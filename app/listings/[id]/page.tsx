@@ -43,6 +43,7 @@ export default async function ListingDetail({ params }: { params: { id: string }
           translatedDesc={t?.description ?? l.description}
           originalTitle={l.title}
           originalDesc={l.description}
+          needsTranslation={needsTranslation}
           hasTranslation={!needsTranslation || !!t}
         />
         <p className="text-xl font-bold text-tomo-navy">

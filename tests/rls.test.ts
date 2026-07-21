@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { config } from "dotenv";
 config({ path: ".env.local" });
@@ -44,6 +44,10 @@ beforeAll(async () => {
   }).select().single();
   if (ce) throw ce;
   convId = conv!.id;
+});
+
+afterAll(async () => {
+  if (listingId) await alice.from("listings").update({ status: "sold", title: "[test] 필름카메라" }).eq("id", listingId);
 });
 
 describe("RLS", () => {

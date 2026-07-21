@@ -3,7 +3,8 @@ import { useState } from "react";
 
 export default function OriginalToggle(props: {
   translatedTitle: string; translatedDesc: string;
-  originalTitle: string; originalDesc: string; hasTranslation: boolean;
+  originalTitle: string; originalDesc: string;
+  needsTranslation: boolean; hasTranslation: boolean;
 }) {
   const [showOriginal, setShowOriginal] = useState(!props.hasTranslation);
   const title = showOriginal ? props.originalTitle : props.translatedTitle;
@@ -12,12 +13,13 @@ export default function OriginalToggle(props: {
     <div>
       <h1 className="text-lg font-bold">{title}</h1>
       <p className="mt-2 whitespace-pre-wrap text-sm text-gray-700">{desc}</p>
-      {props.hasTranslation ? (
+      {props.needsTranslation && props.hasTranslation && (
         <button className="mt-2 text-xs font-bold text-tomo-navy underline"
           onClick={() => setShowOriginal(!showOriginal)}>
           {showOriginal ? "번역 보기 · 翻訳を見る" : "원문 보기 · 原文を見る"}
         </button>
-      ) : (
+      )}
+      {props.needsTranslation && !props.hasTranslation && (
         <p className="mt-2 text-xs text-gray-400">번역 준비 중 · 翻訳準備中</p>
       )}
     </div>

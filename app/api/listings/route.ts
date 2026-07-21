@@ -16,7 +16,9 @@ export async function POST(req: Request) {
 
   const body = await req.json();
   const { title, description, price, category, tradeMethod, crossBorder, images } = body;
-  if (!title || !description || !Number.isInteger(price) || price <= 0)
+  if (!title || typeof title !== "string" || title.length > 80 ||
+      !description || typeof description !== "string" || description.length > 2000 ||
+      !Number.isInteger(price) || price <= 0 || price > 100000000)
     return NextResponse.json({ error: "invalid fields" }, { status: 400 });
   if (!CATEGORIES.includes(category) || !METHODS.includes(tradeMethod))
     return NextResponse.json({ error: "invalid category or method" }, { status: 400 });

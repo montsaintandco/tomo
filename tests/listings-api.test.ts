@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { config } from "dotenv";
 config({ path: ".env.local" });
@@ -15,6 +15,10 @@ beforeAll(async () => {
   });
   if (error) throw error;
   aliceId = data.user!.id;
+});
+
+afterAll(async () => {
+  await alice.from("listings").delete().eq("seller_id", aliceId).eq("title", "테스트 상품");
 });
 
 describe("listings", () => {
@@ -44,7 +48,8 @@ describe("listings", () => {
   it("feed query returns translations inline", async () => {
     const { data } = await alice.from("listings")
       .select("id, title, listing_translations(language, title)")
-      .eq("seller_id", aliceId).limit(1).single();
+      .eq("seller_id", aliceId).eq("title", "테스트 상품")
+      .order("created_at", { ascending: false }).limit(1).single();
     expect(data!.listing_translations.length).toBeGreaterThan(0);
   });
 });
