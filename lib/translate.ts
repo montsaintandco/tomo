@@ -27,3 +27,27 @@ export async function translateListing(input: {
     return null;
   }
 }
+
+export async function translateMessage(
+  body: string, from: "ko" | "ja"
+): Promise<string | null> {
+  if (!process.env.ANTHROPIC_API_KEY) return null;
+  const to = from === "ko" ? "ja" : "ko";
+  try {
+    const client = new Anthropic();
+    const res = await client.messages.create({
+      model: "claude-opus-4-8",
+      max_tokens: 512,
+      messages: [{
+        role: "user",
+        content: `Translate this short secondhand-marketplace chat message from ${LANG_NAME[from]} to ${LANG_NAME[to]}. Keep it casual and natural. Reply with ONLY the translation, nothing else.\n\n${body}`,
+      }],
+    });
+    const block = res.content.find((b) => b.type === "text");
+    if (!block || block.type !== "text") return null;
+    const out = block.text.trim();
+    return out.length > 0 ? out : null;
+  } catch {
+    return null;
+  }
+}
