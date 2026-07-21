@@ -51,9 +51,10 @@ npm test      # vitest 20개 통과해야 정상
 ## 문서
 
 - `2026-07-17-tomo-design-spec.md` — 제품 설계 스펙 (승인본)
-- `2026-07-17-tomo-plan-01-foundation.md`, `2026-07-21-tomo-plan-02-listings.md` — 실행 완료된 구현 플랜
+- `2026-07-17-tomo-plan-01-foundation.md`, `2026-07-21-tomo-plan-02-listings.md`, `2026-07-21-tomo-plan-03-chat.md` — 실행 완료된 구현 플랜
+- `2026-07-21-tomo-plan-04-escrow.md` — 다음 실행 플랜(작성 완료, 미구현). Task 1·4~7은 키 없이 선행 가능, Task 2~3(Stripe·webhook)은 키 대기
 - 브랜드: 토모 TOMO — 말풍선 두 개(블루=한국, 핑크=일본) 겹침에서 하트. 카와이 컨셉
 
 ## Claude에서 이어서 작업하려면
 
-새 세션에서 이 폴더를 연결하고: "TOMO 프로젝트 이어서. HANDOFF.md와 .superpowers/sdd/progress.md 읽고 Plan 03(채팅) 작성부터 시작해줘"
+새 세션에서 이 폴더를 연결하고: "TOMO 프로젝트 이어서. HANDOFF.md와 .superpowers/sdd/progress.md 읽고 Plan 04(에스크로) 구현 시작해줘". 키 확보 전이면 Task 1(마이그레이션)부터.
