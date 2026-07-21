@@ -14,12 +14,15 @@ export default function BottomNav() {
   if (path.startsWith("/login") || path.startsWith("/onboarding")) return null;
   return (
     <nav className="fixed bottom-0 left-0 right-0 mx-auto flex max-w-md justify-around rounded-t-card border-t bg-white py-3">
-      {items.map((i) => (
-        <Link key={i.href} href={i.href}
-          className={`text-sm font-bold ${path === i.href ? "text-tomo-navy" : "text-gray-400"}`}>
-          {i.label}
-        </Link>
-      ))}
+      {items.map((i) => {
+        const active = i.href === "/" ? path === "/" : path.startsWith(i.href);
+        return (
+          <Link key={i.href} href={i.href}
+            className={`text-sm font-bold ${active ? "text-tomo-navy" : "text-gray-400"}`}>
+            {i.label}
+          </Link>
+        );
+      })}
     </nav>
   );
 }
