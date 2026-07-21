@@ -21,12 +21,16 @@ export default async function Home({ searchParams }: { searchParams: { tab?: str
   else if (tab === "global") query = query.neq("country", viewer.country).eq("cross_border_enabled", true);
 
   if (q) {
-    const { data: tIds } = await supabase.from("listing_translations")
-      .select("listing_id").ilike("title", `%${q}%`).limit(40);
-    const ids = (tIds ?? []).map((t) => t.listing_id);
-    query = ids.length > 0
-      ? query.or(`title.ilike.%${q}%,id.in.(${ids.join(",")})`)
-      : query.ilike("title", `%${q}%`);
+    const pattern = `%${q.replace(/[%_]/g, (m) => `\\${m}`)}%`;
+    const [tRes, oRes] = await Promise.all([
+      supabase.from("listing_translations").select("listing_id").ilike("title", pattern).limit(60),
+      supabase.from("listings").select("id").ilike("title", pattern).limit(60),
+    ]);
+    const ids = Array.from(new Set([
+      ...(tRes.data ?? []).map((t) => t.listing_id),
+      ...(oRes.data ?? []).map((o) => o.id),
+    ]));
+    query = query.in("id", ids.length > 0 ? ids : ["00000000-0000-0000-0000-000000000000"]);
   }
 
   const { data: listings } = await query;
@@ -42,12 +46,18 @@ export default async function Home({ searchParams }: { searchParams: { tab?: str
         {tab !== "all" && <input type="hidden" name="tab" value={tab} />}
       </form>
       <div className="mb-4 flex gap-2">
-        {TABS.map(([v, l]) => (
-          <Link key={v} href={v === "all" ? "/" : `/?tab=${v}`}
-            className={`rounded-full px-4 py-1.5 text-sm font-bold ${tab === v ? "bg-tomo-navy text-white" : "border bg-white"}`}>
-            {l}
-          </Link>
-        ))}
+        {TABS.map(([v, l]) => {
+          const params = new URLSearchParams();
+          if (v !== "all") params.set("tab", v);
+          if (q) params.set("q", q);
+          const qs = params.toString();
+          return (
+            <Link key={v} href={qs ? `/?${qs}` : "/"}
+              className={`rounded-full px-4 py-1.5 text-sm font-bold ${tab === v ? "bg-tomo-navy text-white" : "border bg-white"}`}>
+              {l}
+            </Link>
+          );
+        })}
       </div>
       <div className="grid grid-cols-2 gap-3">
         {(listings ?? []).map((l) => (
