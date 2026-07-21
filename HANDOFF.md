@@ -1,6 +1,6 @@
 # TOMO 프로젝트 핸드오프 (2026-07-21)
 
-한일 크로스보더 중고거래 플랫폼. Plan 01(기반)·Plan 02(상품) 완료 상태.
+한일 크로스보더 중고거래 플랫폼. Plan 01(기반)·Plan 02(상품)·Plan 03(채팅) 완료 상태.
 
 ## 재개 방법
 
@@ -9,7 +9,7 @@
 cd tomo
 npm install
 npm run dev   # http://localhost:3000
-npm test      # vitest 13개 통과해야 정상
+npm test      # vitest 20개 통과해야 정상
 ```
 
 `.env.local`은 zip에 포함되어 있음 (Supabase URL + anon key). Node 18+ 필요.
@@ -17,7 +17,7 @@ npm test      # vitest 13개 통과해야 정상
 ## 인프라
 
 - Supabase: 프로젝트 `tomo` (id `zftztnkczlblnkgaijzc`, 서울 리전, seoulbuy 조직 — 이든에이치 계정)
-  - 마이그레이션 5개 적용 완료 (`supabase/migrations/` = DB 실제 상태와 일치)
+  - 마이그레이션 7개 적용 완료 (`supabase/migrations/` = DB 실제 상태와 일치)
   - Auth: 이메일 확인 꺼짐(개발용)
 - 테스트 계정: `tomo.test.alice@gmail.com`(한국/서울 마포구), `tomo.test.bob@gmail.com`(일본/신주쿠) — 비밀번호 `test-pass-1234`
 - 데모 상품 4건 시드됨. 재시드: `npx tsx scripts/seed-demo.ts` (멱등)
@@ -26,13 +26,13 @@ npm test      # vitest 13개 통과해야 정상
 
 - 인증·온보딩(국가/지역/언어), 전 테이블 RLS + 권한상승 차단, 신뢰온도 스키마
 - 상품 등록(이미지 업로드 + 자동번역 훅) / 피드(전체·내동네·해외직구 탭, 환산가) / 상세(원문 토글) / 검색(한일 양방향)
+- 채팅: 구매자↔판매자 1:1 실시간(Supabase Realtime) + 발송 시점 메시지 자동번역·저장, 번역 말풍선(원문 언어색)+원문 토글, `/chat` 목록·`/chat/[id]` 채팅방. 참여자만 열람 RLS
 - 에스크로 상태머신·센터(서울/나리타) 스키마 정의 (구현은 Plan 04)
 
 ## 남은 로드맵
 
-1. **Plan 03 — 채팅**: Supabase Realtime + 메시지 자동번역 (다음 순서)
-2. **Plan 04 — 에스크로 거래**: Stripe 테스트 모드, 상태머신 SECURITY DEFINER 함수, 센터 관리 화면(/admin/center), 후기→신뢰온도
-3. 배포: Vercel + 폰트 복원(Cafe24 써라운드/M PLUS Rounded — 샌드박스 문제로 제거됨, layout.tsx에 재적용)
+1. **Plan 04 — 에스크로 거래**: Stripe 테스트 모드, 상태머신 SECURITY DEFINER 함수, 센터 관리 화면(/admin/center), 후기→신뢰온도 (다음 순서)
+2. 배포: Vercel + 폰트 복원(Cafe24 써라운드/M PLUS Rounded — 샌드박스 문제로 제거됨, layout.tsx에 재적용)
 
 ## 필요한 키 (아직 없음)
 
@@ -44,6 +44,7 @@ npm test      # vitest 13개 통과해야 정상
 
 - API 라우트는 미들웨어 보호 밖 (자체 인증 필수 — /api/listings 참고)
 - 구매자발 상태 전이는 반드시 SECURITY DEFINER DB 함수로 (listings UPDATE RLS가 셀러 전용)
+- RLS 서브쿼리 교훈: WITH CHECK 안 서브쿼리에서 unqualified 컬럼은 서브쿼리 테이블로 바인딩됨. 삽입 대상 행 컬럼은 반드시 `테이블명.컬럼` 으로 한정할 것 (0006→0007 정책 버그 수정 사례)
 - 이월: 피드 쿼리 에러 표시, 고아 이미지 정리, 폼 a11y 라벨, 로그인 signIn→signUp 폴스루 UX
 - 상세 내역: 저장소 내 `.superpowers/sdd/progress.md` (전체 진행 레저)
 
