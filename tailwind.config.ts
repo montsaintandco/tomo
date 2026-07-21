@@ -11,7 +11,13 @@ const config: Config = {
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
+        "tomo-blue": "#9CC5EC",
+        "tomo-pink": "#F2AFAF",
+        "tomo-coral": "#E2807F",
+        "tomo-ivory": "#FBF9F4",
+        "tomo-navy": "#0C447C",
       },
+      borderRadius: { card: "16px" },
     },
   },
   plugins: [],
