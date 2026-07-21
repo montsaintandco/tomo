@@ -11,22 +11,21 @@ let bob: SupabaseClient;   // JP buyer
 let aliceId: string, bobId: string;
 let listingId: string, convId: string;
 
-async function signUp(tag: string): Promise<[SupabaseClient, string]> {
+async function signIn(tag: string): Promise<[SupabaseClient, string]> {
   const c = createClient(url, anonKey, { auth: { persistSession: false } });
-  const { data, error } = await c.auth.signUp({
-    email: `tomo.test.${tag}${Date.now()}@gmail.com`,
+  const { data, error } = await c.auth.signInWithPassword({
+    email: `tomo.test.${tag}@gmail.com`,
     password: "test-pass-1234",
   });
   if (error) throw error;
-  if (!data.session) throw new Error("no session — is email confirmation disabled?");
   return [c, data.user!.id];
 }
 
 beforeAll(async () => {
-  [alice, aliceId] = await signUp("alice");
-  [bob, bobId] = await signUp("bob");
-  const p1 = await alice.from("profiles").insert({ id: aliceId, nickname: "alice", country: "KR", region: "서울 마포구", language: "ko" });
-  const p2 = await bob.from("profiles").insert({ id: bobId, nickname: "bob", country: "JP", region: "東京 新宿区", language: "ja" });
+  [alice, aliceId] = await signIn("alice");
+  [bob, bobId] = await signIn("bob");
+  const p1 = await alice.from("profiles").upsert({ id: aliceId, nickname: "alice", country: "KR", region: "서울 마포구", language: "ko" });
+  const p2 = await bob.from("profiles").upsert({ id: bobId, nickname: "bob", country: "JP", region: "東京 新宿区", language: "ja" });
   if (p1.error || p2.error) throw p1.error ?? p2.error;
   const { data: listing, error: le } = await alice.from("listings").insert({
     seller_id: aliceId, title: "필름카메라", description: "잘 작동해요", source_language: "ko",
