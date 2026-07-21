@@ -2,7 +2,7 @@ import { createServerSupabase } from "@/lib/supabase/server";
 import { getViewer } from "@/lib/listings";
 import { formatWithConversion } from "@/lib/currency";
 import OriginalToggle from "@/components/OriginalToggle";
-import Link from "next/link";
+import ChatButton from "@/components/ChatButton";
 import { notFound, redirect } from "next/navigation";
 
 export default async function ListingDetail({ params }: { params: { id: string } }) {
@@ -56,10 +56,7 @@ export default async function ListingDetail({ params }: { params: { id: string }
         )}
         {viewer.id !== seller.id && l.status === "active" && (
           <div className="flex gap-2">
-            <Link href={`/chat?listing=${l.id}`}
-              className="flex-1 rounded-full border border-tomo-navy py-3 text-center font-bold text-tomo-navy">
-              채팅하기
-            </Link>
+            <ChatButton listingId={l.id} />
             <button className="flex-1 rounded-full bg-tomo-coral py-3 font-bold text-white" disabled>
               안전결제 (준비 중)
             </button>
