@@ -24,9 +24,14 @@ async function signIn(tag: string): Promise<[SupabaseClient, string]> {
 beforeAll(async () => {
   [alice, aliceId] = await signIn("alice");
   [bob, bobId] = await signIn("bob");
-  const p1 = await alice.from("profiles").upsert({ id: aliceId, nickname: "alice", country: "KR", region: "서울 마포구", language: "ko" });
-  const p2 = await bob.from("profiles").upsert({ id: bobId, nickname: "bob", country: "JP", region: "東京 新宿区", language: "ja" });
-  if (p1.error || p2.error) throw p1.error ?? p2.error;
+  const ensureProfile = async (client: SupabaseClient, profile: { id: string; nickname: string; country: string; region: string; language: string }) => {
+    const { data: existing } = await client.from("profiles").select("id").eq("id", profile.id).maybeSingle();
+    if (existing) return;
+    const { error } = await client.from("profiles").insert(profile);
+    if (error && error.code !== "23505") throw error;
+  };
+  await ensureProfile(alice, { id: aliceId, nickname: "alice", country: "KR", region: "서울 마포구", language: "ko" });
+  await ensureProfile(bob, { id: bobId, nickname: "bob", country: "JP", region: "東京 新宿区", language: "ja" });
   const { data: listing, error: le } = await alice.from("listings").insert({
     seller_id: aliceId, title: "필름카메라", description: "잘 작동해요", source_language: "ko",
     price: 50000, currency: "KRW", category: "camera", trade_method: "shipping",
@@ -73,5 +78,12 @@ describe("RLS", () => {
       is_cross_border: false, item_price: 50000, currency: "KRW",
     });
     expect(error).not.toBeNull();
+  });
+
+  it("blocks self-escalation of is_admin and trust_temp", async () => {
+    const { error: e1 } = await alice.from("profiles").update({ is_admin: true }).eq("id", aliceId);
+    expect(e1).not.toBeNull();
+    const { error: e2 } = await alice.from("profiles").update({ trust_temp: 99.9 }).eq("id", aliceId);
+    expect(e2).not.toBeNull();
   });
 });

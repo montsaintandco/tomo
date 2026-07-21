@@ -14,8 +14,17 @@ export async function middleware(req: NextRequest) {
     }
   );
   const { data } = await supabase.auth.getUser();
-  const isPublic = req.nextUrl.pathname.startsWith("/login");
+  const path = req.nextUrl.pathname;
+  const isPublic = path.startsWith("/login");
   if (!data.user && !isPublic) return NextResponse.redirect(new URL("/login", req.url));
+  if (data.user && !isPublic && !path.startsWith("/onboarding")) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("id", data.user.id)
+      .maybeSingle();
+    if (!profile) return NextResponse.redirect(new URL("/onboarding", req.url));
+  }
   return res;
 }
 
