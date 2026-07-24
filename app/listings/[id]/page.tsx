@@ -3,6 +3,7 @@ import { getViewer } from "@/lib/listings";
 import { formatWithConversion } from "@/lib/currency";
 import OriginalToggle from "@/components/OriginalToggle";
 import ChatButton from "@/components/ChatButton";
+import CheckoutButton from "@/components/CheckoutButton";
 import { notFound, redirect } from "next/navigation";
 
 export default async function ListingDetail({ params }: { params: { id: string } }) {
@@ -57,9 +58,7 @@ export default async function ListingDetail({ params }: { params: { id: string }
         {viewer.id !== seller.id && l.status === "active" && (
           <div className="flex gap-2">
             <ChatButton listingId={l.id} />
-            <button className="flex-1 rounded-full bg-tomo-coral py-3 font-bold text-white" disabled>
-              안전결제 (준비 중)
-            </button>
+            <CheckoutButton listingId={l.id} />
           </div>
         )}
       </div>
