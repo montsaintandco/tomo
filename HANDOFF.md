@@ -9,7 +9,7 @@
 cd tomo
 npm install
 npm run dev   # http://localhost:3000
-npm test      # vitest 20개 통과해야 정상
+npm test      # vitest 30개 통과해야 정상
 ```
 
 `.env.local`은 zip에 포함되어 있음 (Supabase URL + anon key). Node 18+ 필요.
@@ -17,9 +17,9 @@ npm test      # vitest 20개 통과해야 정상
 ## 인프라
 
 - Supabase: 프로젝트 `tomo` (id `zftztnkczlblnkgaijzc`, 서울 리전, seoulbuy 조직 — 이든에이치 계정)
-  - 마이그레이션 7개 적용 완료 (`supabase/migrations/` = DB 실제 상태와 일치)
+  - 마이그레이션 9개 적용 완료 (`supabase/migrations/` = DB 실제 상태와 일치)
   - Auth: 이메일 확인 꺼짐(개발용)
-- 테스트 계정: `tomo.test.alice@gmail.com`(한국/서울 마포구), `tomo.test.bob@gmail.com`(일본/신주쿠) — 비밀번호 `test-pass-1234`
+- 테스트 계정: `tomo.test.alice@gmail.com`(한국/서울 마포구), `tomo.test.bob@gmail.com`(일본/신주쿠), `tomo.test.center@gmail.com`(센터 admin, is_admin=true) — 비밀번호 모두 `test-pass-1234`
 - 데모 상품 4건 시드됨. 재시드: `npx tsx scripts/seed-demo.ts` (멱등)
 
 ## 완료된 것
@@ -27,11 +27,11 @@ npm test      # vitest 20개 통과해야 정상
 - 인증·온보딩(국가/지역/언어), 전 테이블 RLS + 권한상승 차단, 신뢰온도 스키마
 - 상품 등록(이미지 업로드 + 자동번역 훅) / 피드(전체·내동네·해외직구 탭, 환산가) / 상세(원문 토글) / 검색(한일 양방향)
 - 채팅: 구매자↔판매자 1:1 실시간(Supabase Realtime) + 발송 시점 메시지 자동번역·저장, 번역 말풍선(원문 언어색)+원문 토글, `/chat` 목록·`/chat/[id]` 채팅방. 참여자만 열람 RLS
-- 에스크로 상태머신·센터(서울/나리타) 스키마 정의 (구현은 Plan 04)
+- 에스크로 DB 계층(Plan 04 Task 1): 상태머신 SECURITY DEFINER 함수(start/advance/mark_paid/attach_payment_intent/submit_review) + 예약 lazy-expiry + 수수료 10% + 후기→신뢰온도. 직접 쓰기 차단, 함수 EXECUTE는 authenticated 한정(0009). 마이그레이션 0008·0009
 
 ## 남은 로드맵
 
-1. **Plan 04 — 에스크로 거래**: Stripe 테스트 모드, 상태머신 SECURITY DEFINER 함수, 센터 관리 화면(/admin/center), 후기→신뢰온도 (다음 순서)
+1. **Plan 04 나머지**: Task 2~3(Stripe 결제 API·webhook — 키 대기), Task 4(`/transactions/[id]`), Task 5(`/admin/center` + transactions admin SELECT RLS), Task 6(후기 UI·하트게이지·프로필). Task 4~6은 키 없이 진행 가능 (다음 순서)
 2. 배포: Vercel + 폰트 복원(Cafe24 써라운드/M PLUS Rounded — 샌드박스 문제로 제거됨, layout.tsx에 재적용)
 
 ## 필요한 키 (아직 없음)
@@ -52,9 +52,9 @@ npm test      # vitest 20개 통과해야 정상
 
 - `2026-07-17-tomo-design-spec.md` — 제품 설계 스펙 (승인본)
 - `2026-07-17-tomo-plan-01-foundation.md`, `2026-07-21-tomo-plan-02-listings.md`, `2026-07-21-tomo-plan-03-chat.md` — 실행 완료된 구현 플랜
-- `2026-07-21-tomo-plan-04-escrow.md` — 다음 실행 플랜(작성 완료, 미구현). Task 1·4~7은 키 없이 선행 가능, Task 2~3(Stripe·webhook)은 키 대기
+- `2026-07-21-tomo-plan-04-escrow.md` — 실행 플랜. Task 1(마이그레이션) 완료, Task 7 부분(상태머신·수수료·RLS 테스트) 완료. Task 2~3(Stripe·webhook) 키 대기, Task 4~6(UI) 키 없이 선행 가능
 - 브랜드: 토모 TOMO — 말풍선 두 개(블루=한국, 핑크=일본) 겹침에서 하트. 카와이 컨셉
 
 ## Claude에서 이어서 작업하려면
 
-새 세션에서 이 폴더를 연결하고: "TOMO 프로젝트 이어서. HANDOFF.md와 .superpowers/sdd/progress.md 읽고 Plan 04(에스크로) 구현 시작해줘". 키 확보 전이면 Task 1(마이그레이션)부터.
+새 세션에서 이 폴더를 연결하고: "TOMO 프로젝트 이어서. HANDOFF.md와 .superpowers/sdd/progress.md 읽고 Plan 04 Task 4(거래 진행 화면)부터 이어서". Stripe/service_role 키 확보 시 Task 2~3(결제·webhook)도 가능.
