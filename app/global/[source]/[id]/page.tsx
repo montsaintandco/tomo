@@ -4,6 +4,8 @@ import { formatPrice, formatWithConversion, convertPrice } from "@/lib/currency"
 import { proxyEstimateJpy } from "@/lib/fees";
 import { mercariItem } from "@/lib/market/mercari";
 import { yahooAuctionItem } from "@/lib/market/yahoo-auction";
+import { daangnItem } from "@/lib/market/daangn";
+import { joongnaItem } from "@/lib/market/joongna";
 import { SOURCE_LABEL, LIVE_SOURCES, type MarketSource, type MarketItemDetail } from "@/lib/market/types";
 import ProxyRequestButton from "@/components/ProxyRequestButton";
 import Link from "next/link";
@@ -15,6 +17,8 @@ async function loadItem(source: MarketSource, id: string): Promise<MarketItemDet
   try {
     if (source === "mercari") return await mercariItem(id);
     if (source === "yahoo_auction") return await yahooAuctionItem(id);
+    if (source === "daangn") return await daangnItem(id);
+    if (source === "joongna") return await joongnaItem(id);
   } catch {
     return null; // 파서 실패·품절·차단 → 캐시 폴백
   }

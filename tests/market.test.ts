@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { isRetryableStatus, backoffMs } from "../lib/market/http";
-import { LIVE_SOURCES, SOURCE_LABEL } from "../lib/market/types";
+import { LIVE_SOURCES, SOURCE_LABEL, SOURCE_CURRENCY } from "../lib/market/types";
 
 describe("market http retry policy", () => {
   it("retries only transient statuses", () => {
@@ -17,11 +17,18 @@ describe("market http retry policy", () => {
 });
 
 describe("market sources", () => {
-  it("marks only japan sources as live-parseable", () => {
-    expect(LIVE_SOURCES).toEqual(["mercari", "yahoo_auction"]);
-    // 한국 소스는 라벨은 있으나 실파싱 미지원 (어드민 수동 등록으로 커버)
-    expect(SOURCE_LABEL.daangn).toBe("당근마켓");
-    expect(LIVE_SOURCES).not.toContain("daangn");
-    expect(LIVE_SOURCES).not.toContain("joongna");
+  it("has all four markets live-parseable", () => {
+    expect(LIVE_SOURCES).toEqual(["mercari", "yahoo_auction", "daangn", "joongna"]);
+  });
+
+  it("maps each source to its market currency (drives search language)", () => {
+    expect(SOURCE_CURRENCY.mercari).toBe("JPY");
+    expect(SOURCE_CURRENCY.yahoo_auction).toBe("JPY");
+    expect(SOURCE_CURRENCY.daangn).toBe("KRW");
+    expect(SOURCE_CURRENCY.joongna).toBe("KRW");
+  });
+
+  it("labels every source", () => {
+    for (const s of LIVE_SOURCES) expect(SOURCE_LABEL[s]).toBeTruthy();
   });
 });

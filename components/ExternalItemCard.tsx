@@ -9,9 +9,11 @@ export type ExternalCardItem = {
 };
 
 // 메루카리식 밀집 카드 — 이미지 우선, 가격이 가장 굵게
+// rate는 "외화 → 뷰어 통화" 환율. 같은 통화면 환산 없이 원값 표시
 export default function ExternalItemCard({ item, rate, viewerCurrency }: {
   item: ExternalCardItem; rate: number; viewerCurrency: Currency;
 }) {
+  const effectiveRate = item.currency === viewerCurrency ? 1 : rate;
   return (
     <Link href={`/global/${item.source}/${item.sourceId}`}
       className="group flex flex-col transition-opacity hover:opacity-90 active:opacity-70">
@@ -40,7 +42,7 @@ export default function ExternalItemCard({ item, rate, viewerCurrency }: {
       <div className="mt-1.5 flex flex-col gap-0.5">
         <p className="line-clamp-2 text-xs leading-snug text-gray-600">{item.title}</p>
         <p className="tnum text-[15px] font-bold text-gray-900">
-          {formatWithConversion(item.price, item.currency, rate, viewerCurrency)}
+          {formatWithConversion(item.price, item.currency, effectiveRate, viewerCurrency)}
         </p>
         {item.auction && <p className="text-[10px] text-gray-400">현재가 · 낙찰가 변동</p>}
       </div>

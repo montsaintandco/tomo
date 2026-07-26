@@ -24,8 +24,8 @@ export default async function AdminExternalPage() {
         <Link href="/admin" className="text-xs text-gray-500">← 운영</Link>
       </div>
       <p className="mb-4 rounded-card bg-tomo-ivory p-3 text-xs text-gray-600">
-        당근마켓·중고나라는 공개 API가 없어 자동 수집이 안 돼요. 상품 링크와 정보를 직접 등록하면
-        해외직구 피드에 노출되고 대행 신청을 받을 수 있어요.
+        당근마켓·중고나라는 검색으로 자동 수집되지만, 수집이 안 되는 상품(비공개 링크, 특가 등)은
+        여기서 직접 등록할 수 있어요. 등록하면 해외직구 피드에 노출되고 대행 신청을 받습니다.
       </p>
 
       <ExternalItemForm />

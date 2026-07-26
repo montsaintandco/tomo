@@ -52,28 +52,35 @@ export async function translateMessage(
   }
 }
 
-// 키 없이 쓰는 폴백 사전 (MyMemory 무료 티어). 검색어처럼 짧은 문자열에만 사용
-async function translateQueryFallback(q: string): Promise<string | null> {
+const HANGUL = /[가-힣]/;
+const JAPANESE = /[ぁ-んァ-ヶ一-龯]/;
+
+// 키 없이 쓰는 폴백 (MyMemory 무료 티어). 검색어처럼 짧은 문자열에만 사용
+async function translateQueryFallback(q: string, to: "ko" | "ja"): Promise<string | null> {
+  const pair = to === "ja" ? "ko|ja" : "ja|ko";
   try {
     const res = await fetch(
-      `https://api.mymemory.translated.net/get?q=${encodeURIComponent(q)}&langpair=ko|ja`,
+      `https://api.mymemory.translated.net/get?q=${encodeURIComponent(q)}&langpair=${pair}`,
       { signal: AbortSignal.timeout(6000), next: { revalidate: 86400 } }
     );
     if (!res.ok) return null;
     const j = await res.json();
     const out = String(j?.responseData?.translatedText ?? "").trim();
-    // 실패 시 원문이나 경고 문자열이 돌아옴 — 일본어 문자가 있어야 채택
-    if (!out || out === q || !/[ぁ-んァ-ヶ一-龯]/.test(out)) return null;
+    // 실패 시 원문·경고 문자열이 돌아옴 — 목표 언어 문자가 있어야 채택
+    const expect = to === "ja" ? JAPANESE : HANGUL;
+    if (!out || out === q || !expect.test(out)) return null;
     return out;
   } catch {
     return null;
   }
 }
 
-// 검색어 ko→ja 번역 (외부 일본 마켓 검색용).
+// 검색어 번역 (외부 마켓 검색용). 이미 목표 언어면 그대로 반환.
 // ANTHROPIC_API_KEY 있으면 Claude, 없으면 무료 폴백. 둘 다 실패하면 원문.
-export async function translateQueryToJa(q: string): Promise<string> {
-  if (!/[가-힣]/.test(q)) return q; // 한글 없으면 그대로 (일본어/영어 검색)
+export async function translateQueryTo(q: string, to: "ko" | "ja"): Promise<string> {
+  const from = to === "ja" ? "ko" : "ja";
+  const sourceScript = from === "ko" ? HANGUL : JAPANESE;
+  if (!sourceScript.test(q)) return q; // 번역할 원문 문자가 없으면 그대로 (영어 등)
 
   if (process.env.ANTHROPIC_API_KEY) {
     try {
@@ -83,7 +90,7 @@ export async function translateQueryToJa(q: string): Promise<string> {
         max_tokens: 100,
         messages: [{
           role: "user",
-          content: `Translate this Korean marketplace search query to Japanese. Reply with ONLY the Japanese query, nothing else.\n\n${q}`,
+          content: `Translate this ${LANG_NAME[from]} marketplace search query to ${LANG_NAME[to]}. Reply with ONLY the translated query, nothing else.\n\n${q}`,
         }],
       });
       const block = res.content.find((b) => b.type === "text");
@@ -96,5 +103,8 @@ export async function translateQueryToJa(q: string): Promise<string> {
     }
   }
 
-  return (await translateQueryFallback(q)) ?? q;
+  return (await translateQueryFallback(q, to)) ?? q;
 }
+
+// 하위 호환 별칭 (일본 마켓 검색)
+export const translateQueryToJa = (q: string) => translateQueryTo(q, "ja");

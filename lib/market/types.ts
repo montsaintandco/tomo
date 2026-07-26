@@ -29,5 +29,10 @@ export const SOURCE_LABEL: Record<MarketSource, string> = {
   joongna: "중고나라",
 };
 
-// 실파싱 가능 소스 (한국 소스는 공개 API 없음 — 어드민 수동 등록으로 커버, 연동 준비 중)
-export const LIVE_SOURCES: MarketSource[] = ["mercari", "yahoo_auction"];
+// 실파싱 가능 소스. 일본은 API/마크업, 한국은 JSON-LD(당근)·카드 마크업(중고나라)
+export const LIVE_SOURCES: MarketSource[] = ["mercari", "yahoo_auction", "daangn", "joongna"];
+
+// 소스별 취급 통화 — 검색어 번역 방향과 대행 견적 통화를 정한다
+export const SOURCE_CURRENCY: Record<MarketSource, "KRW" | "JPY"> = {
+  mercari: "JPY", yahoo_auction: "JPY", daangn: "KRW", joongna: "KRW",
+};
