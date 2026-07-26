@@ -12,9 +12,12 @@ export default async function Home({ searchParams }: { searchParams: { tab?: str
   const q = searchParams.q?.trim();
   const localNeedsLogin = tab === "local" && viewer.guest;
 
+  // 판매중 → 예약중 → 거래완료 순으로 노출 (당근·메루카리 관행: 끝난 거래는 뒤로)
   let query = supabase.from("listings")
     .select("id, title, price, currency, source_language, country, region, status, images, created_at, listing_translations(language, title)")
-    .order("created_at", { ascending: false }).limit(40);
+    .order("status", { ascending: true })   // active < reserved < sold (enum 정의 순)
+    .order("created_at", { ascending: false })
+    .limit(40);
 
   if (tab === "local" && !viewer.guest) query = query.eq("country", viewer.country).eq("region", viewer.region).in("trade_method", ["direct", "both"]);
   else if (tab === "global") query = query.neq("country", viewer.country).eq("cross_border_enabled", true);
