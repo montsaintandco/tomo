@@ -32,8 +32,8 @@ npm test      # vitest 30개 통과해야 정상
 
 ## 남은 로드맵
 
-1. **Plan 04 Task 2~3 (키 대기)**: Stripe 결제 API(`/api/checkout` 완성)·webhook. `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET`/`SUPABASE_SERVICE_ROLE_KEY` 확보 후. Task 1·4·5·6·7(부분) 완료
-2. 배포: Vercel + 폰트 복원(Cafe24 써라운드/M PLUS Rounded — 샌드박스 문제로 제거됨, layout.tsx에 재적용)
+1. **키 3종 넣고 Stripe 라이브 테스트**: 코드는 작성 완료(`lib/stripe.ts`, `/api/checkout`, `/api/stripe/webhook`, `lib/supabase/admin.ts`) — 전부 키 없으면 503 graceful. `.env.local`에 `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET`/`SUPABASE_SERVICE_ROLE_KEY` 추가 후 `stripe listen --forward-to localhost:3000/api/stripe/webhook`로 테스트카드 결제→`paid`→listing `sold` 확인. Stripe 대시보드에 webhook 엔드포인트 등록도 필요(배포 후)
+2. 배포: Vercel + 폰트 복원(Cafe24 써라운드/M PLUS Rounded — 샌드박스 문제로 제거됨, layout.tsx에 재적용. next/font/google은 빌드시 폰트 fetch — Vercel에선 정상)
 
 ## 필요한 키 (아직 없음)
 
