@@ -30,10 +30,16 @@ npm test      # vitest 30개 통과해야 정상
 - 에스크로 DB 계층(Plan 04 Task 1): 상태머신 SECURITY DEFINER 함수(start/advance/mark_paid/attach_payment_intent/submit_review) + 예약 lazy-expiry + 수수료 10% + 후기→신뢰온도. 직접 쓰기 차단, 함수 EXECUTE는 authenticated 한정(0009). 마이그레이션 0008·0009
 - 에스크로 UI(Plan 04 Task 4·5·6): `/transactions/[id]`(타임라인·금액·운송장·역할별 액션), `/admin/center`(admin SELECT RLS 0010, 센터별 입고/발송 큐), `/profile/[id]`(하트게이지·상품·받은 후기, `me` 별칭), 상세 안전결제 버튼(키 없으면 graceful)
 
+## 배포
+
+- **Vercel 배포 완료** (production). 프로젝트 `tomo` (팀 montsaintandco's projects, Hobby). GitHub `montsaintandco/tomo` 연동 → master 푸시 시 자동 재배포
+- URL: https://tomo-montsaintandcos-projects.vercel.app (배포별 URL 예: tomo-mqhr5o7b9-…)
+- Vercel 환경변수: `NEXT_PUBLIC_SUPABASE_URL`·`NEXT_PUBLIC_SUPABASE_ANON_KEY`만 설정됨(Production+Preview). 아직 미설정: `ANTHROPIC_API_KEY`(번역), `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET`/`SUPABASE_SERVICE_ROLE_KEY`(결제) — 없으면 각 기능 graceful 대기, 오류 아님
+
 ## 남은 로드맵
 
-1. **키 3종 넣고 Stripe 라이브 테스트**: 코드는 작성 완료(`lib/stripe.ts`, `/api/checkout`, `/api/stripe/webhook`, `lib/supabase/admin.ts`) — 전부 키 없으면 503 graceful. `.env.local`에 `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET`/`SUPABASE_SERVICE_ROLE_KEY` 추가 후 `stripe listen --forward-to localhost:3000/api/stripe/webhook`로 테스트카드 결제→`paid`→listing `sold` 확인. Stripe 대시보드에 webhook 엔드포인트 등록도 필요(배포 후)
-2. 배포: Vercel + 폰트 복원(Cafe24 써라운드/M PLUS Rounded — 샌드박스 문제로 제거됨, layout.tsx에 재적용. next/font/google은 빌드시 폰트 fetch — Vercel에선 정상)
+1. **키 넣고 Stripe 라이브 테스트**: 코드 완료(`lib/stripe.ts`, `/api/checkout`, `/api/stripe/webhook`, `lib/supabase/admin.ts`) — 키 없으면 503. 로컬은 `.env.local`+`stripe listen`, 배포는 Vercel 환경변수 추가 + Stripe 대시보드 webhook 엔드포인트(`/api/stripe/webhook`) 등록
+2. 폰트 복원(Cafe24 써라운드/M PLUS Rounded — layout.tsx에 next/font 재적용. Vercel 빌드는 폰트 fetch 정상), 커스텀 도메인(선택)
 
 ## 필요한 키 (아직 없음)
 
