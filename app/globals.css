@@ -2,15 +2,94 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 브랜드 서체: 한국어 Cafe24 써라운드(로고·헤딩), 본문 Pretendard(일본어 글리프 포함) */
 @font-face {
   font-family: "Cafe24Ssurround";
   src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2105@1.0/Cafe24Ssurround.woff") format("woff");
   font-weight: 700;
   font-display: swap;
 }
+@font-face {
+  font-family: "Pretendard";
+  src: url("https://fastly.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/woff2/PretendardVariable.woff2") format("woff2-variations");
+  font-weight: 300 800;
+  font-display: swap;
+}
+
+:root {
+  color-scheme: light;
+  /* 네이비 틴트 섀도우 — 순수 검정 대신 배경 색조를 머금게 */
+  --shadow-soft: 0 1px 2px rgba(12, 68, 124, 0.04), 0 4px 16px rgba(12, 68, 124, 0.06);
+  --shadow-lift: 0 2px 6px rgba(12, 68, 124, 0.08), 0 12px 28px rgba(12, 68, 124, 0.1);
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: "Pretendard", -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN",
+    "Yu Gothic", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer base {
+  h1, h2 { letter-spacing: -0.02em; text-wrap: balance; }
+  p { text-wrap: pretty; }
+  :focus-visible {
+    outline: 2px solid #0C447C;
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+}
+
+@layer components {
+  /* 로고·주요 헤딩 전용 라운드 서체 */
+  .font-brand {
+    font-family: "Cafe24Ssurround", "Pretendard", sans-serif;
+    letter-spacing: 0;
+  }
+  /* 카드: border+shadow 조합 대신 틴트 섀도우 하나로 */
+  .card {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: var(--shadow-soft);
+    transition: box-shadow 220ms ease, transform 220ms ease;
+  }
+  a.card:hover, button.card:hover { box-shadow: var(--shadow-lift); transform: translateY(-1px); }
+  a.card:active, button.card:active { transform: translateY(0) scale(0.995); }
+
+  .btn {
+    border-radius: 9999px;
+    font-weight: 700;
+    transition: transform 160ms ease, opacity 160ms ease, background-color 160ms ease;
+  }
+  .btn:hover:not(:disabled) { opacity: 0.92; }
+  .btn:active:not(:disabled) { transform: scale(0.97); }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  /* 가격·수량은 자릿수 정렬 */
+  .tnum { font-variant-numeric: tabular-nums; }
+
+  /* 이미지 자리 (로딩 전) */
+  .skeleton {
+    background: linear-gradient(100deg, #f1efe9 30%, #f7f5f0 50%, #f1efe9 70%);
+    background-size: 200% 100%;
+    animation: shimmer 1.4s infinite linear;
+  }
+}
+
+@keyframes shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
 
 @layer utilities {
-  .text-balance {
-    text-wrap: balance;
+  .text-balance { text-wrap: balance; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

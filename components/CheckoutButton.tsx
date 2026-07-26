@@ -27,7 +27,7 @@ export default function CheckoutButton({ listingId }: { listingId: string }) {
   return (
     <div className="flex-1">
       <button onClick={go} disabled={busy}
-        className="w-full rounded-full bg-tomo-coral py-3 font-bold text-white disabled:opacity-50">
+        className="btn w-full bg-tomo-coral py-3 text-white">
         {busy ? "연결 중…" : "안전결제"}
       </button>
       {msg && <p className="mt-1 text-xs text-gray-500">{msg}</p>}

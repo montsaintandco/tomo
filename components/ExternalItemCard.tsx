@@ -8,34 +8,38 @@ export type ExternalCardItem = {
   soldOut?: boolean; auction?: boolean;
 };
 
+// 메루카리식 밀집 카드 — 이미지 우선, 가격이 가장 굵게
 export default function ExternalItemCard({ item, rate, viewerCurrency }: {
   item: ExternalCardItem; rate: number; viewerCurrency: Currency;
 }) {
   return (
     <Link href={`/global/${item.source}/${item.sourceId}`}
-      className="flex flex-col overflow-hidden rounded-card border bg-white">
-      <div className="relative aspect-square bg-gray-100">
-        {item.thumb && (
+      className="group flex flex-col transition-opacity hover:opacity-90 active:opacity-70">
+      <div className="relative aspect-square overflow-hidden rounded-xl bg-gray-100">
+        {item.thumb ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={item.thumb} alt="" className="h-full w-full object-cover" loading="lazy" />
+          <img src={item.thumb} alt="" loading="lazy"
+            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]" />
+        ) : (
+          <div className="skeleton h-full w-full" />
         )}
-        <span className="absolute left-1.5 top-1.5 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-bold text-white">
+        <span className="absolute left-1.5 top-1.5 rounded bg-black/55 px-1.5 py-0.5 text-[10px] font-bold text-white backdrop-blur-sm">
           {SOURCE_LABEL[item.source]}
         </span>
         {item.auction && (
-          <span className="absolute right-1.5 top-1.5 rounded-full bg-tomo-coral px-2 py-0.5 text-[10px] font-bold text-white">
-            입찰
+          <span className="absolute right-1.5 top-1.5 rounded bg-tomo-coral px-1.5 py-0.5 text-[10px] font-bold text-white">
+            입찰중
           </span>
         )}
         {item.soldOut && (
-          <span className="absolute inset-0 flex items-center justify-center bg-black/50 text-sm font-bold text-white">
+          <span className="absolute inset-0 flex items-center justify-center bg-black/45 text-sm font-bold text-white">
             품절
           </span>
         )}
       </div>
-      <div className="flex flex-col gap-0.5 p-2">
-        <p className="line-clamp-2 text-xs leading-snug text-gray-700">{item.title}</p>
-        <p className="text-sm font-bold text-tomo-navy">
+      <div className="mt-1.5 flex flex-col gap-0.5">
+        <p className="line-clamp-2 text-xs leading-snug text-gray-600">{item.title}</p>
+        <p className="tnum text-[15px] font-bold text-gray-900">
           {formatWithConversion(item.price, item.currency, rate, viewerCurrency)}
         </p>
         {item.auction && <p className="text-[10px] text-gray-400">현재가 · 낙찰가 변동</p>}

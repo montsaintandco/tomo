@@ -27,7 +27,7 @@ export default function ChatButton({ listingId }: { listingId: string }) {
   return (
     <div className="flex-1">
       <button onClick={start} disabled={busy}
-        className="w-full rounded-full border border-tomo-navy py-3 text-center font-bold text-tomo-navy disabled:opacity-50">
+        className="btn w-full border border-tomo-navy py-3 text-center text-tomo-navy">
         {busy ? "연결 중…" : "채팅하기"}
       </button>
       {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
