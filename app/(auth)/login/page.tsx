@@ -1,13 +1,21 @@
 "use client";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 
+// useSearchParams는 Suspense 경계 안에서만 프리렌더 가능
 export default function LoginPage() {
+  return <Suspense><LoginForm /></Suspense>;
+}
+
+function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const router = useRouter();
+  const next = useSearchParams().get("next");
+  // 온보딩이 미완이면 보호 경로 진입 시 미들웨어가 다시 온보딩으로 보냄
+  const dest = next && next.startsWith("/") ? next : "/onboarding";
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -15,7 +23,7 @@ export default function LoginPage() {
     const supabase = createBrowserSupabase();
     // 기존 계정이면 로그인 성공
     const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-    if (!signInError) return router.push("/onboarding");
+    if (!signInError) return router.push(dest);
     // 로그인 실패 → 신규 가입 시도
     const { error: signUpError } = await supabase.auth.signUp({ email, password });
     if (!signUpError) return router.push("/onboarding");

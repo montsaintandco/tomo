@@ -1,15 +1,15 @@
 import { createServerSupabase } from "@/lib/supabase/server";
-import { getViewer } from "@/lib/listings";
+import { getViewerOrGuest } from "@/lib/listings";
 import { formatWithConversion } from "@/lib/currency";
 import OriginalToggle from "@/components/OriginalToggle";
 import ChatButton from "@/components/ChatButton";
 import CheckoutButton from "@/components/CheckoutButton";
-import { notFound, redirect } from "next/navigation";
+import Link from "next/link";
+import { notFound } from "next/navigation";
 
 export default async function ListingDetail({ params }: { params: { id: string } }) {
   const supabase = await createServerSupabase();
-  const viewer = await getViewer(supabase);
-  if (!viewer) redirect("/onboarding");
+  const viewer = await getViewerOrGuest(supabase);
 
   const { data: l } = await supabase.from("listings")
     .select("*, listing_translations(language, title, description), profiles!listings_seller_id_fkey(id, nickname, trust_temp, region, country)")
@@ -55,7 +55,13 @@ export default async function ListingDetail({ params }: { params: { id: string }
             해외 상품 — {l.country === "JP" ? "나리타 센터" : "서울 센터"} 경유 배송 · 국제배송비 별도
           </p>
         )}
-        {viewer.id !== seller.id && l.status === "active" && (
+        {viewer.guest && l.status === "active" && (
+          <Link href={`/login?next=/listings/${l.id}`}
+            className="rounded-full bg-tomo-coral py-3 text-center font-bold text-white">
+            로그인하고 거래하기 · ログインして取引
+          </Link>
+        )}
+        {!viewer.guest && viewer.id !== seller.id && l.status === "active" && (
           <div className="flex gap-2">
             <ChatButton listingId={l.id} />
             <CheckoutButton listingId={l.id} />

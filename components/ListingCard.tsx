@@ -10,7 +10,10 @@ export type FeedListing = {
   listing_translations: { language: string; title: string }[];
 };
 
-export default function ListingCard({ listing, viewer }: { listing: FeedListing; viewer: Viewer }) {
+export default function ListingCard({ listing, viewer }: {
+  listing: FeedListing;
+  viewer: Pick<Viewer, "country" | "language" | "rate" | "currency">;
+}) {
   const foreign = listing.country !== viewer.country;
   return (
     <Link href={`/listings/${listing.id}`}

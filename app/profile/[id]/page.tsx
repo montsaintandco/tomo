@@ -1,5 +1,5 @@
 import { createServerSupabase } from "@/lib/supabase/server";
-import { getViewer } from "@/lib/listings";
+import { getViewerOrGuest } from "@/lib/listings";
 import { formatPrice, type Currency } from "@/lib/currency";
 import HeartGauge from "@/components/HeartGauge";
 import Link from "next/link";
@@ -12,9 +12,9 @@ type Review = {
 
 export default async function ProfilePage({ params }: { params: { id: string } }) {
   const supabase = await createServerSupabase();
-  const viewer = await getViewer(supabase);
-  if (!viewer) redirect("/onboarding");
-  const targetId = params.id === "me" ? viewer.id : params.id;
+  const viewer = await getViewerOrGuest(supabase);
+  if (params.id === "me" && (viewer.guest || !viewer.id)) redirect("/login?next=/profile/me");
+  const targetId = params.id === "me" ? viewer.id! : params.id;
 
   const { data: p } = await supabase.from("profiles")
     .select("id, nickname, country, region, trust_temp").eq("id", targetId).maybeSingle();
