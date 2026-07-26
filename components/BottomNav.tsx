@@ -4,9 +4,10 @@ import { usePathname } from "next/navigation";
 
 const items = [
   { href: "/", label: "홈" },
+  { href: "/global", label: "해외직구" },
   { href: "/sell", label: "판매" },
   { href: "/chat", label: "채팅" },
-  { href: "/profile/me", label: "마이" },
+  { href: "/mypage", label: "마이" },
 ] as const;
 
 export default function BottomNav() {
