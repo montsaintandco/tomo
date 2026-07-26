@@ -11,11 +11,18 @@ export default function LoginPage() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    setError("");
     const supabase = createBrowserSupabase();
-    let { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) ({ error } = await supabase.auth.signUp({ email, password }));
-    if (error) return setError(error.message);
-    router.push("/onboarding");
+    // 기존 계정이면 로그인 성공
+    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+    if (!signInError) return router.push("/onboarding");
+    // 로그인 실패 → 신규 가입 시도
+    const { error: signUpError } = await supabase.auth.signUp({ email, password });
+    if (!signUpError) return router.push("/onboarding");
+    // 이미 있는 이메일인데 가입도 실패 = 비밀번호가 틀린 것 (오해 소지 메시지 대체)
+    if (/already registered|already exists|user already/i.test(signUpError.message))
+      return setError("비밀번호가 올바르지 않아요 · パスワードが正しくありません");
+    setError(signUpError.message);
   }
 
   return (
