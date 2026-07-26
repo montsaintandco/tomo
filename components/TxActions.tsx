@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 
-type Role = "buyer" | "seller" | "other";
+type Role = "buyer" | "seller" | "admin" | "other";
 
 export default function TxActions({
   txId, status, isCrossBorder, role,
@@ -23,6 +23,10 @@ export default function TxActions({
     action = { label: "수령 확인", to: "delivered" };
   } else if (role === "buyer" && status === "delivered") {
     action = { label: "구매 확정", to: "completed" };
+  } else if (role === "admin" && status === "shipped_to_center") {
+    action = { label: "입고 확인", to: "center_received" };
+  } else if (role === "admin" && status === "center_received") {
+    action = { label: "국제 발송", to: "shipped_international", tracking: true };
   } else if ((role === "buyer" || role === "seller") && status === "pending_payment") {
     action = { label: "결제 취소", to: "cancelled", outline: true };
   }

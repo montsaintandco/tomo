@@ -35,8 +35,8 @@ export default async function TransactionPage({ params }: { params: { id: string
   if (!data) notFound(); // RLS: 거래 당사자가 아니면 여기서 차단
 
   const tx = data as unknown as TxDetail;
-  const role: "buyer" | "seller" | "other" =
-    tx.buyer_id === viewer.id ? "buyer" : tx.seller_id === viewer.id ? "seller" : "other";
+  const role: "buyer" | "seller" | "admin" | "other" =
+    tx.buyer_id === viewer.id ? "buyer" : tx.seller_id === viewer.id ? "seller" : viewer.isAdmin ? "admin" : "other";
   const other = role === "buyer" ? tx.seller : tx.buyer;
   const l = tx.listings;
   const foreign = tx.currency !== viewer.currency;
