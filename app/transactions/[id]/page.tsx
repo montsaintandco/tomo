@@ -4,6 +4,7 @@ import { formatPrice, formatWithConversion, type Currency } from "@/lib/currency
 import { platformFee, buyerTotal, sellerPayout } from "@/lib/fees";
 import EscrowTimeline from "@/components/EscrowTimeline";
 import TxActions from "@/components/TxActions";
+import ReviewForm from "@/components/ReviewForm";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
@@ -40,6 +41,14 @@ export default async function TransactionPage({ params }: { params: { id: string
   const other = role === "buyer" ? tx.seller : tx.buyer;
   const l = tx.listings;
   const foreign = tx.currency !== viewer.currency;
+  const isParty = role === "buyer" || role === "seller";
+
+  let alreadyReviewed = false;
+  if (tx.status === "completed" && isParty) {
+    const { data: mine } = await supabase.from("reviews")
+      .select("id").eq("transaction_id", tx.id).eq("reviewer_id", viewer.id).maybeSingle();
+    alreadyReviewed = !!mine;
+  }
 
   return (
     <main className="mx-auto max-w-md p-4 pb-24">
@@ -103,10 +112,12 @@ export default async function TransactionPage({ params }: { params: { id: string
 
       <TxActions txId={tx.id} status={tx.status} isCrossBorder={tx.is_cross_border} role={role} />
 
-      {tx.status === "completed" && (
-        <p className="mt-4 rounded-card bg-tomo-ivory p-3 text-center text-sm text-gray-500">
-          거래가 완료되었습니다 · 후기를 남겨보세요 (준비 중)
-        </p>
+      {tx.status === "completed" && isParty && (
+        <div className="mt-4">
+          {alreadyReviewed
+            ? <p className="rounded-card bg-tomo-ivory p-3 text-center text-sm text-gray-500">후기를 남겼어요 · 감사합니다</p>
+            : <ReviewForm txId={tx.id} />}
+        </div>
       )}
     </main>
   );

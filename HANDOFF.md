@@ -28,10 +28,11 @@ npm test      # vitest 30개 통과해야 정상
 - 상품 등록(이미지 업로드 + 자동번역 훅) / 피드(전체·내동네·해외직구 탭, 환산가) / 상세(원문 토글) / 검색(한일 양방향)
 - 채팅: 구매자↔판매자 1:1 실시간(Supabase Realtime) + 발송 시점 메시지 자동번역·저장, 번역 말풍선(원문 언어색)+원문 토글, `/chat` 목록·`/chat/[id]` 채팅방. 참여자만 열람 RLS
 - 에스크로 DB 계층(Plan 04 Task 1): 상태머신 SECURITY DEFINER 함수(start/advance/mark_paid/attach_payment_intent/submit_review) + 예약 lazy-expiry + 수수료 10% + 후기→신뢰온도. 직접 쓰기 차단, 함수 EXECUTE는 authenticated 한정(0009). 마이그레이션 0008·0009
+- 에스크로 UI(Plan 04 Task 4·5·6): `/transactions/[id]`(타임라인·금액·운송장·역할별 액션), `/admin/center`(admin SELECT RLS 0010, 센터별 입고/발송 큐), `/profile/[id]`(하트게이지·상품·받은 후기, `me` 별칭), 상세 안전결제 버튼(키 없으면 graceful)
 
 ## 남은 로드맵
 
-1. **Plan 04 나머지**: Task 2~3(Stripe 결제 API·webhook — 키 대기), Task 4(`/transactions/[id]`), Task 5(`/admin/center` + transactions admin SELECT RLS), Task 6(후기 UI·하트게이지·프로필). Task 4~6은 키 없이 진행 가능 (다음 순서)
+1. **Plan 04 Task 2~3 (키 대기)**: Stripe 결제 API(`/api/checkout` 완성)·webhook. `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET`/`SUPABASE_SERVICE_ROLE_KEY` 확보 후. Task 1·4·5·6·7(부분) 완료
 2. 배포: Vercel + 폰트 복원(Cafe24 써라운드/M PLUS Rounded — 샌드박스 문제로 제거됨, layout.tsx에 재적용)
 
 ## 필요한 키 (아직 없음)
@@ -57,4 +58,4 @@ npm test      # vitest 30개 통과해야 정상
 
 ## Claude에서 이어서 작업하려면
 
-새 세션에서 이 폴더를 연결하고: "TOMO 프로젝트 이어서. HANDOFF.md와 .superpowers/sdd/progress.md 읽고 Plan 04 Task 4(거래 진행 화면)부터 이어서". Stripe/service_role 키 확보 시 Task 2~3(결제·webhook)도 가능.
+새 세션에서 이 폴더를 연결하고: "TOMO 프로젝트 이어서. HANDOFF.md와 .superpowers/sdd/progress.md 읽고 Plan 04 Task 2~3(Stripe 결제·webhook) 진행". 키 3종(STRIPE_SECRET_KEY/STRIPE_WEBHOOK_SECRET/SUPABASE_SERVICE_ROLE_KEY) 먼저 `.env.local`에 추가 필요. 키 없으면 배포(Vercel+폰트)부터.
