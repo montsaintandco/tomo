@@ -88,8 +88,13 @@ export default async function GlobalPage({ searchParams }: {
       </header>
 
       <div className="px-4 pb-6 pt-2">
-        {translated && translated !== q && (
+        {q && translated && translated !== q && (
           <p className="mb-2 text-xs text-gray-400">일본어로 검색했어요: {translated}</p>
+        )}
+        {q && translated === q && /[가-힣]/.test(q) && (
+          <p className="mb-2 rounded-lg bg-tomo-pink/15 px-3 py-2 text-xs text-gray-600">
+            번역이 안 돼서 한국어 그대로 찾았어요. 일본어로 검색하면 훨씬 많이 나와요 (예: スニーカー)
+          </p>
         )}
 
         {items.length > 0 ? (

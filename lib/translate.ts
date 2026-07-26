@@ -52,25 +52,49 @@ export async function translateMessage(
   }
 }
 
-// 검색어 ko→ja 번역 (외부 일본 마켓 검색용). 키 없음/실패/이미 일본어면 원문 반환
-export async function translateQueryToJa(q: string): Promise<string> {
-  if (!process.env.ANTHROPIC_API_KEY) return q;
-  if (!/[가-힣]/.test(q)) return q; // 한글 없으면 그대로 (일본어/영어 검색)
+// 키 없이 쓰는 폴백 사전 (MyMemory 무료 티어). 검색어처럼 짧은 문자열에만 사용
+async function translateQueryFallback(q: string): Promise<string | null> {
   try {
-    const client = new Anthropic();
-    const res = await client.messages.create({
-      model: "claude-opus-4-8",
-      max_tokens: 100,
-      messages: [{
-        role: "user",
-        content: `Translate this Korean marketplace search query to Japanese. Reply with ONLY the Japanese query, nothing else.\n\n${q}`,
-      }],
-    });
-    const block = res.content.find((b) => b.type === "text");
-    if (!block || block.type !== "text") return q;
-    const out = block.text.trim();
-    return out.length > 0 ? out : q;
+    const res = await fetch(
+      `https://api.mymemory.translated.net/get?q=${encodeURIComponent(q)}&langpair=ko|ja`,
+      { signal: AbortSignal.timeout(6000), next: { revalidate: 86400 } }
+    );
+    if (!res.ok) return null;
+    const j = await res.json();
+    const out = String(j?.responseData?.translatedText ?? "").trim();
+    // 실패 시 원문이나 경고 문자열이 돌아옴 — 일본어 문자가 있어야 채택
+    if (!out || out === q || !/[ぁ-んァ-ヶ一-龯]/.test(out)) return null;
+    return out;
   } catch {
-    return q;
+    return null;
   }
+}
+
+// 검색어 ko→ja 번역 (외부 일본 마켓 검색용).
+// ANTHROPIC_API_KEY 있으면 Claude, 없으면 무료 폴백. 둘 다 실패하면 원문.
+export async function translateQueryToJa(q: string): Promise<string> {
+  if (!/[가-힣]/.test(q)) return q; // 한글 없으면 그대로 (일본어/영어 검색)
+
+  if (process.env.ANTHROPIC_API_KEY) {
+    try {
+      const client = new Anthropic();
+      const res = await client.messages.create({
+        model: "claude-opus-4-8",
+        max_tokens: 100,
+        messages: [{
+          role: "user",
+          content: `Translate this Korean marketplace search query to Japanese. Reply with ONLY the Japanese query, nothing else.\n\n${q}`,
+        }],
+      });
+      const block = res.content.find((b) => b.type === "text");
+      if (block?.type === "text") {
+        const out = block.text.trim();
+        if (out.length > 0) return out;
+      }
+    } catch {
+      // 키가 있어도 실패할 수 있으므로 폴백으로 진행
+    }
+  }
+
+  return (await translateQueryFallback(q)) ?? q;
 }
