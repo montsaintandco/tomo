@@ -63,6 +63,16 @@ export default async function Home({ searchParams }: { searchParams: { tab?: str
           );
         })}
       </div>
+
+      {/* 구매 루트 안내: 자체 상품 외에 일본 마켓 대행 구매 진입점 */}
+      <Link href="/global"
+        className="mb-4 flex items-center justify-between rounded-card bg-tomo-blue/20 p-3">
+        <div>
+          <p className="text-sm font-bold text-tomo-navy">일본 마켓 구매대행</p>
+          <p className="text-xs text-gray-500">메루카리·야후 상품을 대신 사드려요</p>
+        </div>
+        <span className="text-sm font-bold text-tomo-navy">→</span>
+      </Link>
       {localNeedsLogin ? (
         <div className="mt-16 flex flex-col items-center gap-3 rounded-card bg-tomo-ivory p-6 text-center">
           <p className="text-sm text-gray-500">내 동네 상품은 지역 설정 후 볼 수 있어요<br/>ご近所の商品はログイン後に表示されます</p>
