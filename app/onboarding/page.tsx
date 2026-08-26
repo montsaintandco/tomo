@@ -35,25 +35,28 @@ export default function OnboardingPage() {
     <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-4 p-6">
       <h1 className="text-xl font-bold">프로필 만들기 · プロフィール作成</h1>
       <form onSubmit={submit} className="flex flex-col gap-3">
-        <input className="rounded-full border px-4 py-3" placeholder="닉네임 · ニックネーム" value={nickname} onChange={(e) => setNickname(e.target.value)} required maxLength={20} />
-        <div className="flex gap-2">
+        <label htmlFor="ob-nickname" className="sr-only">닉네임 · ニックネーム</label>
+        <input id="ob-nickname" className="rounded-full border px-4 py-3" placeholder="닉네임 · ニックネーム" value={nickname} onChange={(e) => setNickname(e.target.value)} required maxLength={20} />
+        <div className="flex gap-2" role="group" aria-label="국가 · 国">
           {(["KR", "JP"] as const).map((c) => (
-            <button type="button" key={c}
+            <button type="button" key={c} aria-pressed={country === c}
               className={`flex-1 rounded-full py-3 font-bold ${country === c ? (c === "KR" ? "bg-tomo-blue text-white" : "bg-tomo-pink text-white") : "border"}`}
               onClick={() => { setCountry(c); setRegion(REGIONS[c][0]); setLanguage(c === "KR" ? "ko" : "ja"); }}>
               {c === "KR" ? "한국" : "日本"}
             </button>
           ))}
         </div>
-        <select className="rounded-full border px-4 py-3" value={region} onChange={(e) => setRegion(e.target.value)}>
+        <label htmlFor="ob-region" className="sr-only">지역 · 地域</label>
+        <select id="ob-region" className="rounded-full border px-4 py-3" value={region} onChange={(e) => setRegion(e.target.value)}>
           {REGIONS[country].map((r) => <option key={r}>{r}</option>)}
         </select>
-        <select className="rounded-full border px-4 py-3" value={language} onChange={(e) => setLanguage(e.target.value as "ko" | "ja")}>
+        <label htmlFor="ob-language" className="sr-only">언어 · 言語</label>
+        <select id="ob-language" className="rounded-full border px-4 py-3" value={language} onChange={(e) => setLanguage(e.target.value as "ko" | "ja")}>
           <option value="ko">한국어</option>
           <option value="ja">日本語</option>
         </select>
         <button className="rounded-full bg-tomo-coral-deep py-3 font-bold text-white">완료 · 完了</button>
-        {error && <p className="text-sm text-tomo-rose">{error}</p>}
+        {error && <p role="alert" className="text-sm text-tomo-rose">{error}</p>}
       </form>
     </main>
   );
