@@ -30,9 +30,9 @@ export default function QuoteForm({ id, defaultItemPrice, quoted, total }: {
   }
 
   return (
-    <div className="rounded-card bg-gray-50 p-2">
+    <div className="rounded-card bg-tomo-navy/5 p-2">
       {quoted && total != null && (
-        <p className="mb-2 text-xs text-gray-500">발송된 견적: ¥{total.toLocaleString()} · 수정 후 재발송 가능</p>
+        <p className="mb-2 text-xs text-ink-soft">발송된 견적: ¥{total.toLocaleString()} · 수정 후 재발송 가능</p>
       )}
       <div className="mb-2 grid grid-cols-3 gap-2">
         <Field label="상품가" value={itemPrice} onChange={setItemPrice} />
@@ -44,7 +44,7 @@ export default function QuoteForm({ id, defaultItemPrice, quoted, total }: {
         className="w-full rounded-full bg-tomo-navy py-2 text-sm font-bold text-white disabled:opacity-50">
         {busy ? "발송 중…" : quoted ? "견적 재발송" : "견적 발송"}
       </button>
-      {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
+      {error && <p className="mt-1 text-xs text-tomo-rose">{error}</p>}
     </div>
   );
 }
@@ -52,7 +52,7 @@ export default function QuoteForm({ id, defaultItemPrice, quoted, total }: {
 function Field({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   return (
     <label className="block">
-      <span className="mb-0.5 block text-[10px] text-gray-500">{label} (¥)</span>
+      <span className="mb-0.5 block text-[10px] text-ink-soft">{label} (¥)</span>
       <input type="number" min={0} value={value} onChange={(e) => onChange(e.target.value)}
         className="w-full rounded border px-2 py-1 text-sm" />
     </label>

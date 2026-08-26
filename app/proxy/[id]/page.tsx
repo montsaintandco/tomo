@@ -48,7 +48,7 @@ export default async function ProxyDetailPage({ params }: { params: { id: string
       {item && (
         <Link href={`/global/${item.source}/${item.source_id}`}
           className="mb-4 flex items-center gap-3 rounded-card border bg-white p-3">
-          <div className="h-14 w-14 shrink-0 overflow-hidden rounded-card bg-gray-100">
+          <div className="h-14 w-14 shrink-0 overflow-hidden rounded-card bg-tomo-navy/5">
             {item.images[0] && (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={item.images[0]} alt="" className="h-full w-full object-cover" />
@@ -56,7 +56,7 @@ export default async function ProxyDetailPage({ params }: { params: { id: string
           </div>
           <div className="min-w-0">
             <p className="line-clamp-2 text-sm font-bold">{item.title_translated || item.title}</p>
-            <p className="mt-0.5 text-xs text-gray-500">
+            <p className="mt-0.5 text-xs text-ink-soft">
               {SOURCE_LABEL[item.source as MarketSource]} · {formatPrice(item.price, item.currency)}
             </p>
           </div>
@@ -65,16 +65,16 @@ export default async function ProxyDetailPage({ params }: { params: { id: string
 
       <div className="mb-4 rounded-card border bg-white p-4">
         {cancelled ? (
-          <p className="text-center text-sm font-bold text-gray-500">취소된 신청이에요</p>
+          <p className="text-center text-sm font-bold text-ink-soft">취소된 신청이에요</p>
         ) : (
           <ol className="flex flex-col gap-2">
             {STEPS.map(([s, label], i) => (
               <li key={s} className="flex items-center gap-3">
                 <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-                  i < cur ? "bg-tomo-blue text-white" : i === cur ? "bg-tomo-coral text-white" : "bg-gray-200 text-gray-400"}`}>
+                  i < cur ? "bg-tomo-blue text-white" : i === cur ? "bg-tomo-coral-deep text-white" : "bg-tomo-navy/10 text-ink-faint"}`}>
                   {i < cur ? "✓" : i + 1}
                 </span>
-                <span className={`text-sm ${i === cur ? "font-bold text-tomo-navy" : i < cur ? "text-gray-600" : "text-gray-400"}`}>
+                <span className={`text-sm ${i === cur ? "font-bold text-tomo-navy" : i < cur ? "text-ink-soft" : "text-ink-faint"}`}>
                   {label}
                 </span>
               </li>
@@ -86,9 +86,9 @@ export default async function ProxyDetailPage({ params }: { params: { id: string
       {r.quote_total != null ? (
         <div className="mb-4 rounded-card border bg-white p-4 text-sm">
           <p className="mb-2 font-bold text-tomo-navy">견적</p>
-          <div className="flex justify-between"><span className="text-gray-500">상품가</span><span>{formatPrice(r.quote_item_price ?? 0, "JPY")}</span></div>
-          <div className="mt-1 flex justify-between"><span className="text-gray-500">대행 수수료</span><span>{formatPrice(r.quote_fee ?? 0, "JPY")}</span></div>
-          <div className="mt-1 flex justify-between"><span className="text-gray-500">국제배송비</span><span>{formatPrice(r.quote_shipping ?? 0, "JPY")}</span></div>
+          <div className="flex justify-between"><span className="text-ink-soft">상품가</span><span>{formatPrice(r.quote_item_price ?? 0, "JPY")}</span></div>
+          <div className="mt-1 flex justify-between"><span className="text-ink-soft">대행 수수료</span><span>{formatPrice(r.quote_fee ?? 0, "JPY")}</span></div>
+          <div className="mt-1 flex justify-between"><span className="text-ink-soft">국제배송비</span><span>{formatPrice(r.quote_shipping ?? 0, "JPY")}</span></div>
           <div className="mt-2 flex justify-between border-t pt-2 font-bold">
             <span>합계</span>
             <span className="text-tomo-navy">
@@ -98,13 +98,13 @@ export default async function ProxyDetailPage({ params }: { params: { id: string
           </div>
         </div>
       ) : (
-        <p className="mb-4 rounded-card bg-tomo-ivory p-3 text-center text-xs text-gray-500">
+        <p className="mb-4 rounded-card bg-tomo-ivory p-3 text-center text-xs text-ink-soft">
           견적을 준비하고 있어요. 확정되면 알려드릴게요.
         </p>
       )}
 
       {r.intl_tracking && (
-        <p className="mb-4 rounded-card border bg-white p-3 text-xs text-gray-600">국제 운송장: {r.intl_tracking}</p>
+        <p className="mb-4 rounded-card border bg-white p-3 text-xs text-ink-soft">국제 운송장: {r.intl_tracking}</p>
       )}
 
       <ProxyActions id={r.id} status={r.status} isOwner={isOwner} isAdmin={viewer.isAdmin} />

@@ -40,7 +40,7 @@ export default function ExternalItemForm() {
         {["daangn", "joongna"].map((s) => (
           <button key={s} onClick={() => setSource(s)}
             className={`rounded-full px-3 py-1 text-xs font-bold ${
-              source === s ? "bg-tomo-navy text-white" : "border text-gray-500"}`}>
+              source === s ? "bg-tomo-navy text-white" : "border text-ink-soft"}`}>
             {s === "daangn" ? "당근마켓" : "중고나라"}
           </button>
         ))}
@@ -54,10 +54,10 @@ export default function ExternalItemForm() {
       <input value={image} onChange={(e) => setImage(e.target.value)} placeholder="이미지 URL (선택)"
         className="rounded-card border px-3 py-2 text-sm" />
       <button onClick={save} disabled={busy || !ready}
-        className="rounded-full bg-tomo-coral py-2 text-sm font-bold text-white disabled:opacity-50">
+        className="rounded-full bg-tomo-coral-deep py-2 text-sm font-bold text-white disabled:opacity-50">
         {busy ? "등록 중…" : "등록"}
       </button>
-      {msg && <p className="text-center text-xs text-gray-500">{msg}</p>}
+      {msg && <p className="text-center text-xs text-ink-soft">{msg}</p>}
     </div>
   );
 }

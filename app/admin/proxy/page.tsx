@@ -38,7 +38,7 @@ export default async function AdminProxyPage() {
     <main className="mx-auto max-w-md p-4 pb-24">
       <div className="mb-4 flex items-baseline justify-between">
         <h1 className="text-xl font-bold text-tomo-navy">구매대행 관리</h1>
-        <Link href="/admin" className="text-xs text-gray-500">← 운영</Link>
+        <Link href="/admin" className="text-xs text-ink-soft">← 운영</Link>
       </div>
 
       <div className="flex flex-col gap-3">
@@ -47,7 +47,7 @@ export default async function AdminProxyPage() {
           return (
             <div key={r.id} className="rounded-card border bg-white p-3">
               <div className="mb-2 flex items-start gap-3">
-                <div className="h-12 w-12 shrink-0 overflow-hidden rounded-card bg-gray-100">
+                <div className="h-12 w-12 shrink-0 overflow-hidden rounded-card bg-tomo-navy/5">
                   {it?.images?.[0] && (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={it.images[0]} alt="" className="h-full w-full object-cover" />
@@ -55,15 +55,15 @@ export default async function AdminProxyPage() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="line-clamp-2 text-sm font-bold">{it?.title ?? "상품"}</p>
-                  <p className="mt-0.5 text-xs text-gray-500">
+                  <p className="mt-0.5 text-xs text-ink-soft">
                     {it ? SOURCE_LABEL[it.source as MarketSource] : ""} · {r.profiles?.nickname} · {LABEL[r.status] ?? r.status}
                   </p>
-                  {it && <p className="text-xs text-gray-400">원가 {formatPrice(it.price, "JPY")}</p>}
+                  {it && <p className="text-xs text-ink-faint">원가 {formatPrice(it.price, "JPY")}</p>}
                 </div>
                 <Link href={`/proxy/${r.id}`} className="shrink-0 text-xs text-tomo-navy">상세</Link>
               </div>
 
-              {r.note && <p className="mb-2 rounded-card bg-tomo-ivory p-2 text-xs text-gray-600">요청: {r.note}</p>}
+              {r.note && <p className="mb-2 rounded-card bg-tomo-ivory p-2 text-xs text-ink-soft">요청: {r.note}</p>}
 
               {(r.status === "requested" || r.status === "quoted") ? (
                 <QuoteForm id={r.id}
@@ -77,7 +77,7 @@ export default async function AdminProxyPage() {
           );
         })}
         {rows.length === 0 && (
-          <p className="mt-16 text-center text-sm text-gray-400">처리할 대행 신청이 없어요</p>
+          <p className="mt-16 text-center text-sm text-ink-faint">처리할 대행 신청이 없어요</p>
         )}
       </div>
     </main>

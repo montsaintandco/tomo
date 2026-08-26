@@ -39,7 +39,7 @@ export default async function AdminCenterPage() {
         const items = rows.filter((r) => r.center === c);
         return (
           <section key={c} className="mb-5">
-            <h2 className="mb-2 text-sm font-bold text-gray-500">
+            <h2 className="mb-2 text-sm font-bold text-ink-soft">
               {c === "SEOUL" ? "서울 센터" : "나리타 센터"} ({items.length})
             </h2>
             <div className="flex flex-col gap-2">
@@ -48,7 +48,7 @@ export default async function AdminCenterPage() {
                   className="flex items-center justify-between rounded-card border bg-white p-3">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-bold">{r.listings?.title ?? "—"}</p>
-                    <p className="truncate text-xs text-gray-500">
+                    <p className="truncate text-xs text-ink-soft">
                       {r.seller?.nickname} → {r.buyer?.nickname}
                       {r.domestic_tracking && ` · ${r.domestic_tracking}`}
                     </p>
@@ -59,7 +59,7 @@ export default async function AdminCenterPage() {
                 </Link>
               ))}
               {items.length === 0 && (
-                <p className="rounded-card bg-tomo-ivory p-3 text-center text-xs text-gray-400">
+                <p className="rounded-card bg-tomo-ivory p-3 text-center text-xs text-ink-faint">
                   대기 중인 거래 없음
                 </p>
               )}

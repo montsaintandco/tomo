@@ -70,10 +70,10 @@ export default async function ExternalItemPage({ params }: {
             {SOURCE_LABEL[source]}
           </span>
           {item.auction && (
-            <span className="rounded-full bg-tomo-coral px-2.5 py-1 text-[11px] font-bold text-white">입찰 진행</span>
+            <span className="rounded-full bg-tomo-coral-deep px-2.5 py-1 text-[11px] font-bold text-white">입찰 진행</span>
           )}
           {item.soldOut && (
-            <span className="rounded-full bg-gray-400 px-2.5 py-1 text-[11px] font-bold text-white">품절</span>
+            <span className="rounded-full bg-tomo-navy/70 px-2.5 py-1 text-[11px] font-bold text-white">품절</span>
           )}
         </div>
 
@@ -83,16 +83,16 @@ export default async function ExternalItemPage({ params }: {
           <p className="text-xl font-bold text-tomo-navy">
             {formatWithConversion(item.price, item.currency, rate, viewer.currency)}
           </p>
-          {item.auction && <p className="mt-0.5 text-xs text-gray-500">현재가 — 낙찰가는 달라질 수 있어요</p>}
+          {item.auction && <p className="mt-0.5 text-xs text-ink-soft">현재가 — 낙찰가는 달라질 수 있어요</p>}
         </div>
 
         {est && (
           <div className="rounded-card bg-tomo-ivory p-3 text-xs">
             <p className="mb-2 font-bold text-tomo-navy">예상 결제 금액 (견적 전 참고치)</p>
-            <div className="flex justify-between"><span className="text-gray-500">상품가</span><span>{formatPrice(est.item, "JPY")}</span></div>
-            <div className="mt-0.5 flex justify-between"><span className="text-gray-500">대행 수수료</span><span>{formatPrice(est.fee, "JPY")}</span></div>
-            <div className="mt-0.5 flex justify-between"><span className="text-gray-500">현지 결제·송금</span><span>{formatPrice(est.remit, "JPY")}</span></div>
-            <div className="mt-0.5 flex justify-between"><span className="text-gray-500">국제배송(예상)</span><span>{formatPrice(est.shipping, "JPY")}</span></div>
+            <div className="flex justify-between"><span className="text-ink-soft">상품가</span><span>{formatPrice(est.item, "JPY")}</span></div>
+            <div className="mt-0.5 flex justify-between"><span className="text-ink-soft">대행 수수료</span><span>{formatPrice(est.fee, "JPY")}</span></div>
+            <div className="mt-0.5 flex justify-between"><span className="text-ink-soft">현지 결제·송금</span><span>{formatPrice(est.remit, "JPY")}</span></div>
+            <div className="mt-0.5 flex justify-between"><span className="text-ink-soft">국제배송(예상)</span><span>{formatPrice(est.shipping, "JPY")}</span></div>
             <div className="mt-2 flex justify-between border-t pt-2 font-bold">
               <span>합계</span>
               <span className="text-tomo-navy">
@@ -100,18 +100,18 @@ export default async function ExternalItemPage({ params }: {
                 {viewer.currency === "KRW" && ` (약 ${formatPrice(convertPrice(est.total, "JPY", viewer.rate), "KRW")})`}
               </span>
             </div>
-            <p className="mt-2 text-[10px] text-gray-400">
+            <p className="mt-2 text-[10px] text-ink-faint">
               무게·부피에 따라 국제배송비가 달라져요. 신청 후 정확한 견적을 보내드립니다.
             </p>
           </div>
         )}
 
         {item.description && (
-          <p className="whitespace-pre-wrap text-sm leading-relaxed text-gray-700">{item.description}</p>
+          <p className="whitespace-pre-wrap text-sm leading-relaxed text-ink-soft">{item.description}</p>
         )}
 
         {(item.sellerName || item.condition || Object.keys(item.extra).length > 0) && (
-          <div className="rounded-card border bg-white p-3 text-xs text-gray-600">
+          <div className="rounded-card border bg-white p-3 text-xs text-ink-soft">
             {item.sellerName && <p>판매자: {item.sellerName}</p>}
             {item.condition && <p className="mt-1">상품 상태: {item.condition}</p>}
             {Object.entries(item.extra).filter(([, v]) => v).map(([k, v]) => (
@@ -121,13 +121,13 @@ export default async function ExternalItemPage({ params }: {
         )}
 
         {stale && (
-          <p className="rounded-card bg-gray-100 p-3 text-xs text-gray-500">
+          <p className="rounded-card bg-tomo-navy/5 p-3 text-xs text-ink-soft">
             원본 정보를 불러오지 못해 저장된 정보를 표시하고 있어요. 가격·재고가 바뀌었을 수 있어요.
           </p>
         )}
 
         <a href={item.url} target="_blank" rel="noopener noreferrer"
-          className="text-center text-xs text-gray-400 underline">
+          className="text-center text-xs text-ink-faint underline">
           원본 상품 페이지 열기
         </a>
       </div>
@@ -135,11 +135,11 @@ export default async function ExternalItemPage({ params }: {
       <div className="fixed bottom-0 left-0 right-0 mx-auto max-w-md border-t bg-white p-3">
         {viewer.guest ? (
           <Link href={`/login?next=/global/${source}/${params.id}`}
-            className="block rounded-full bg-tomo-coral py-3 text-center font-bold text-white">
+            className="block rounded-full bg-tomo-coral-deep py-3 text-center font-bold text-white">
             로그인하고 대행 신청 · ログインして代行依頼
           </Link>
         ) : item.soldOut ? (
-          <button disabled className="w-full rounded-full bg-gray-300 py-3 font-bold text-white">품절된 상품이에요</button>
+          <button disabled className="w-full rounded-full bg-tomo-navy/70 py-3 font-bold text-white">품절된 상품이에요</button>
         ) : (
           <ProxyRequestButton
             source={source} sourceId={params.id}

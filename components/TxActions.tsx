@@ -52,10 +52,10 @@ export default function TxActions({
       )}
       <button onClick={run} disabled={busy}
         className={`w-full rounded-full py-3 font-bold disabled:opacity-50 ${
-          a.outline ? "border border-tomo-navy text-tomo-navy" : "bg-tomo-coral text-white"}`}>
+          a.outline ? "border border-tomo-navy text-tomo-navy" : "bg-tomo-coral-deep text-white"}`}>
         {busy ? "처리 중…" : a.label}
       </button>
-      {error && <p className="text-xs text-red-500">{error}</p>}
+      {error && <p className="text-xs text-tomo-rose">{error}</p>}
     </div>
   );
 }

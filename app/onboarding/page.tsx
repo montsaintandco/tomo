@@ -52,8 +52,8 @@ export default function OnboardingPage() {
           <option value="ko">한국어</option>
           <option value="ja">日本語</option>
         </select>
-        <button className="rounded-full bg-tomo-coral py-3 font-bold text-white">완료 · 完了</button>
-        {error && <p className="text-sm text-red-500">{error}</p>}
+        <button className="rounded-full bg-tomo-coral-deep py-3 font-bold text-white">완료 · 完了</button>
+        {error && <p className="text-sm text-tomo-rose">{error}</p>}
       </form>
     </main>
   );

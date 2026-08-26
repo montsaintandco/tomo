@@ -81,10 +81,10 @@ export default function SellPage() {
           <input type="checkbox" checked={crossBorder} onChange={(e) => setCrossBorder(e.target.checked)} />
           해외 판매 허용 (센터 경유 배송)
         </label>
-        <button disabled={busy} className="rounded-full bg-tomo-coral py-3 font-bold text-white disabled:opacity-50">
+        <button disabled={busy} className="rounded-full bg-tomo-coral-deep py-3 font-bold text-white disabled:opacity-50">
           {busy ? "등록 중…" : "등록하기 · 出品"}
         </button>
-        {error && <p className="text-sm text-red-500">{error}</p>}
+        {error && <p className="text-sm text-tomo-rose">{error}</p>}
       </form>
     </main>
   );

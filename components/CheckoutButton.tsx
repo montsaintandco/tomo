@@ -27,10 +27,17 @@ export default function CheckoutButton({ listingId }: { listingId: string }) {
   return (
     <div className="flex-1">
       <button onClick={go} disabled={busy}
-        className="btn w-full bg-tomo-coral py-3 text-white">
-        {busy ? "연결 중…" : "안전결제"}
+        className="btn flex w-full items-center justify-center gap-1.5 bg-tomo-coral-deep py-3 text-white">
+        {busy ? "연결 중…" : (
+          <>
+            <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" aria-hidden>
+              <path d="M12 21C7.2 17.2 2.5 13.6 2.5 8.9 2.5 5.6 5 3.5 7.8 3.5c1.7 0 3.3.9 4.2 2.3.9-1.4 2.5-2.3 4.2-2.3 2.8 0 5.3 2.1 5.3 5.4 0 4.7-4.7 8.3-9.5 12.1z" fill="#fff" />
+            </svg>
+            안전결제
+          </>
+        )}
       </button>
-      {msg && <p className="mt-1 text-xs text-gray-500">{msg}</p>}
+      {msg && <p className="mt-1 text-xs text-ink-soft">{msg}</p>}
     </div>
   );
 }

@@ -43,7 +43,7 @@ export default async function MyPage() {
         <div className="mb-3 flex items-center justify-between">
           <div>
             <p className="text-lg font-bold">{profile?.nickname}</p>
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-ink-faint">
               <span className="mr-1 rounded-full bg-tomo-blue/40 px-2 py-0.5">{profile?.country}</span>
               {profile?.region}
             </p>
@@ -108,7 +108,7 @@ function Section({ title, href, hrefLabel, children }: {
   return (
     <section className="mb-5">
       <div className="mb-2 flex items-baseline justify-between">
-        <h2 className="text-sm font-bold text-gray-500">{title}</h2>
+        <h2 className="text-sm font-bold text-ink-soft">{title}</h2>
         {href && <Link href={href} className="text-xs text-tomo-navy">{hrefLabel} →</Link>}
       </div>
       <div className="flex flex-col gap-2">{children}</div>
@@ -121,7 +121,7 @@ function Row({ href, image, title, sub, right }: {
 }) {
   return (
     <Link href={href} className="flex items-center gap-3 rounded-card border bg-white p-3">
-      <div className="h-11 w-11 shrink-0 overflow-hidden rounded-card bg-gray-100">
+      <div className="h-11 w-11 shrink-0 overflow-hidden rounded-card bg-tomo-navy/5">
         {image && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={image} alt="" className="h-full w-full object-cover" />
@@ -129,7 +129,7 @@ function Row({ href, image, title, sub, right }: {
       </div>
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm">{title}</p>
-        <p className="text-xs text-gray-400">{sub}</p>
+        <p className="text-xs text-ink-faint">{sub}</p>
       </div>
       <span className="shrink-0 text-sm font-bold text-tomo-navy">{right}</span>
     </Link>
@@ -137,5 +137,5 @@ function Row({ href, image, title, sub, right }: {
 }
 
 function Empty({ text }: { text: string }) {
-  return <p className="rounded-card bg-tomo-ivory p-3 text-center text-xs text-gray-400">{text}</p>;
+  return <p className="rounded-card bg-tomo-ivory p-3 text-center text-xs text-ink-faint">{text}</p>;
 }

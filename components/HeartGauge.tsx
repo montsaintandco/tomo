@@ -3,12 +3,24 @@ export default function HeartGauge({ temp }: { temp: number }) {
   const pct = Math.max(0, Math.min(100, (temp / 50) * 100));
   return (
     <div>
-      <div className="mb-1 flex items-center justify-between">
-        <span className="text-lg font-bold text-tomo-coral">♥ {temp.toFixed(1)}°</span>
-        <span className="text-xs text-gray-400">신뢰온도 · 信頼温度</span>
+      <div className="mb-1.5 flex items-end justify-between">
+        <span className="tnum flex items-center gap-1.5 font-brand text-xl text-tomo-coral-deep">
+          <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden>
+            <path d="M12 21C7.2 17.2 2.5 13.6 2.5 8.9 2.5 5.6 5 3.5 7.8 3.5c1.7 0 3.3.9 4.2 2.3.9-1.4 2.5-2.3 4.2-2.3 2.8 0 5.3 2.1 5.3 5.4 0 4.7-4.7 8.3-9.5 12.1z" fill="#C14E4C" />
+          </svg>
+          {temp.toFixed(1)}°
+        </span>
+        <span className="text-xs text-ink-faint">신뢰온도 · 信頼温度</span>
       </div>
-      <div className="h-2 overflow-hidden rounded-full bg-gray-100">
-        <div className="h-full rounded-full bg-tomo-coral" style={{ width: `${pct}%` }} />
+      {/* 핑크→코랄로 데워지는 트랙 (브릿지 그라데이션은 크로스보더 전용이라 안 씀) */}
+      <div className="relative h-2.5 overflow-hidden rounded-full bg-tomo-navy/5">
+        <div className="absolute inset-y-0 left-0 rounded-full"
+          style={{ width: `${pct}%`, background: "linear-gradient(90deg, #F2AFAF, #C14E4C)" }} />
+      </div>
+      <div className="tnum mt-1 flex justify-between text-[10px] text-ink-faint">
+        <span>0°</span>
+        <span>기본 36.5°</span>
+        <span>50°</span>
       </div>
     </div>
   );

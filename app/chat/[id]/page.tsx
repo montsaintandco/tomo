@@ -45,7 +45,7 @@ export default async function ChatDetailPage({ params }: { params: { id: string 
         <p className="font-bold">{other.nickname}</p>
         <Link href={`/listings/${l.id}`}
           className="mt-2 flex items-center gap-2 rounded-card bg-tomo-ivory p-2">
-          <div className="h-10 w-10 shrink-0 overflow-hidden rounded-card bg-gray-100">
+          <div className="h-10 w-10 shrink-0 overflow-hidden rounded-card bg-tomo-navy/5">
             {l.images[0] && (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={l.images[0]} alt="" className="h-full w-full object-cover" />

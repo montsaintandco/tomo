@@ -30,10 +30,10 @@ export default function ProxyRequestButton(props: {
   return (
     <div>
       <button onClick={submit} disabled={busy}
-        className="w-full rounded-full bg-tomo-coral py-3 font-bold text-white disabled:opacity-50">
+        className="w-full rounded-full bg-tomo-coral-deep py-3 font-bold text-white disabled:opacity-50">
         {busy ? "신청 중…" : "대행 신청하기 · 代行を依頼"}
       </button>
-      {error && <p className="mt-1 text-center text-xs text-red-500">{error}</p>}
+      {error && <p className="mt-1 text-center text-xs text-tomo-rose">{error}</p>}
     </div>
   );
 }

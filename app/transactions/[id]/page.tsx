@@ -56,7 +56,7 @@ export default async function TransactionPage({ params }: { params: { id: string
 
       <Link href={`/listings/${l.id}`}
         className="mb-4 flex items-center gap-3 rounded-card border bg-white p-3">
-        <div className="h-14 w-14 shrink-0 overflow-hidden rounded-card bg-gray-100">
+        <div className="h-14 w-14 shrink-0 overflow-hidden rounded-card bg-tomo-navy/5">
           {l.images[0] && (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={l.images[0]} alt="" className="h-full w-full object-cover" />
@@ -64,7 +64,7 @@ export default async function TransactionPage({ params }: { params: { id: string
         </div>
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-bold">{displayTitle(l, viewer.language)}</p>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-ink-soft">
             {role === "buyer" ? "판매자" : "구매자"} · {other.nickname}
             {tx.is_cross_border && tx.center && ` · ${tx.center === "NARITA" ? "나리타" : "서울"} 센터`}
           </p>
@@ -77,12 +77,12 @@ export default async function TransactionPage({ params }: { params: { id: string
 
       <div className="mb-4 rounded-card border bg-white p-4 text-sm">
         <div className="flex justify-between">
-          <span className="text-gray-500">상품가</span>
+          <span className="text-ink-soft">상품가</span>
           <span>{formatPrice(tx.item_price, tx.currency)}</span>
         </div>
         {tx.is_cross_border && (
           <div className="mt-1 flex justify-between">
-            <span className="text-gray-500">국제배송비</span>
+            <span className="text-ink-soft">국제배송비</span>
             <span>{formatPrice(tx.intl_shipping_fee, tx.currency)}</span>
           </div>
         )}
@@ -97,14 +97,14 @@ export default async function TransactionPage({ params }: { params: { id: string
           </span>
         </div>
         {role === "seller" && (
-          <p className="mt-1 text-right text-[10px] text-gray-400">
+          <p className="mt-1 text-right text-[10px] text-ink-faint">
             플랫폼 수수료 10% ({formatPrice(platformFee(tx.item_price), tx.currency)}) 차감
           </p>
         )}
       </div>
 
       {(tx.domestic_tracking || tx.intl_tracking) && (
-        <div className="mb-4 rounded-card border bg-white p-4 text-xs text-gray-600">
+        <div className="mb-4 rounded-card border bg-white p-4 text-xs text-ink-soft">
           {tx.domestic_tracking && <p>국내 운송장: {tx.domestic_tracking}</p>}
           {tx.intl_tracking && <p className="mt-1">국제 운송장: {tx.intl_tracking}</p>}
         </div>
@@ -115,7 +115,7 @@ export default async function TransactionPage({ params }: { params: { id: string
       {tx.status === "completed" && isParty && (
         <div className="mt-4">
           {alreadyReviewed
-            ? <p className="rounded-card bg-tomo-ivory p-3 text-center text-sm text-gray-500">후기를 남겼어요 · 감사합니다</p>
+            ? <p className="rounded-card bg-tomo-ivory p-3 text-center text-sm text-ink-soft">후기를 남겼어요 · 감사합니다</p>
             : <ReviewForm txId={tx.id} />}
         </div>
       )}

@@ -16,8 +16,8 @@ export default function ExternalItemCard({ item, rate, viewerCurrency }: {
   const effectiveRate = item.currency === viewerCurrency ? 1 : rate;
   return (
     <Link href={`/global/${item.source}/${item.sourceId}`}
-      className="group flex flex-col transition-opacity hover:opacity-90 active:opacity-70">
-      <div className="relative aspect-square overflow-hidden rounded-xl bg-gray-100">
+      className="press group flex flex-col">
+      <div className="relative aspect-square overflow-hidden rounded-2xl bg-tomo-navy/5">
         {item.thumb ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={item.thumb} alt="" loading="lazy"
@@ -25,26 +25,26 @@ export default function ExternalItemCard({ item, rate, viewerCurrency }: {
         ) : (
           <div className="skeleton h-full w-full" />
         )}
-        <span className="absolute left-1.5 top-1.5 rounded bg-black/55 px-1.5 py-0.5 text-[10px] font-bold text-white backdrop-blur-sm">
+        <span className="absolute left-1.5 top-1.5 rounded-full bg-tomo-navy/60 px-2 py-0.5 text-[10px] font-bold text-white backdrop-blur-sm">
           {SOURCE_LABEL[item.source]}
         </span>
         {item.auction && (
-          <span className="absolute right-1.5 top-1.5 rounded bg-tomo-coral px-1.5 py-0.5 text-[10px] font-bold text-white">
+          <span className="absolute right-1.5 top-1.5 rounded-full bg-tomo-coral-deep px-2 py-0.5 text-[10px] font-bold text-white">
             입찰중
           </span>
         )}
         {item.soldOut && (
-          <span className="absolute inset-0 flex items-center justify-center bg-black/45 text-sm font-bold text-white">
+          <span className="absolute inset-0 flex items-center justify-center bg-tomo-navy/70 text-sm font-bold text-white">
             품절
           </span>
         )}
       </div>
       <div className="mt-1.5 flex flex-col gap-0.5">
-        <p className="line-clamp-2 text-xs leading-snug text-gray-600">{item.title}</p>
-        <p className="tnum text-[15px] font-bold text-gray-900">
+        <p className="line-clamp-2 text-xs leading-snug text-ink-soft">{item.title}</p>
+        <p className="tnum text-[15px] font-extrabold text-ink">
           {formatWithConversion(item.price, item.currency, effectiveRate, viewerCurrency)}
         </p>
-        {item.auction && <p className="text-[10px] text-gray-400">현재가 · 낙찰가 변동</p>}
+        {item.auction && <p className="text-[10px] text-ink-faint">현재가 · 낙찰가 변동</p>}
       </div>
     </Link>
   );

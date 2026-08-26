@@ -4,6 +4,7 @@ import { formatWithConversion } from "@/lib/currency";
 import OriginalToggle from "@/components/OriginalToggle";
 import ChatButton from "@/components/ChatButton";
 import CheckoutButton from "@/components/CheckoutButton";
+import { CountryChip, TomoSymbol } from "@/components/Brand";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -26,28 +27,62 @@ export default async function ListingDetail({ params }: { params: { id: string }
 
   return (
     <main className="mx-auto max-w-md pb-32">
-      {/* 이미지: 가로 스와이프 (세로 나열 대신) */}
-      {images.length > 0 ? (
-        <div className="flex snap-x snap-mandatory gap-1 overflow-x-auto">
-          {images.map((src, i) => (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img key={i} src={src} alt={`${l.title} 사진 ${i + 1}`}
-              className="aspect-square w-full shrink-0 snap-center object-cover" />
-          ))}
-        </div>
-      ) : (
-        <div className="skeleton aspect-square w-full" />
-      )}
+      {/* 이미지 위 뒤로가기 — 상세는 이미지가 헤더다 */}
+      <div className="relative">
+        <Link href="/" aria-label="피드로 돌아가기"
+          className="press absolute left-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-tomo-navy/45 backdrop-blur-sm">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2.2}
+            strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden>
+            <path d="M15 5l-7 7 7 7" />
+          </svg>
+        </Link>
+
+        {/* 이미지: 가로 스와이프 (세로 나열 대신). 이미지가 없거나 깨져도 브랜드 필드가 받친다 */}
+        {images.length > 0 ? (
+          <div className="relative bg-tomo-navy/5">
+            <div className="absolute inset-0 flex items-center justify-center" aria-hidden>
+              <TomoSymbol className="h-20 w-28 opacity-50" />
+            </div>
+            <div className="relative flex snap-x snap-mandatory gap-1 overflow-x-auto">
+              {images.map((src, i) => (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img key={i} src={src} alt={`${l.title} 사진 ${i + 1}`}
+                  className="aspect-square w-full shrink-0 snap-center object-cover" />
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="flex aspect-square w-full items-center justify-center bg-tomo-navy/5">
+            <TomoSymbol className="h-20 w-28 opacity-60" />
+          </div>
+        )}
+        {images.length > 1 && (
+          <span className="tnum absolute bottom-3 right-3 rounded-full bg-tomo-navy/70 px-2.5 py-1 text-[11px] font-bold text-white backdrop-blur-sm">
+            사진 {images.length}장
+          </span>
+        )}
+      </div>
 
       <div className="flex flex-col gap-4 p-4">
         <Link href={`/profile/${seller.id}`}
-          className="card flex items-center justify-between p-3">
-          <span>
-            <span className="block text-sm font-bold">{seller.nickname}</span>
-            <span className="block text-xs text-gray-400">{seller.region}</span>
+          className="card flex items-center justify-between p-3.5">
+          <span className="flex items-center gap-2.5">
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-tomo-blue/25 font-brand text-sm text-tomo-navy">
+              {seller.nickname.slice(0, 1)}
+            </span>
+            <span>
+              <span className="block text-sm font-bold text-ink">{seller.nickname}</span>
+              <span className="flex items-center gap-1 text-xs text-ink-soft">
+                <CountryChip country={seller.country} />
+                {seller.region}
+              </span>
+            </span>
           </span>
-          <span className="tnum rounded-full bg-tomo-coral/15 px-3 py-1 text-sm font-bold text-tomo-coral">
-            ♥ {Number(seller.trust_temp).toFixed(1)}°
+          <span className="tnum flex items-center gap-1 rounded-full bg-tomo-pink/25 px-3 py-1 text-sm font-bold text-tomo-rose">
+            <svg viewBox="0 0 24 24" className="h-3 w-3" aria-hidden>
+              <path d="M12 21C7.2 17.2 2.5 13.6 2.5 8.9 2.5 5.6 5 3.5 7.8 3.5c1.7 0 3.3.9 4.2 2.3.9-1.4 2.5-2.3 4.2-2.3 2.8 0 5.3 2.1 5.3 5.4 0 4.7-4.7 8.3-9.5 12.1z" fill="#A34543" />
+            </svg>
+            {Number(seller.trust_temp).toFixed(1)}°
           </span>
         </Link>
 
@@ -60,26 +95,30 @@ export default async function ListingDetail({ params }: { params: { id: string }
           hasTranslation={!needsTranslation || !!t}
         />
 
-        <p className="tnum text-2xl font-bold text-gray-900">
-          {formatWithConversion(l.price, l.currency, foreign ? viewer.rate : 1, viewer.currency)}
-        </p>
+        <div>
+          <p className="tnum font-brand text-[26px] leading-tight text-ink">
+            {formatWithConversion(l.price, l.currency, foreign ? viewer.rate : 1, viewer.currency)}
+          </p>
+        </div>
 
+        {/* 크로스보더 안내 — 두 나라가 만나는 정보이므로 말풍선 그라데이션 */}
         {foreign && (l.trade_method === "direct" || l.trade_method === "both") && (
-          <p className="rounded-xl bg-tomo-blue/20 p-3 text-xs leading-relaxed text-gray-700">
-            <span className="font-bold text-tomo-navy">여행 중 직거래 가능</span> —{" "}
+          <div className="grad-bridge-soft chat-bubble chat-bubble-theirs p-3.5 text-xs leading-relaxed text-ink">
+            <span className="font-bold text-tomo-navy">여행 중 직거래 가능.</span>{" "}
             {l.country === "JP" ? "일본" : "한국"} 여행 때 판매자와 직접 만나 받을 수 있어요.
             채팅으로 장소·시간을 정하세요.
-          </p>
+          </div>
         )}
         {foreign && l.trade_method !== "direct" && (
-          <p className="rounded-xl bg-tomo-blue/15 p-3 text-xs leading-relaxed text-gray-600">
-            해외 상품이에요. {l.country === "JP" ? "나리타" : "서울"} 센터를 거쳐 배송되고,
+          <div className="chat-bubble chat-bubble-theirs bg-tomo-blue/20 p-3.5 text-xs leading-relaxed text-ink">
+            <span className="font-bold text-tomo-navy">해외 상품이에요.</span>{" "}
+            {l.country === "JP" ? "나리타" : "서울"} 센터를 거쳐 배송되고,
             국제배송비는 결제할 때 함께 계산됩니다.
-          </p>
+          </div>
         )}
 
         {!canAct && (
-          <p className="rounded-xl bg-gray-100 p-3 text-center text-sm font-bold text-gray-500">
+          <p className="rounded-card bg-tomo-navy/5 p-3 text-center text-sm font-bold text-ink-soft">
             {l.status === "sold" ? "거래가 끝난 상품이에요" : "예약 중인 상품이에요"}
           </p>
         )}
@@ -87,10 +126,10 @@ export default async function ListingDetail({ params }: { params: { id: string }
 
       {/* 고정 CTA 바 — 스크롤과 무관하게 항상 잡힘 */}
       {canAct && !isMine && (
-        <div className="fixed bottom-[62px] left-0 right-0 z-20 mx-auto max-w-md border-t border-black/5 bg-white/95 p-3 backdrop-blur">
+        <div className="fixed bottom-[62px] left-0 right-0 z-20 mx-auto max-w-md border-t border-tomo-navy/5 bg-white/95 p-3 backdrop-blur">
           {viewer.guest ? (
             <Link href={`/login?next=/listings/${l.id}`}
-              className="btn block bg-tomo-coral py-3 text-center text-white">
+              className="btn block bg-tomo-coral-deep py-3 text-center text-white">
               로그인하고 거래하기
             </Link>
           ) : (

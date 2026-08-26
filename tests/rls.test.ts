@@ -48,14 +48,14 @@ beforeAll(async () => {
 
 afterAll(async () => {
   // 실제로 지운다 — 예전엔 sold로 이름만 바꿔 남겨서 실행할 때마다 피드에 쓰레기가 쌓였음.
-  // 참조(대화·메시지·번역)를 먼저 지워야 listings 삭제가 통과한다.
+  // messages·listing_translations는 FK cascade. 대화 삭제는 0013 정책 필요.
   if (!listingId) return;
   if (convId) {
-    await bob.from("messages").delete().eq("conversation_id", convId);
-    await bob.from("conversations").delete().eq("id", convId);
+    const { error } = await bob.from("conversations").delete().eq("id", convId);
+    if (error) console.warn("cleanup: conversation delete 실패 (0013 적용 확인):", error.message);
   }
-  await alice.from("listing_translations").delete().eq("listing_id", listingId);
-  await alice.from("listings").delete().eq("id", listingId);
+  const { error } = await alice.from("listings").delete().eq("id", listingId);
+  if (error) console.warn("cleanup: listing delete 실패:", error.message);
 });
 
 describe("RLS", () => {

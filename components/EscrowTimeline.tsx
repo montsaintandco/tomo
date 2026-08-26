@@ -18,7 +18,7 @@ export default function EscrowTimeline({
 }: { status: string; isCrossBorder: boolean; lang?: "ko" | "ja" }) {
   if (status === "cancelled" || status === "disputed") {
     return (
-      <div className="rounded-card bg-gray-100 p-3 text-center text-sm font-bold text-gray-500">
+      <div className="rounded-card bg-tomo-navy/5 p-3 text-center text-sm font-bold text-ink-soft">
         {status === "cancelled"
           ? (lang === "ja" ? "キャンセルされた取引" : "취소된 거래")
           : (lang === "ja" ? "紛争処理中" : "분쟁 처리 중")}
@@ -36,12 +36,12 @@ export default function EscrowTimeline({
           <li key={s} className="flex items-center gap-3">
             <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
               done ? "bg-tomo-blue text-white"
-                : active ? "bg-tomo-coral text-white"
-                : "bg-gray-200 text-gray-400"}`}>
+                : active ? "bg-tomo-coral-deep text-white"
+                : "bg-tomo-navy/10 text-ink-faint"}`}>
               {done ? "✓" : i + 1}
             </span>
             <span className={`text-sm ${
-              active ? "font-bold text-tomo-navy" : done ? "text-gray-600" : "text-gray-400"}`}>
+              active ? "font-bold text-tomo-navy" : done ? "text-ink-soft" : "text-ink-faint"}`}>
               {LABEL[s][lang]}
             </span>
           </li>

@@ -40,7 +40,7 @@ function LoginForm() {
         <input className="rounded-full border px-4 py-3" type="email" placeholder="name@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
         <input className="rounded-full border px-4 py-3" type="password" placeholder="비밀번호 / パスワード" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} />
         <button className="rounded-full bg-tomo-blue py-3 font-bold text-white">시작하기 · はじめる</button>
-        {error && <p className="text-sm text-red-500">{error}</p>}
+        {error && <p className="text-sm text-tomo-rose">{error}</p>}
       </form>
     </main>
   );

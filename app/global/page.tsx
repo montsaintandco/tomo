@@ -1,6 +1,7 @@
 import { createServerSupabase } from "@/lib/supabase/server";
 import { getViewerOrGuest } from "@/lib/listings";
 import ExternalItemCard, { type ExternalCardItem } from "@/components/ExternalItemCard";
+import { TomoSymbol } from "@/components/Brand";
 import { searchMarkets } from "@/lib/market/search";
 import { SOURCE_LABEL, LIVE_SOURCES, type MarketSource } from "@/lib/market/types";
 import Link from "next/link";
@@ -42,19 +43,25 @@ export default async function GlobalPage({ searchParams }: {
 
   return (
     <main className="mx-auto max-w-md">
-      <header className="sticky top-0 z-20 bg-tomo-ivory/95 px-4 pb-2 pt-3 backdrop-blur">
-        <div className="mb-2 flex items-center justify-between">
+      <header className="sticky top-0 z-20 bg-tomo-ivory/95 px-4 pb-3 pt-3 backdrop-blur">
+        <div className="mb-1 flex items-center justify-between">
           <h1 className="font-brand text-xl text-tomo-navy">해외직구</h1>
           {viewer.guest && (
             <Link href="/login" className="btn bg-tomo-navy px-4 py-1.5 text-sm text-white">로그인</Link>
           )}
         </div>
-        <p className="mb-3 text-xs text-gray-500">일본·한국 마켓 상품을 대신 사서 보내드려요. 견적 확인 후 결제하면 됩니다.</p>
+        <p className="mb-3 text-xs text-ink-soft">일본·한국 마켓 상품을 대신 사서 보내드려요. 견적 확인 후 결제하면 됩니다.</p>
 
         <form className="mb-3" role="search">
           <label htmlFor="global-q" className="sr-only">해외 마켓 상품 검색</label>
-          <input id="global-q" name="q" defaultValue={q} placeholder="찾는 물건을 검색하세요 (예: 필름카메라)"
-            className="w-full rounded-full bg-white px-4 py-2.5 text-sm shadow-[0_1px_2px_rgba(12,68,124,0.05)] placeholder:text-gray-400" />
+          <div className="relative">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}
+              strokeLinecap="round" className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-faint" aria-hidden>
+              <circle cx="11" cy="11" r="6.5" /><path d="m16 16 4.5 4.5" />
+            </svg>
+            <input id="global-q" name="q" defaultValue={q} placeholder="찾는 물건을 검색하세요 (예: 필름카메라)"
+              className="w-full rounded-full bg-white py-2.5 pl-10 pr-4 text-sm shadow-[var(--shadow-soft)] placeholder:text-ink-soft" />
+          </div>
           {source !== "all" && <input type="hidden" name="source" value={source} />}
         </form>
 
@@ -66,9 +73,9 @@ export default async function GlobalPage({ searchParams }: {
             const qs = params.toString();
             const live = s === "all" || LIVE_SOURCES.includes(s as MarketSource);
             return (
-              <Link key={s} href={qs ? `/global?${qs}` : "/global"}
-                className={`shrink-0 rounded-full px-3.5 py-1.5 text-[13px] font-bold transition-colors ${
-                  source === s ? "bg-tomo-navy text-white" : "bg-white text-gray-500 hover:text-gray-800"}`}>
+              <Link key={s} href={qs ? `/global?${qs}` : "/global"} aria-current={source === s ? "page" : undefined}
+                className={`press shrink-0 rounded-full px-3.5 py-1.5 text-[13px] font-bold transition-colors ${
+                  source === s ? "bg-tomo-navy text-white shadow-[var(--shadow-soft)]" : "bg-white text-ink-soft hover:text-ink"}`}>
                 {s === "all" ? "전체" : SOURCE_LABEL[s as MarketSource]}
                 {!live && <span className="ml-1 font-normal opacity-60">준비중</span>}
               </Link>
@@ -79,7 +86,7 @@ export default async function GlobalPage({ searchParams }: {
 
       <div className="px-4 pb-6 pt-2">
         {q && usedQueries.length > 0 && (
-          <p className="mb-2 text-xs text-gray-400">번역해서 찾았어요: {usedQueries.join(" · ")}</p>
+          <p className="mb-2 text-xs text-ink-soft">번역해서 찾았어요: {usedQueries.join(" · ")}</p>
         )}
 
         {items.length > 0 ? (
@@ -90,11 +97,12 @@ export default async function GlobalPage({ searchParams }: {
             ))}
           </div>
         ) : (
-          <div className="mt-14 px-6 text-center">
-            <p className="text-sm text-gray-500">
+          <div className="mt-12 flex flex-col items-center px-6 text-center">
+            <TomoSymbol />
+            <p className="mt-3 text-sm text-ink-soft">
               {q ? `'${q}' 검색 결과가 없어요` : "찾는 물건을 검색해 보세요"}
             </p>
-            <p className="mt-1 text-xs text-gray-400">
+            <p className="mt-1 text-xs text-ink-soft">
               {q ? "다른 검색어를 써보세요" : "메루카리·야후·당근·중고나라를 한 번에 찾아드려요"}
             </p>
           </div>
