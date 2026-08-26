@@ -3,7 +3,8 @@ import { getViewerOrGuest } from "@/lib/listings";
 import ListingRow, { type FeedListing } from "@/components/ListingRow";
 import Link from "next/link";
 
-const TABS = [["all", "전체"], ["local", "내 동네"], ["global", "해외직구"]] as const;
+// 구매 루트: 전체 / 내 동네 직거래 / 상대국 여행 중 직거래 (해외 대행구매는 /global)
+const TABS = [["all", "전체"], ["local", "내 동네"], ["travel", "여행 직거래"]] as const;
 
 export default async function Home({ searchParams }: { searchParams: { tab?: string; q?: string } }) {
   const supabase = await createServerSupabase();
@@ -14,13 +15,17 @@ export default async function Home({ searchParams }: { searchParams: { tab?: str
 
   // 판매중 → 예약중 → 거래완료 순으로 노출 (당근·메루카리 관행: 끝난 거래는 뒤로)
   let query = supabase.from("listings")
-    .select("id, title, price, currency, source_language, country, region, status, images, created_at, listing_translations(language, title)")
+    .select("id, title, price, currency, source_language, country, region, status, images, created_at, trade_method, cross_border_enabled, listing_translations(language, title)")
     .order("status", { ascending: true })   // active < reserved < sold (enum 정의 순)
     .order("created_at", { ascending: false })
     .limit(40);
 
-  if (tab === "local" && !viewer.guest) query = query.eq("country", viewer.country).eq("region", viewer.region).in("trade_method", ["direct", "both"]);
-  else if (tab === "global") query = query.neq("country", viewer.country).eq("cross_border_enabled", true);
+  if (tab === "local" && !viewer.guest) {
+    query = query.eq("country", viewer.country).eq("region", viewer.region).in("trade_method", ["direct", "both"]);
+  } else if (tab === "travel") {
+    // 상대국에서 직접 만나 거래할 수 있는 상품 (여행 갔을 때). 게스트는 KR 기준으로 일본 상품
+    query = query.neq("country", viewer.country).in("trade_method", ["direct", "both"]);
+  }
 
   if (q) {
     const pattern = `%${q.replace(/[%_]/g, (m) => `\\${m}`)}%`;
@@ -102,13 +107,18 @@ export default async function Home({ searchParams }: { searchParams: { tab?: str
         ) : (
           <div className="mt-14 px-6 text-center">
             <p className="text-sm text-gray-500">
-              {q ? `'${q}' 검색 결과가 없어요` : "아직 등록된 상품이 없어요"}
+              {q ? `'${q}' 검색 결과가 없어요`
+                : tab === "travel" ? "여행 중 직거래할 상품이 아직 없어요"
+                : "아직 등록된 상품이 없어요"}
             </p>
             <p className="mt-1 text-xs text-gray-400">
-              {q ? "다른 검색어로 찾아보거나 해외직구를 둘러보세요" : "첫 상품을 등록해 보세요"}
+              {q ? "다른 검색어로 찾아보거나 해외직구를 둘러보세요"
+                : tab === "travel" ? "상대 나라에서 직접 만나 거래할 수 있는 상품이 여기 모여요"
+                : "첫 상품을 등록해 보세요"}
             </p>
-            <Link href={q ? "/global" : "/sell"} className="btn mt-4 inline-block bg-tomo-coral px-6 py-2.5 text-sm text-white">
-              {q ? "해외직구 둘러보기" : "상품 등록하기"}
+            <Link href={q || tab === "travel" ? "/global" : "/sell"}
+              className="btn mt-4 inline-block bg-tomo-coral px-6 py-2.5 text-sm text-white">
+              {q || tab === "travel" ? "해외직구 둘러보기" : "상품 등록하기"}
             </Link>
           </div>
         )}

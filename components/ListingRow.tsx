@@ -6,6 +6,8 @@ export type FeedListing = {
   id: string; title: string; price: number; currency: Currency;
   source_language: string; country: "KR" | "JP"; region: string;
   status: string; images: string[]; created_at: string;
+  trade_method?: "direct" | "shipping" | "both";
+  cross_border_enabled?: boolean;
   listing_translations: { language: string; title: string }[];
 };
 
@@ -27,6 +29,8 @@ export default function ListingRow({ listing, viewer }: {
   const foreign = listing.country !== viewer.country;
   const sold = listing.status === "sold";
   const reserved = listing.status === "reserved";
+  // 상대국 상품이면서 직접 만나 거래 가능 → 여행 갔을 때 직거래할 수 있음
+  const travelDeal = foreign && (listing.trade_method === "direct" || listing.trade_method === "both");
 
   return (
     <li className="border-b border-black/5 last:border-0">
@@ -60,6 +64,11 @@ export default function ListingRow({ listing, viewer }: {
           <p className="tnum mt-0.5 text-[15px] font-bold text-gray-900">
             {formatWithConversion(listing.price, listing.currency, foreign ? viewer.rate : 1, viewer.currency)}
           </p>
+          {travelDeal && (
+            <span className="mt-0.5 w-fit rounded bg-tomo-blue/25 px-1.5 py-0.5 text-[10px] font-bold text-tomo-navy">
+              여행 중 직거래 가능
+            </span>
+          )}
         </div>
       </Link>
     </li>

@@ -64,7 +64,14 @@ export default async function ListingDetail({ params }: { params: { id: string }
           {formatWithConversion(l.price, l.currency, foreign ? viewer.rate : 1, viewer.currency)}
         </p>
 
-        {foreign && (
+        {foreign && (l.trade_method === "direct" || l.trade_method === "both") && (
+          <p className="rounded-xl bg-tomo-blue/20 p-3 text-xs leading-relaxed text-gray-700">
+            <span className="font-bold text-tomo-navy">여행 중 직거래 가능</span> —{" "}
+            {l.country === "JP" ? "일본" : "한국"} 여행 때 판매자와 직접 만나 받을 수 있어요.
+            채팅으로 장소·시간을 정하세요.
+          </p>
+        )}
+        {foreign && l.trade_method !== "direct" && (
           <p className="rounded-xl bg-tomo-blue/15 p-3 text-xs leading-relaxed text-gray-600">
             해외 상품이에요. {l.country === "JP" ? "나리타" : "서울"} 센터를 거쳐 배송되고,
             국제배송비는 결제할 때 함께 계산됩니다.
