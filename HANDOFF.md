@@ -39,7 +39,7 @@ npm test      # vitest 35개 통과해야 정상
 
 - **Vercel 배포 완료** (production). 프로젝트 `tomo` (팀 montsaintandco's projects, Hobby). GitHub `montsaintandco/tomo` 연동 → master 푸시 시 자동 재배포
 - URL: https://tomo-montsaintandcos-projects.vercel.app (배포별 URL 예: tomo-mqhr5o7b9-…)
-- Vercel 환경변수: `NEXT_PUBLIC_SUPABASE_URL`·`NEXT_PUBLIC_SUPABASE_ANON_KEY`만 설정됨(Production+Preview). 아직 미설정: `ANTHROPIC_API_KEY`(번역), `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET`/`SUPABASE_SERVICE_ROLE_KEY`(결제) — 없으면 각 기능 graceful 대기, 오류 아님
+- Vercel 환경변수: `NEXT_PUBLIC_SUPABASE_URL`·`NEXT_PUBLIC_SUPABASE_ANON_KEY`만 설정됨(Production+Preview). 아직 미설정: `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET`/`SUPABASE_SERVICE_ROLE_KEY`(결제) — 없으면 결제 기능 graceful 대기, 오류 아님. 번역은 키 불필요(아래)
 
 ## 남은 로드맵
 
@@ -48,9 +48,14 @@ npm test      # vitest 35개 통과해야 정상
 
 ## 필요한 키 (아직 없음)
 
-- `ANTHROPIC_API_KEY` — 실번역 작동용 (없으면 "번역 준비 중" 표시, 오류 아님)
 - `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET` (테스트 모드) — Plan 04에서
-- Supabase `service_role` 키 — Plan 04 웹훅에서 (대시보드 → Project Settings → API Keys)
+- Supabase `service_role` 키 — Plan 04 웹훅 + `scripts/cleanup-orphan-images.ts` 일괄 정리에서 (대시보드 → Project Settings → API Keys)
+
+## 번역 (2026-08-26 전환: 무료, 키 불필요)
+
+- `lib/translate.ts` — 구글 무료 엔드포인트 `clients5.google.com/translate_a/t?client=dict-chrome-ex` (POST, q 복수 지원, 키 없음). 리스팅·채팅·검색어 번역 전부 이 경로. 실패 시 null(graceful), 검색어는 MyMemory 2차 폴백 → 원문
+- `@anthropic-ai/sdk` 의존성 제거됨. `ANTHROPIC_API_KEY` 더 이상 불필요
+- 주의: 비공식 엔드포인트라 IP에 따라 차단될 수 있음(`translate.googleapis.com` gtx는 데이터센터 IP에서 차단 확인됨 — 그래서 clients5 채택). 차단 시에도 UI는 "번역 준비 중" 표시로 동작
 
 ## 주의사항 / 이월된 마이너 이슈
 
@@ -70,4 +75,4 @@ npm test      # vitest 35개 통과해야 정상
 
 ## Claude에서 이어서 작업하려면
 
-새 세션에서 이 폴더를 연결하고: "TOMO 프로젝트 이어서. HANDOFF.md 읽고 진행". 최우선 잔여 작업은 키 투입: `ANTHROPIC_API_KEY`(실번역), Stripe 3종(Plan 04 Task 2~3 라이브 테스트 — STRIPE_SECRET_KEY/STRIPE_WEBHOOK_SECRET/SUPABASE_SERVICE_ROLE_KEY). 키 없으면 폰트 복원·이월 이슈부터.
+새 세션에서 이 폴더를 연결하고: "TOMO 프로젝트 이어서. HANDOFF.md 읽고 진행". 최우선 잔여 작업은 Stripe 3종 키 투입(Plan 04 Task 2~3 라이브 테스트 — STRIPE_SECRET_KEY/STRIPE_WEBHOOK_SECRET/SUPABASE_SERVICE_ROLE_KEY). 번역은 무료 구글 경로로 전환 완료(키 불필요), 이월 이슈 4건도 정리 완료.

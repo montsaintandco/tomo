@@ -1,62 +1,56 @@
-import Anthropic from "@anthropic-ai/sdk";
+// 번역: 구글 무료 엔드포인트(clients5, dict-chrome-ex 클라이언트) 사용 — API 키 불필요.
+// 실패 시 null 반환으로 graceful (발송·등록은 항상 성공, 스펙 §9). 검색어는 MyMemory 2차 폴백.
 
-const LANG_NAME = { ko: "Korean", ja: "Japanese" } as const;
+type Lang = "ko" | "ja";
 
-export async function translateListing(input: {
-  title: string; description: string; from: "ko" | "ja";
-}): Promise<{ title: string; description: string } | null> {
-  if (!process.env.ANTHROPIC_API_KEY) return null;
-  const to = input.from === "ko" ? "ja" : "ko";
+// 여러 문자열을 한 요청으로 번역. 응답은 입력 순서대로의 배열.
+async function googleTranslate(texts: string[], from: Lang, to: Lang): Promise<string[] | null> {
   try {
-    const client = new Anthropic();
-    const res = await client.messages.create({
-      model: "claude-opus-4-8",
-      max_tokens: 1024,
-      messages: [{
-        role: "user",
-        content: `Translate this secondhand marketplace listing from ${LANG_NAME[input.from]} to ${LANG_NAME[to]}. Keep the tone casual and natural for a marketplace. Reply with ONLY a JSON object {"title": "...", "description": "..."} and nothing else.\n\nTitle: ${input.title}\nDescription: ${input.description}`,
-      }],
-    });
-    const block = res.content.find((b) => b.type === "text");
-    if (!block || block.type !== "text") return null;
-    const jsonText = block.text.slice(block.text.indexOf("{"), block.text.lastIndexOf("}") + 1);
-    const parsed = JSON.parse(jsonText);
-    if (typeof parsed.title !== "string" || typeof parsed.description !== "string") return null;
-    return { title: parsed.title, description: parsed.description };
+    const body = new URLSearchParams();
+    for (const t of texts) body.append("q", t);
+    const res = await fetch(
+      `https://clients5.google.com/translate_a/t?client=dict-chrome-ex&sl=${from}&tl=${to}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body,
+        signal: AbortSignal.timeout(8000),
+        cache: "no-store",
+      }
+    );
+    if (!res.ok) return null;
+    const j: unknown = await res.json();
+    if (!Array.isArray(j)) return null;
+    // 항목은 보통 문자열, sl=auto 계열 변형에선 [번역, 감지언어] 배열일 수 있음
+    const out = j.map((item) =>
+      typeof item === "string" ? item : Array.isArray(item) && typeof item[0] === "string" ? item[0] : ""
+    );
+    if (out.length !== texts.length || out.some((s) => s.trim().length === 0)) return null;
+    return out.map((s) => s.trim());
   } catch {
     return null;
   }
 }
 
-export async function translateMessage(
-  body: string, from: "ko" | "ja"
-): Promise<string | null> {
-  if (!process.env.ANTHROPIC_API_KEY) return null;
+export async function translateListing(input: {
+  title: string; description: string; from: Lang;
+}): Promise<{ title: string; description: string } | null> {
+  const to = input.from === "ko" ? "ja" : "ko";
+  const out = await googleTranslate([input.title, input.description], input.from, to);
+  return out ? { title: out[0], description: out[1] } : null;
+}
+
+export async function translateMessage(body: string, from: Lang): Promise<string | null> {
   const to = from === "ko" ? "ja" : "ko";
-  try {
-    const client = new Anthropic();
-    const res = await client.messages.create({
-      model: "claude-opus-4-8",
-      max_tokens: 512,
-      messages: [{
-        role: "user",
-        content: `Translate this short secondhand-marketplace chat message from ${LANG_NAME[from]} to ${LANG_NAME[to]}. Keep it casual and natural. Reply with ONLY the translation, nothing else.\n\n${body}`,
-      }],
-    });
-    const block = res.content.find((b) => b.type === "text");
-    if (!block || block.type !== "text") return null;
-    const out = block.text.trim();
-    return out.length > 0 ? out : null;
-  } catch {
-    return null;
-  }
+  const out = await googleTranslate([body], from, to);
+  return out ? out[0] : null;
 }
 
 const HANGUL = /[가-힣]/;
 const JAPANESE = /[ぁ-んァ-ヶ一-龯]/;
 
-// 키 없이 쓰는 폴백 (MyMemory 무료 티어). 검색어처럼 짧은 문자열에만 사용
-async function translateQueryFallback(q: string, to: "ko" | "ja"): Promise<string | null> {
+// 2차 폴백 (MyMemory 무료 티어). 검색어처럼 짧은 문자열에만 사용
+async function translateQueryFallback(q: string, to: Lang): Promise<string | null> {
   const pair = to === "ja" ? "ko|ja" : "ja|ko";
   try {
     const res = await fetch(
@@ -76,33 +70,14 @@ async function translateQueryFallback(q: string, to: "ko" | "ja"): Promise<strin
 }
 
 // 검색어 번역 (외부 마켓 검색용). 이미 목표 언어면 그대로 반환.
-// ANTHROPIC_API_KEY 있으면 Claude, 없으면 무료 폴백. 둘 다 실패하면 원문.
-export async function translateQueryTo(q: string, to: "ko" | "ja"): Promise<string> {
+// 구글 무료 번역 → MyMemory 폴백 → 원문 순.
+export async function translateQueryTo(q: string, to: Lang): Promise<string> {
   const from = to === "ja" ? "ko" : "ja";
   const sourceScript = from === "ko" ? HANGUL : JAPANESE;
   if (!sourceScript.test(q)) return q; // 번역할 원문 문자가 없으면 그대로 (영어 등)
 
-  if (process.env.ANTHROPIC_API_KEY) {
-    try {
-      const client = new Anthropic();
-      const res = await client.messages.create({
-        model: "claude-opus-4-8",
-        max_tokens: 100,
-        messages: [{
-          role: "user",
-          content: `Translate this ${LANG_NAME[from]} marketplace search query to ${LANG_NAME[to]}. Reply with ONLY the translated query, nothing else.\n\n${q}`,
-        }],
-      });
-      const block = res.content.find((b) => b.type === "text");
-      if (block?.type === "text") {
-        const out = block.text.trim();
-        if (out.length > 0) return out;
-      }
-    } catch {
-      // 키가 있어도 실패할 수 있으므로 폴백으로 진행
-    }
-  }
-
+  const g = await googleTranslate([q], from, to);
+  if (g) return g[0];
   return (await translateQueryFallback(q, to)) ?? q;
 }
 
