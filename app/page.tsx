@@ -28,12 +28,14 @@ export default async function Home({ searchParams }: { searchParams: { tab?: str
     query = query.neq("country", viewer.country).in("trade_method", ["direct", "both"]);
   }
 
+  let searchError: { message: string } | null = null;
   if (q) {
     const pattern = `%${q.replace(/[%_]/g, (m) => `\\${m}`)}%`;
     const [tRes, oRes] = await Promise.all([
       supabase.from("listing_translations").select("listing_id").ilike("title", pattern).limit(60),
       supabase.from("listings").select("id").ilike("title", pattern).limit(60),
     ]);
+    searchError = tRes.error ?? oRes.error;
     const ids = Array.from(new Set([
       ...(tRes.data ?? []).map((t) => t.listing_id),
       ...(oRes.data ?? []).map((o) => o.id),
@@ -41,7 +43,15 @@ export default async function Home({ searchParams }: { searchParams: { tab?: str
     query = query.in("id", ids.length > 0 ? ids : ["00000000-0000-0000-0000-000000000000"]);
   }
 
-  const { data: listings } = localNeedsLogin ? { data: [] } : await query;
+  const { data: listings, error: queryError } = localNeedsLogin ? { data: [], error: null } : await query;
+  const feedError = queryError ?? searchError;
+  if (feedError) console.error("[feed] listings query failed:", feedError.message);
+
+  const retryParams = new URLSearchParams();
+  if (tab !== "all") retryParams.set("tab", tab);
+  if (q) retryParams.set("q", q);
+  const retryQs = retryParams.toString();
+  const retryHref = retryQs ? `/?${retryQs}` : "/";
 
   return (
     <main className="mx-auto max-w-md">
@@ -112,6 +122,18 @@ export default async function Home({ searchParams }: { searchParams: { tab?: str
             </p>
             <Link href="/login?next=/?tab=local" className="btn bg-tomo-navy px-6 py-2.5 text-sm text-white">
               로그인하고 동네 설정
+            </Link>
+          </div>
+        ) : feedError ? (
+          <div className="mt-12 flex flex-col items-center px-6 text-center">
+            <TomoSymbol />
+            <p className="mt-3 text-sm text-tomo-rose">
+              상품을 불러오지 못했어요<br />
+              <span className="text-ink-soft">商品を読み込めませんでした</span>
+            </p>
+            <p className="mt-1 text-xs text-ink-soft">잠시 후 다시 시도해 주세요</p>
+            <Link href={retryHref} className="btn mt-4 inline-block bg-tomo-navy px-6 py-2.5 text-sm text-white">
+              다시 시도
             </Link>
           </div>
         ) : (listings ?? []).length > 0 ? (
