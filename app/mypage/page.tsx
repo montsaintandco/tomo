@@ -2,6 +2,7 @@ import { createServerSupabase } from "@/lib/supabase/server";
 import { getViewer } from "@/lib/listings";
 import { formatPrice, type Currency } from "@/lib/currency";
 import HeartGauge from "@/components/HeartGauge";
+import { CountryChip } from "@/components/Brand";
 import { SOURCE_LABEL, type MarketSource } from "@/lib/market/types";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -38,18 +39,18 @@ export default async function MyPage() {
   ]);
 
   return (
-    <main className="mx-auto max-w-md p-4 pb-24">
-      <div className="mb-5 rounded-card border bg-white p-4">
+    <main className="mx-auto max-w-md p-4 pb-24 md:max-w-2xl md:px-6 md:pb-16 md:pt-8">
+      <div className="card mb-5 p-4 md:p-6">
         <div className="mb-3 flex items-center justify-between">
           <div>
             <p className="text-lg font-bold">{profile?.nickname}</p>
-            <p className="text-xs text-ink-faint">
-              <span className="mr-1 rounded-full bg-tomo-blue/40 px-2 py-0.5">{profile?.country}</span>
+            <p className="flex items-center gap-1.5 text-xs text-ink-soft">
+              <CountryChip country={(profile?.country ?? "KR") as "KR" | "JP"} />
               {profile?.region}
             </p>
           </div>
           {viewer.isAdmin && (
-            <Link href="/admin" className="rounded-full bg-tomo-navy px-3 py-1.5 text-xs font-bold text-white">
+            <Link href="/admin" className="btn bg-tomo-navy px-3 py-1.5 text-xs text-white">
               운영자
             </Link>
           )}
@@ -95,7 +96,7 @@ export default async function MyPage() {
       </Section>
 
       <Link href={`/profile/${viewer.id}`}
-        className="block rounded-card border bg-white p-3 text-center text-sm font-bold text-tomo-navy">
+        className="card block p-3 text-center text-sm font-bold text-tomo-navy">
         내 프로필·후기 보기
       </Link>
     </main>
@@ -120,7 +121,7 @@ function Row({ href, image, title, sub, right }: {
   href: string; image?: string; title: string; sub: string; right: string;
 }) {
   return (
-    <Link href={href} className="flex items-center gap-3 rounded-card border bg-white p-3">
+    <Link href={href} className="card flex items-center gap-3 p-3">
       <div className="h-11 w-11 shrink-0 overflow-hidden rounded-card bg-tomo-navy/5">
         {image && (
           // eslint-disable-next-line @next/next/no-img-element
@@ -137,5 +138,5 @@ function Row({ href, image, title, sub, right }: {
 }
 
 function Empty({ text }: { text: string }) {
-  return <p className="rounded-card bg-tomo-ivory p-3 text-center text-xs text-ink-faint">{text}</p>;
+  return <p className="rounded-card bg-tomo-navy/5 p-3 text-center text-xs text-ink-soft">{text}</p>;
 }

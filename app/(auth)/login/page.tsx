@@ -2,6 +2,7 @@
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createBrowserSupabase } from "@/lib/supabase/client";
+import { Wordmark } from "@/components/Brand";
 
 // useSearchParams는 Suspense 경계 안에서만 프리렌더 가능
 export default function LoginPage() {
@@ -34,12 +35,15 @@ function LoginForm() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-4 p-6">
-      <h1 className="text-center text-2xl font-bold text-tomo-navy">TOMO</h1>
+    <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-5 p-6">
+      <div className="flex flex-col items-center gap-1">
+        <Wordmark className="text-3xl" />
+        <p className="text-xs text-ink-soft">한국과 일본을 잇는 중고마켓 · 韓国と日本をつなぐフリマ</p>
+      </div>
       <form onSubmit={submit} className="flex flex-col gap-3">
-        <input className="rounded-full border px-4 py-3" type="email" placeholder="name@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
-        <input className="rounded-full border px-4 py-3" type="password" placeholder="비밀번호 / パスワード" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} />
-        <button className="rounded-full bg-tomo-blue py-3 font-bold text-white">시작하기 · はじめる</button>
+        <input className="rounded-full bg-white px-4 py-3 shadow-[var(--shadow-soft)]" type="email" placeholder="name@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
+        <input className="rounded-full bg-white px-4 py-3 shadow-[var(--shadow-soft)]" type="password" placeholder="비밀번호 / パスワード" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} />
+        <button className="btn bg-tomo-navy py-3 text-white">시작하기 · はじめる</button>
         {error && <p className="text-sm text-tomo-rose">{error}</p>}
       </form>
     </main>

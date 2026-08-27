@@ -3,7 +3,7 @@ import Link from "next/link";
 export default function NotFound() {
   return (
     <main className="mx-auto flex min-h-[70dvh] max-w-md flex-col items-center justify-center gap-4 px-6 text-center">
-      <p className="font-brand text-5xl text-tomo-blue">404</p>
+      <p className="font-brand text-5xl text-tomo-navy">404</p>
       <div>
         <p className="text-sm text-ink-soft">찾으시는 페이지가 없어요</p>
         <p className="mt-1 text-xs text-ink-faint">お探しのページが見つかりません</p>

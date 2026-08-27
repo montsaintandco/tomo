@@ -40,8 +40,8 @@ export default async function ChatDetailPage({ params }: { params: { id: string 
     .order("created_at", { ascending: true }).limit(100);
 
   return (
-    <main className="mx-auto flex h-dvh max-w-md flex-col">
-      <header className="border-b bg-white p-3">
+    <main className="mx-auto flex h-dvh max-w-md flex-col md:h-[calc(100dvh-65px)] md:max-w-2xl">
+      <header className="border-b border-tomo-navy/5 bg-white p-3">
         <p className="font-bold">{other.nickname}</p>
         <Link href={`/listings/${l.id}`}
           className="mt-2 flex items-center gap-2 rounded-card bg-tomo-ivory p-2">

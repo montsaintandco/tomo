@@ -24,7 +24,7 @@ export default function BottomNav() {
 
   return (
     <nav aria-label="주요 메뉴"
-      className="fixed bottom-0 left-0 right-0 z-30 mx-auto max-w-md border-t border-tomo-navy/5 bg-white/95 backdrop-blur">
+      className="fixed bottom-0 left-0 right-0 z-30 mx-auto max-w-md border-t border-tomo-navy/5 bg-white/95 backdrop-blur md:hidden">
       <ul className="flex items-end">
         {items.map((i) => {
           const active = i.href === "/" ? path === "/" : path.startsWith(i.href);

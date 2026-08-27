@@ -42,8 +42,8 @@ export default async function GlobalPage({ searchParams }: {
   }
 
   return (
-    <main className="mx-auto max-w-md">
-      <header className="sticky top-0 z-20 bg-tomo-ivory/95 px-4 pb-3 pt-3 backdrop-blur">
+    <main className="mx-auto max-w-md md:max-w-6xl md:px-6">
+      <header className="sticky top-0 z-20 bg-tomo-ivory/95 px-4 pb-3 pt-3 backdrop-blur md:static md:bg-transparent md:px-0 md:pb-4 md:pt-8 md:backdrop-blur-0">
         <div className="mb-1 flex items-center justify-between">
           <h1 className="font-brand text-xl text-tomo-navy">해외직구</h1>
           {viewer.guest && (
@@ -52,7 +52,7 @@ export default async function GlobalPage({ searchParams }: {
         </div>
         <p className="mb-3 text-xs text-ink-soft">일본·한국 마켓 상품을 대신 사서 보내드려요. 견적 확인 후 결제하면 됩니다.</p>
 
-        <form className="mb-3" role="search">
+        <form className="mb-3 md:max-w-xl" role="search">
           <label htmlFor="global-q" className="sr-only">해외 마켓 상품 검색</label>
           <div className="relative">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}
@@ -65,7 +65,7 @@ export default async function GlobalPage({ searchParams }: {
           {source !== "all" && <input type="hidden" name="source" value={source} />}
         </form>
 
-        <div className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1">
+        <div className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1 md:mx-0 md:px-0">
           {TABS.map((s) => {
             const params = new URLSearchParams();
             if (s !== "all") params.set("source", s);
@@ -84,13 +84,13 @@ export default async function GlobalPage({ searchParams }: {
         </div>
       </header>
 
-      <div className="px-4 pb-6 pt-2">
+      <div className="px-4 pb-6 pt-2 md:px-0 md:pb-16">
         {q && usedQueries.length > 0 && (
           <p className="mb-2 text-xs text-ink-soft">번역해서 찾았어요: {usedQueries.join(" · ")}</p>
         )}
 
         {items.length > 0 ? (
-          <div className="grid grid-cols-2 gap-x-3 gap-y-4">
+          <div className="grid grid-cols-2 gap-x-3 gap-y-4 sm:grid-cols-3 md:grid-cols-4 md:gap-x-5 md:gap-y-7 lg:grid-cols-5">
             {items.map((it) => (
               <ExternalItemCard key={`${it.source}-${it.sourceId}`} item={it}
                 rate={viewer.rate} viewerCurrency={viewer.currency} />

@@ -26,9 +26,9 @@ export default async function ListingDetail({ params }: { params: { id: string }
   const isMine = !viewer.guest && viewer.id === seller.id;
 
   return (
-    <main className="mx-auto max-w-md pb-32">
-      {/* 이미지 위 뒤로가기 — 상세는 이미지가 헤더다 */}
-      <div className="relative">
+    <main className="mx-auto max-w-md pb-32 md:grid md:max-w-5xl md:grid-cols-2 md:items-start md:gap-10 md:px-6 md:pb-16 md:pt-8">
+      {/* 이미지 위 뒤로가기 — 상세는 이미지가 헤더다. 데스크톱은 좌측 고정 컬럼 */}
+      <div className="relative md:sticky md:top-24 md:overflow-hidden md:rounded-card md:shadow-[var(--shadow-soft)]">
         <Link href="/" aria-label="피드로 돌아가기"
           className="press absolute left-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-tomo-navy/45 backdrop-blur-sm">
           <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2.2}
@@ -63,7 +63,7 @@ export default async function ListingDetail({ params }: { params: { id: string }
         )}
       </div>
 
-      <div className="flex flex-col gap-4 p-4">
+      <div className="flex flex-col gap-4 p-4 md:p-0">
         <Link href={`/profile/${seller.id}`}
           className="card flex items-center justify-between p-3.5">
           <span className="flex items-center gap-2.5">
@@ -122,11 +122,9 @@ export default async function ListingDetail({ params }: { params: { id: string }
             {l.status === "sold" ? "거래가 끝난 상품이에요" : "예약 중인 상품이에요"}
           </p>
         )}
-      </div>
-
-      {/* 고정 CTA 바 — 스크롤과 무관하게 항상 잡힘 */}
-      {canAct && !isMine && (
-        <div className="fixed bottom-[62px] left-0 right-0 z-20 mx-auto max-w-md border-t border-tomo-navy/5 bg-white/95 p-3 backdrop-blur">
+        {/* CTA — 모바일은 하단 고정 바, 데스크톱은 정보 컬럼 안에서 흐름 배치 */}
+        {canAct && !isMine && (
+          <div className="fixed bottom-[62px] left-0 right-0 z-20 mx-auto max-w-md border-t border-tomo-navy/5 bg-white/95 p-3 backdrop-blur md:static md:mx-0 md:mt-2 md:max-w-none md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-0">
           {viewer.guest ? (
             <Link href={`/login?next=/listings/${l.id}`}
               className="btn block bg-tomo-coral-deep py-3 text-center text-white">
@@ -138,8 +136,9 @@ export default async function ListingDetail({ params }: { params: { id: string }
               <CheckoutButton listingId={l.id} />
             </div>
           )}
-        </div>
-      )}
+          </div>
+        )}
+      </div>
     </main>
   );
 }

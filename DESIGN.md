@@ -148,7 +148,7 @@ A two-nation pastel pair (blue/pink) over ivory and navy ink, with coral as the 
 
 ## Layout
 
-A single mobile column: `max-w-md` centered shell, `px-4` gutters, fixed bottom nav with `pb-24` body clearance. Headers are sticky with `bg-tomo-ivory/95 backdrop-blur`. Feeds are dense Daangn-style rows (96px square thumb, `py-3.5`, hairline `border-tomo-navy/5` separators, sold items sunk below active); the global market uses a Mercari-style image-first grid of square-thumb cards. Spacing rhythm is tight: gaps of 1–3 Tailwind steps (4–12px), section padding 16px. Light mode is locked (`color-scheme: light`, theme color #FBF9F4).
+Responsive two-shell layout. Mobile (<768px): `max-w-md` centered shell, `px-4` gutters, fixed bottom nav with `pb-24` body clearance, sticky page headers with `bg-tomo-ivory/95 backdrop-blur`. Desktop (md+): the bottom nav hides and a sticky ivory top GNB (SiteHeader: wordmark, pill nav links, coral 판매하기 CTA, max-w-6xl) plus a white SiteFooter carry the chrome; page headers go static. Feeds widen to `max-w-6xl` — the home feed flips from Daangn rows to a 3–4 column image-first card grid (same ListingRow markup), the global market grid grows to 4–5 columns, and detail pages become a two-column grid (sticky rounded image column left, info + inline CTA right, `max-w-5xl`). Operate pages (chat, mypage, profile, sell, transactions) stay a single `max-w-2xl` column. Feeds are dense Daangn-style rows (96px square thumb, `py-3.5`, hairline `border-tomo-navy/5` separators, sold items sunk below active); the global market uses a Mercari-style image-first grid of square-thumb cards. Spacing rhythm is tight: gaps of 1–3 Tailwind steps (4–12px), section padding 16px. Light mode is locked (`color-scheme: light`, theme color #FBF9F4).
 
 ## Elevation & Depth
 
@@ -190,7 +190,7 @@ Everything is round. Buttons, chips, tabs, inputs, and scrollbar thumbs are full
 - **Placeholder:** ink-soft, conversational Korean ("어떤 물건을 찾으세요?").
 
 ### Navigation
-- **Bottom nav:** fixed, max-w-md, `bg-white/95 backdrop-blur`, hairline top border. Five items, 10px bold labels, custom rounded-geometry stroke icons (1.7 stroke inactive → 2.1 active, active pill `tomo-blue/30`, active text navy, inactive ink-soft). Center slot is the raised coral sell FAB (48px circle, coral-deep, `--shadow-float`, −20px offset).
+- **Bottom nav (mobile only, hidden md+):** fixed, max-w-md, `bg-white/95 backdrop-blur`, hairline top border. Five items, 10px bold labels, custom rounded-geometry stroke icons (1.7 stroke inactive → 2.1 active, active pill `tomo-blue/30`, active text navy, inactive ink-soft). Center slot is the raised coral sell FAB (48px circle, coral-deep, `--shadow-float`, −20px offset).
 - **Tabs:** pill segments; active = navy fill + white text + soft shadow, inactive = white fill + ink-soft.
 
 ### Chat Bubbles (signature)

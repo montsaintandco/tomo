@@ -98,7 +98,7 @@ export default function ChatRoom(props: {
         <div ref={bottomRef} />
       </div>
       {error && <p className="px-4 pb-1 text-xs text-tomo-rose">{error}</p>}
-      <form onSubmit={send} className="flex items-center gap-2 border-t border-tomo-navy/5 bg-white p-3 pb-20">
+      <form onSubmit={send} className="flex items-center gap-2 border-t border-tomo-navy/5 bg-white p-3 pb-20 md:pb-3">
         <input value={draft} onChange={(e) => setDraft(e.target.value)}
           placeholder="메시지 입력 · メッセージを入力" maxLength={1000}
           className="flex-1 rounded-full bg-tomo-ivory px-4 py-2.5 text-sm placeholder:text-ink-soft" />

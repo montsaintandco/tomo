@@ -49,39 +49,40 @@ export default function SellPage() {
   }
 
   return (
-    <main className="mx-auto max-w-md p-4 pb-24">
-      <h1 className="mb-4 text-xl font-bold text-tomo-navy">판매하기 · 出品する</h1>
+    <main className="mx-auto max-w-md p-4 pb-24 md:max-w-2xl md:px-6 md:pb-16 md:pt-8">
+      <h1 className="font-brand mb-4 text-xl text-tomo-navy">판매하기 · 出品する</h1>
       <form onSubmit={submit} className="flex flex-col gap-3">
         <label className="text-sm font-bold">사진 (최대 5장)
-          <input type="file" accept="image/*" multiple className="mt-1 block w-full text-sm"
+          <input type="file" accept="image/*" multiple className="mt-1 block w-full text-sm text-ink-soft"
             onChange={(e) => setFiles(Array.from(e.target.files ?? []))} />
         </label>
         <label className="text-sm font-bold">제목
-          <input className="mt-1 w-full rounded-full border px-4 py-3" value={title} onChange={(e) => setTitle(e.target.value)} required maxLength={80} />
+          <input className="mt-1 w-full rounded-full bg-white px-4 py-3 font-normal shadow-[var(--shadow-soft)]" value={title} onChange={(e) => setTitle(e.target.value)} required maxLength={80} />
         </label>
         <label className="text-sm font-bold">설명
-          <textarea className="mt-1 w-full rounded-card border px-4 py-3" rows={5} value={description} onChange={(e) => setDescription(e.target.value)} required maxLength={2000} />
+          <textarea className="mt-1 w-full rounded-card bg-white px-4 py-3 font-normal shadow-[var(--shadow-soft)]" rows={5} value={description} onChange={(e) => setDescription(e.target.value)} required maxLength={2000} />
         </label>
         <label className="text-sm font-bold">가격
-          <input className="mt-1 w-full rounded-full border px-4 py-3" type="number" min={1} value={price} onChange={(e) => setPrice(e.target.value)} required />
+          <input className="tnum mt-1 w-full rounded-full bg-white px-4 py-3 font-normal shadow-[var(--shadow-soft)]" type="number" min={1} value={price} onChange={(e) => setPrice(e.target.value)} required />
         </label>
         <label className="text-sm font-bold">카테고리
-          <select className="mt-1 w-full rounded-full border px-4 py-3" value={category} onChange={(e) => setCategory(e.target.value)}>
+          <select className="mt-1 w-full rounded-full bg-white px-4 py-3 font-normal shadow-[var(--shadow-soft)]" value={category} onChange={(e) => setCategory(e.target.value)}>
             {CATEGORIES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
         </label>
         <fieldset className="flex gap-2">
+          <legend className="mb-1 text-sm font-bold">거래 방법</legend>
           {([["direct","직거래"],["shipping","배송"],["both","둘 다"]] as const).map(([v, l]) => (
-            <button type="button" key={v}
-              className={`flex-1 rounded-full py-2 text-sm font-bold ${tradeMethod === v ? "bg-tomo-blue text-white" : "border"}`}
+            <button type="button" key={v} aria-pressed={tradeMethod === v}
+              className={`btn flex-1 py-2 text-sm ${tradeMethod === v ? "bg-tomo-navy text-white shadow-[var(--shadow-soft)]" : "bg-white text-ink-soft"}`}
               onClick={() => setTradeMethod(v)}>{l}</button>
           ))}
         </fieldset>
         <label className="flex items-center gap-2 text-sm font-bold">
-          <input type="checkbox" checked={crossBorder} onChange={(e) => setCrossBorder(e.target.checked)} />
+          <input type="checkbox" className="h-4 w-4 accent-[#C14E4C]" checked={crossBorder} onChange={(e) => setCrossBorder(e.target.checked)} />
           해외 판매 허용 (센터 경유 배송)
         </label>
-        <button disabled={busy} className="rounded-full bg-tomo-coral-deep py-3 font-bold text-white disabled:opacity-50">
+        <button disabled={busy} className="btn bg-tomo-coral-deep py-3 text-white">
           {busy ? "등록 중…" : "등록하기 · 出品"}
         </button>
         {error && <p className="text-sm text-tomo-rose">{error}</p>}

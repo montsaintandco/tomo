@@ -44,16 +44,17 @@ export default async function Home({ searchParams }: { searchParams: { tab?: str
   const { data: listings } = localNeedsLogin ? { data: [] } : await query;
 
   return (
-    <main className="mx-auto max-w-md">
-      <header className="sticky top-0 z-20 bg-tomo-ivory/95 px-4 pb-3 pt-3 backdrop-blur">
-        <div className="mb-3 flex items-center justify-between">
-          <Link href="/" className="press"><Wordmark /></Link>
+    <main className="mx-auto max-w-md md:max-w-6xl md:px-6">
+      <header className="sticky top-0 z-20 bg-tomo-ivory/95 px-4 pb-3 pt-3 backdrop-blur md:static md:bg-transparent md:px-0 md:pb-4 md:pt-8 md:backdrop-blur-0">
+        <div className="mb-3 flex items-center justify-between md:mb-4">
+          <Link href="/" className="press md:hidden"><Wordmark /></Link>
+          <h1 className="font-brand hidden text-xl text-tomo-navy md:block">오늘의 중고거래</h1>
           {viewer.guest && (
             <Link href="/login" className="btn bg-tomo-navy px-4 py-1.5 text-sm text-white">로그인</Link>
           )}
         </div>
 
-        <form className="mb-3" role="search">
+        <form className="mb-3 md:max-w-xl" role="search">
           <label htmlFor="feed-q" className="sr-only">상품 검색</label>
           <div className="relative">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}
@@ -83,10 +84,10 @@ export default async function Home({ searchParams }: { searchParams: { tab?: str
         </div>
       </header>
 
-      <div className="px-4 pb-6 pt-1">
+      <div className="px-4 pb-6 pt-1 md:px-0 md:pb-16">
         {/* 구매 루트 안내 — 두 나라를 잇는 순간이므로 그라데이션 필드 */}
         <Link href="/global"
-          className="grad-bridge press mb-4 flex items-center gap-3 rounded-card p-3.5 shadow-[var(--shadow-soft)]">
+          className="grad-bridge press mb-4 flex items-center gap-3 rounded-card p-3.5 shadow-[var(--shadow-soft)] md:mb-7 md:gap-4 md:p-5">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/85">
             <svg viewBox="0 0 24 24" fill="none" stroke="#0C447C" strokeWidth={1.8}
               strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden>
@@ -115,7 +116,7 @@ export default async function Home({ searchParams }: { searchParams: { tab?: str
             </Link>
           </div>
         ) : (listings ?? []).length > 0 ? (
-          <ul className="flex flex-col">
+          <ul className="flex flex-col md:grid md:grid-cols-3 md:gap-x-5 md:gap-y-8 lg:grid-cols-4">
             {(listings ?? []).map((l) => (
               <ListingRow key={l.id} listing={l as unknown as FeedListing} viewer={viewer} />
             ))}

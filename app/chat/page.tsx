@@ -47,7 +47,7 @@ export default async function ChatListPage() {
   });
 
   return (
-    <main className="mx-auto max-w-md p-4 pb-24">
+    <main className="mx-auto max-w-md p-4 pb-24 md:max-w-2xl md:px-6 md:pb-16 md:pt-8">
       <h1 className="font-brand mb-4 text-xl text-tomo-navy">채팅 · チャット</h1>
       <ul className="flex flex-col">
         {sorted.map((c) => {

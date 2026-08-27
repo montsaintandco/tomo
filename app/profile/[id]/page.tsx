@@ -2,6 +2,7 @@ import { createServerSupabase } from "@/lib/supabase/server";
 import { getViewerOrGuest } from "@/lib/listings";
 import { formatPrice, type Currency } from "@/lib/currency";
 import HeartGauge from "@/components/HeartGauge";
+import { CountryChip } from "@/components/Brand";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
@@ -35,13 +36,13 @@ export default async function ProfilePage({ params }: { params: { id: string } }
   const reviews = (reviewsRaw ?? []) as unknown as Review[];
 
   return (
-    <main className="mx-auto max-w-md p-4 pb-24">
-      <div className="mb-4 rounded-card border bg-white p-4">
+    <main className="mx-auto max-w-md p-4 pb-24 md:max-w-2xl md:px-6 md:pb-16 md:pt-8">
+      <div className="card mb-4 p-4 md:p-6">
         <div className="mb-3 flex items-center justify-between">
           <div>
             <p className="text-lg font-bold">{p.nickname}</p>
-            <p className="text-xs text-ink-faint">
-              <span className="mr-1 rounded-full bg-tomo-blue/40 px-2 py-0.5">{p.country}</span>{p.region}
+            <p className="flex items-center gap-1.5 text-xs text-ink-soft">
+              <CountryChip country={p.country as "KR" | "JP"} />{p.region}
             </p>
           </div>
         </div>
@@ -49,7 +50,7 @@ export default async function ProfilePage({ params }: { params: { id: string } }
       </div>
 
       <h2 className="mb-2 text-sm font-bold text-ink-soft">판매 상품 · 出品</h2>
-      <div className="mb-5 grid grid-cols-3 gap-2">
+      <div className="mb-5 grid grid-cols-3 gap-2 md:grid-cols-4 md:gap-3">
         {(listings ?? []).map((l) => (
           <Link key={l.id} href={`/listings/${l.id}`} className="block">
             <div className="relative aspect-square overflow-hidden rounded-card bg-tomo-navy/5">
@@ -69,7 +70,7 @@ export default async function ProfilePage({ params }: { params: { id: string } }
           </Link>
         ))}
         {(listings ?? []).length === 0 && (
-          <p className="col-span-3 rounded-card bg-tomo-ivory p-3 text-center text-xs text-ink-faint">
+          <p className="col-span-3 rounded-card bg-tomo-navy/5 p-3 text-center text-xs text-ink-soft md:col-span-4">
             등록한 상품이 없어요
           </p>
         )}
@@ -78,7 +79,7 @@ export default async function ProfilePage({ params }: { params: { id: string } }
       <h2 className="mb-2 text-sm font-bold text-ink-soft">받은 후기 · レビュー ({reviews.length})</h2>
       <div className="flex flex-col gap-2">
         {reviews.map((r, i) => (
-          <div key={i} className="rounded-card border bg-white p-3">
+          <div key={i} className="card p-3">
             <div className="flex items-center justify-between">
               <span className="text-sm text-tomo-coral">{"♥".repeat(r.rating)}</span>
               <span className="text-[10px] text-ink-faint">{r.reviewer?.nickname}</span>
@@ -87,7 +88,7 @@ export default async function ProfilePage({ params }: { params: { id: string } }
           </div>
         ))}
         {reviews.length === 0 && (
-          <p className="rounded-card bg-tomo-ivory p-3 text-center text-xs text-ink-faint">
+          <p className="rounded-card bg-tomo-navy/5 p-3 text-center text-xs text-ink-soft">
             아직 후기가 없어요
           </p>
         )}

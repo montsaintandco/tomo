@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import BottomNav from "@/components/BottomNav";
+import SiteHeader from "@/components/SiteHeader";
+import SiteFooter from "@/components/SiteFooter";
 
 export const metadata: Metadata = {
   title: "TOMO — 한국·일본 중고거래",
@@ -17,7 +19,7 @@ export const viewport: Viewport = { themeColor: "#FBF9F4" };
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ko">
-      <body className="bg-tomo-ivory pb-24 text-ink">
+      <body className="bg-tomo-ivory pb-24 text-ink md:pb-0">
         {/* impeccable direction contract · seed: brand-pinned redesign
         THESIS: 두 말풍선이 만나면 하트가 된다. 나라·언어 신호는 전부 말풍선 칩(KR=블루, JP=핑크)이고,
         두 나라가 만나는 순간(여행직거래·대행·번역채팅)에만 블루→핑크 그라데이션과 하트가 등장한다.
@@ -34,7 +36,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-full focus:bg-tomo-navy focus:px-4 focus:py-2 focus:text-sm focus:font-bold focus:text-white">
           본문 바로가기
         </a>
+        <SiteHeader />
         <div id="main">{children}</div>
+        <SiteFooter />
         <BottomNav />
       </body>
     </html>

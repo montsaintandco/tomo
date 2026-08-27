@@ -51,11 +51,11 @@ export default async function TransactionPage({ params }: { params: { id: string
   }
 
   return (
-    <main className="mx-auto max-w-md p-4 pb-24">
-      <h1 className="mb-4 text-xl font-bold text-tomo-navy">거래 진행 · 取引</h1>
+    <main className="mx-auto max-w-md p-4 pb-24 md:max-w-2xl md:px-6 md:pb-16 md:pt-8">
+      <h1 className="font-brand mb-4 text-xl text-tomo-navy">거래 진행 · 取引</h1>
 
       <Link href={`/listings/${l.id}`}
-        className="mb-4 flex items-center gap-3 rounded-card border bg-white p-3">
+        className="card mb-4 flex items-center gap-3 p-3">
         <div className="h-14 w-14 shrink-0 overflow-hidden rounded-card bg-tomo-navy/5">
           {l.images[0] && (
             // eslint-disable-next-line @next/next/no-img-element
@@ -71,11 +71,11 @@ export default async function TransactionPage({ params }: { params: { id: string
         </div>
       </Link>
 
-      <div className="mb-4 rounded-card border bg-white p-4">
+      <div className="card mb-4 p-4">
         <EscrowTimeline status={tx.status} isCrossBorder={tx.is_cross_border} lang={viewer.language} />
       </div>
 
-      <div className="mb-4 rounded-card border bg-white p-4 text-sm">
+      <div className="card mb-4 p-4 text-sm">
         <div className="flex justify-between">
           <span className="text-ink-soft">상품가</span>
           <span>{formatPrice(tx.item_price, tx.currency)}</span>
@@ -86,7 +86,7 @@ export default async function TransactionPage({ params }: { params: { id: string
             <span>{formatPrice(tx.intl_shipping_fee, tx.currency)}</span>
           </div>
         )}
-        <div className="mt-2 flex justify-between border-t pt-2 font-bold">
+        <div className="mt-2 flex justify-between border-t border-tomo-navy/10 pt-2 font-bold">
           <span>{role === "seller" ? "정산 예정액" : "결제 금액"}</span>
           <span className="text-tomo-navy">
             {role === "seller"
@@ -104,7 +104,7 @@ export default async function TransactionPage({ params }: { params: { id: string
       </div>
 
       {(tx.domestic_tracking || tx.intl_tracking) && (
-        <div className="mb-4 rounded-card border bg-white p-4 text-xs text-ink-soft">
+        <div className="card mb-4 p-4 text-xs text-ink-soft">
           {tx.domestic_tracking && <p>국내 운송장: {tx.domestic_tracking}</p>}
           {tx.intl_tracking && <p className="mt-1">국제 운송장: {tx.intl_tracking}</p>}
         </div>
@@ -115,7 +115,7 @@ export default async function TransactionPage({ params }: { params: { id: string
       {tx.status === "completed" && isParty && (
         <div className="mt-4">
           {alreadyReviewed
-            ? <p className="rounded-card bg-tomo-ivory p-3 text-center text-sm text-ink-soft">후기를 남겼어요 · 감사합니다</p>
+            ? <p className="rounded-card bg-tomo-navy/5 p-3 text-center text-sm text-ink-soft">후기를 남겼어요 · 감사합니다</p>
             : <ReviewForm txId={tx.id} />}
         </div>
       )}
