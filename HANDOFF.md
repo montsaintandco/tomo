@@ -5,14 +5,21 @@
 ## 재개 방법
 
 ```bash
-# tomo-project.zip 압축 해제 후
+git clone https://github.com/montsaintandco/tomo.git
 cd tomo
 npm install
 npm run dev   # http://localhost:3000
 npm test      # vitest 35개 통과해야 정상
 ```
 
-`.env.local`은 zip에 포함되어 있음 (Supabase URL + anon key). Node 18+ 필요.
+`.env.local`은 gitignore라 직접 생성 (둘 다 공개값 — anon key는 RLS로 보호됨):
+
+```
+NEXT_PUBLIC_SUPABASE_URL=https://zftztnkczlblnkgaijzc.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpmdHp0bmtjemxibG5rZ2FpanpjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ1ODc3ODMsImV4cCI6MjEwMDE2Mzc4M30.uRRfCrw71ZqA8mkjH9UJ0OW55aeQ362xX3N2Xo17GPI
+```
+
+Node 18+ 필요.
 
 ## 인프라
 
