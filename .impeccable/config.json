@@ -44,6 +44,12 @@
         "value": "26px",
         "createdAt": "2026-08-26T14:56:56.075Z",
         "reason": "build decision: detail price display size in brand face, Price-Loudest Rule"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "34px",
+        "createdAt": "2026-08-27T12:58:19.113Z",
+        "reason": "desktop hero display step for the bridge banner; intentional scale-up of the brand display voice"
       }
     ]
   }
