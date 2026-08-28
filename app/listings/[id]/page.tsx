@@ -5,6 +5,7 @@ import OriginalToggle from "@/components/OriginalToggle";
 import ChatButton from "@/components/ChatButton";
 import CheckoutButton from "@/components/CheckoutButton";
 import { CountryChip, TomoSymbol } from "@/components/Brand";
+import HeartGauge from "@/components/HeartGauge";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -64,26 +65,31 @@ export default async function ListingDetail({ params }: { params: { id: string }
       </div>
 
       <div className="flex flex-col gap-4 p-4 md:p-0">
-        <Link href={`/profile/${seller.id}`}
-          className="card flex items-center justify-between p-3.5">
-          <span className="flex items-center gap-2.5">
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-tomo-blue/25 font-brand text-sm text-tomo-navy">
-              {seller.nickname.slice(0, 1)}
-            </span>
-            <span>
-              <span className="block text-sm font-bold text-ink">{seller.nickname}</span>
-              <span className="flex items-center gap-1 text-xs text-ink-soft">
-                <CountryChip country={seller.country} />
-                {seller.region}
+        <Link href={`/profile/${seller.id}`} className="card block p-3.5 md:p-5">
+          <span className="flex items-center justify-between">
+            <span className="flex items-center gap-2.5">
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-tomo-blue/25 font-brand text-sm text-tomo-navy">
+                {seller.nickname.slice(0, 1)}
+              </span>
+              <span>
+                <span className="block text-sm font-bold text-ink">{seller.nickname}</span>
+                <span className="flex items-center gap-1 text-xs text-ink-soft">
+                  <CountryChip country={seller.country} />
+                  {seller.region}
+                </span>
               </span>
             </span>
+            <span className="tnum flex items-center gap-1 rounded-full bg-tomo-pink/25 px-3 py-1 text-sm font-bold text-tomo-rose md:hidden">
+              <svg viewBox="0 0 24 24" className="h-3 w-3" aria-hidden>
+                <path d="M12 21C7.2 17.2 2.5 13.6 2.5 8.9 2.5 5.6 5 3.5 7.8 3.5c1.7 0 3.3.9 4.2 2.3.9-1.4 2.5-2.3 4.2-2.3 2.8 0 5.3 2.1 5.3 5.4 0 4.7-4.7 8.3-9.5 12.1z" fill="#A34543" />
+              </svg>
+              {Number(seller.trust_temp).toFixed(1)}°
+            </span>
           </span>
-          <span className="tnum flex items-center gap-1 rounded-full bg-tomo-pink/25 px-3 py-1 text-sm font-bold text-tomo-rose">
-            <svg viewBox="0 0 24 24" className="h-3 w-3" aria-hidden>
-              <path d="M12 21C7.2 17.2 2.5 13.6 2.5 8.9 2.5 5.6 5 3.5 7.8 3.5c1.7 0 3.3.9 4.2 2.3.9-1.4 2.5-2.3 4.2-2.3 2.8 0 5.3 2.1 5.3 5.4 0 4.7-4.7 8.3-9.5 12.1z" fill="#A34543" />
-            </svg>
-            {Number(seller.trust_temp).toFixed(1)}°
-          </span>
+          {/* 데스크톱은 신뢰온도를 하트 게이지 풀 스케일로 (모바일은 컴팩트 필) */}
+          <div className="mt-4 hidden md:block">
+            <HeartGauge temp={Number(seller.trust_temp)} />
+          </div>
         </Link>
 
         <OriginalToggle

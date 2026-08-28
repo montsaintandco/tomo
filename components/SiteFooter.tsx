@@ -10,6 +10,13 @@ export default function SiteFooter() {
 
   return (
     <footer className="mt-16 hidden border-t border-tomo-navy/5 bg-white md:block">
+      {/* 브랜드 밴드 — 디자인 테제를 브랜드 보이스로 */}
+      <div className="border-b border-tomo-navy/5">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-8 px-6 py-8">
+          <p className="font-brand text-2xl text-tomo-navy">두 말풍선이 만나면, 하트가 돼요</p>
+          <TomoSymbol className="h-16 w-24 shrink-0" />
+        </div>
+      </div>
       <div className="mx-auto flex max-w-6xl items-start justify-between gap-8 px-6 py-10">
         <div>
           <Wordmark className="text-xl" />
@@ -38,7 +45,6 @@ export default function SiteFooter() {
             </ul>
           </div>
         </nav>
-        <TomoSymbol className="h-14 w-20 shrink-0 opacity-70" />
       </div>
       <div className="border-t border-tomo-navy/5">
         <p className="mx-auto max-w-6xl px-6 py-4 text-xs text-ink-soft">© 2026 TOMO · とも</p>
