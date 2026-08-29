@@ -57,7 +57,7 @@ export default async function ExternalItemPage({ params }: {
 
   return (
     <main className="mx-auto max-w-md pb-28 md:grid md:max-w-5xl md:grid-cols-2 md:items-start md:gap-10 md:px-6 md:pb-16 md:pt-8">
-      <div className="grid grid-cols-1 gap-1 md:sticky md:top-24 md:overflow-hidden md:rounded-card md:shadow-[var(--shadow-soft)]">
+      <div className="grid grid-cols-1 gap-1 md:sticky md:top-24 md:overflow-hidden md:rounded-card md:shadow-soft">
         {(item.images.length ? item.images : [item.thumb]).filter(Boolean).slice(0, 6).map((src, i) => (
           // eslint-disable-next-line @next/next/no-img-element
           <img key={i} src={src} alt="" className="aspect-square w-full object-cover" />

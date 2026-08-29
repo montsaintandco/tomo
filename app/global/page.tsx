@@ -60,7 +60,7 @@ export default async function GlobalPage({ searchParams }: {
               <circle cx="11" cy="11" r="6.5" /><path d="m16 16 4.5 4.5" />
             </svg>
             <input id="global-q" name="q" defaultValue={q} placeholder="찾는 물건을 검색하세요 (예: 필름카메라)"
-              className="w-full rounded-full bg-white py-2.5 pl-10 pr-4 text-sm shadow-[var(--shadow-soft)] placeholder:text-ink-soft md:py-3.5 md:pl-12 md:text-[15px]" />
+              className="w-full rounded-full bg-white py-2.5 pl-10 pr-4 text-sm shadow-soft placeholder:text-ink-soft md:py-3.5 md:pl-12 md:text-[15px]" />
           </div>
           {source !== "all" && <input type="hidden" name="source" value={source} />}
         </form>
@@ -75,7 +75,7 @@ export default async function GlobalPage({ searchParams }: {
             return (
               <Link key={s} href={qs ? `/global?${qs}` : "/global"} aria-current={source === s ? "page" : undefined}
                 className={`press shrink-0 rounded-full px-3.5 py-1.5 text-[13px] font-bold transition-colors md:px-5 md:py-2 md:text-sm ${
-                  source === s ? "bg-tomo-navy text-white shadow-[var(--shadow-soft)]" : "bg-white text-ink-soft hover:text-ink"}`}>
+                  source === s ? "bg-tomo-navy text-white shadow-soft" : "bg-white text-ink-soft hover:text-ink"}`}>
                 {s === "all" ? "전체" : SOURCE_LABEL[s as MarketSource]}
                 {!live && <span className="ml-1 font-normal opacity-60">준비중</span>}
               </Link>

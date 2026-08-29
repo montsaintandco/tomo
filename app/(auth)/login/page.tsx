@@ -57,7 +57,7 @@ function LoginForm() {
         {MODES.map(([v, l]) => (
           <button key={v} type="button" role="tab" aria-selected={mode === v}
             className={`press flex-1 rounded-full py-2 text-sm font-bold transition-colors ${
-              mode === v ? "bg-tomo-navy text-white shadow-[var(--shadow-soft)]" : "bg-white text-ink-soft"}`}
+              mode === v ? "bg-tomo-navy text-white shadow-soft" : "bg-white text-ink-soft"}`}
             onClick={() => { setMode(v); setError(""); }}>
             {l}
           </button>
@@ -65,10 +65,10 @@ function LoginForm() {
       </div>
       <form onSubmit={submit} className="flex flex-col gap-3">
         <label htmlFor="auth-email" className="sr-only">이메일 · メールアドレス</label>
-        <input id="auth-email" className="rounded-full bg-white px-4 py-3 shadow-[var(--shadow-soft)]" type="email" autoComplete="email"
+        <input id="auth-email" className="rounded-full bg-white px-4 py-3 shadow-soft" type="email" autoComplete="email"
           placeholder="name@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
         <label htmlFor="auth-password" className="sr-only">비밀번호 · パスワード</label>
-        <input id="auth-password" className="rounded-full bg-white px-4 py-3 shadow-[var(--shadow-soft)]" type="password"
+        <input id="auth-password" className="rounded-full bg-white px-4 py-3 shadow-soft" type="password"
           autoComplete={mode === "signin" ? "current-password" : "new-password"}
           placeholder="비밀번호 / パスワード (8자 이상)" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} />
         <button disabled={busy} className="btn bg-tomo-coral-deep py-3 text-white">

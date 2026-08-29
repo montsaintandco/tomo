@@ -35,7 +35,7 @@ export default function BottomNav() {
               <li key={i.href} className="flex-1">
                 <Link href={i.href} aria-current={active ? "page" : undefined}
                   className="press -mt-5 flex flex-col items-center gap-1 pb-2.5 text-[10px] font-bold text-tomo-coral-deep">
-                  <span className="flex h-12 w-12 -translate-y-2 items-center justify-center rounded-full bg-tomo-coral-deep shadow-[var(--shadow-float)]">
+                  <span className="flex h-12 w-12 -translate-y-2 items-center justify-center rounded-full bg-tomo-coral-deep shadow-float">
                     <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2.2}
                       strokeLinecap="round" className="h-6 w-6" aria-hidden>
                       <path d="M12 5.5v13M5.5 12h13" />

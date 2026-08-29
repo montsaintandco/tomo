@@ -52,7 +52,7 @@ export default function TxActions({
       {a.tracking && (
         <input value={tracking} onChange={(e) => setTracking(e.target.value)}
           placeholder="운송장 번호 (선택) · 追跡番号（任意）" maxLength={100}
-          className="rounded-full bg-white px-4 py-2.5 text-sm shadow-[var(--shadow-soft)] placeholder:text-ink-soft" />
+          className="rounded-full bg-white px-4 py-2.5 text-sm shadow-soft placeholder:text-ink-soft" />
       )}
       <button onClick={run} disabled={working}
         className={`btn w-full py-3 ${

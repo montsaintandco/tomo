@@ -64,7 +64,7 @@ export default async function Home({ searchParams }: { searchParams: { tab?: str
               <circle cx="11" cy="11" r="6.5" /><path d="m16 16 4.5 4.5" />
             </svg>
             <input id="feed-q" name="q" defaultValue={q ?? ""} placeholder="어떤 물건을 찾으세요?"
-              className="w-full rounded-full bg-white py-2.5 pl-10 pr-4 text-sm shadow-[var(--shadow-soft)] placeholder:text-ink-soft md:py-3.5 md:pl-12 md:text-[15px]" />
+              className="w-full rounded-full bg-white py-2.5 pl-10 pr-4 text-sm shadow-soft placeholder:text-ink-soft md:py-3.5 md:pl-12 md:text-[15px]" />
           </div>
           {tab !== "all" && <input type="hidden" name="tab" value={tab} />}
         </form>
@@ -78,7 +78,7 @@ export default async function Home({ searchParams }: { searchParams: { tab?: str
             return (
               <Link key={v} href={qs ? `/?${qs}` : "/"} aria-current={tab === v ? "page" : undefined}
                 className={`press rounded-full px-3.5 py-1.5 text-[13px] font-bold transition-colors md:px-5 md:py-2 md:text-sm ${
-                  tab === v ? "bg-tomo-navy text-white shadow-[var(--shadow-soft)]" : "bg-white text-ink-soft hover:text-ink"}`}>
+                  tab === v ? "bg-tomo-navy text-white shadow-soft" : "bg-white text-ink-soft hover:text-ink"}`}>
                 {l}
               </Link>
             );
@@ -90,7 +90,7 @@ export default async function Home({ searchParams }: { searchParams: { tab?: str
         {/* 구매 루트 안내 — 두 나라를 잇는 순간이므로 그라데이션 필드.
             데스크톱은 말풍선 꼬리 실루엣을 히어로 스케일로 키운다 */}
         <Link href="/global"
-          className="grad-bridge press mb-4 flex items-center gap-3 rounded-card p-3.5 shadow-[var(--shadow-soft)] md:mb-9 md:gap-8 md:rounded-[32px] md:rounded-bl-[10px] md:p-10">
+          className="grad-bridge press mb-4 flex items-center gap-3 rounded-card p-3.5 shadow-soft md:mb-9 md:gap-8 md:rounded-[32px] md:rounded-bl-[10px] md:p-10">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/85 md:hidden">
             <svg viewBox="0 0 24 24" fill="none" stroke="#0C447C" strokeWidth={1.8}
               strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden>
@@ -103,7 +103,7 @@ export default async function Home({ searchParams }: { searchParams: { tab?: str
               메루카리·야후 상품을 대신 사서 보내드려요
               <span className="hidden md:inline"> — 견적 확인 후 결제, 센터 검수를 거쳐 도착까지.</span>
             </span>
-            <span className="btn mt-5 hidden w-fit items-center gap-2 bg-white/90 px-6 py-2.5 text-sm text-tomo-navy shadow-[var(--shadow-soft)] md:inline-flex">
+            <span className="btn mt-5 hidden w-fit items-center gap-2 bg-white/90 px-6 py-2.5 text-sm text-tomo-navy shadow-soft md:inline-flex">
               해외직구 둘러보기
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2}
                 strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5" aria-hidden>

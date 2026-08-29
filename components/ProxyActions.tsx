@@ -49,7 +49,7 @@ export default function ProxyActions({ id, status, isOwner, isAdmin }: {
       {actions.some((a) => a.tracking) && (
         <input value={tracking} onChange={(e) => setTracking(e.target.value)}
           placeholder="국제 운송장 번호" maxLength={100}
-          className="rounded-full bg-white px-4 py-2.5 text-sm shadow-[var(--shadow-soft)] placeholder:text-ink-soft" />
+          className="rounded-full bg-white px-4 py-2.5 text-sm shadow-soft placeholder:text-ink-soft" />
       )}
       {actions.map((a) => (
         <button key={a.to} onClick={() => run(a.to, a.tracking)} disabled={working}

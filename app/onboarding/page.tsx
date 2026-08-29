@@ -36,13 +36,13 @@ export default function OnboardingPage() {
       <h1 className="font-brand text-xl text-tomo-navy">프로필 만들기 · プロフィール作成</h1>
       <form onSubmit={submit} className="flex flex-col gap-3">
         <label htmlFor="ob-nickname" className="sr-only">닉네임 · ニックネーム</label>
-        <input id="ob-nickname" className="rounded-full bg-white px-4 py-3 shadow-[var(--shadow-soft)]" placeholder="닉네임 · ニックネーム" value={nickname} onChange={(e) => setNickname(e.target.value)} required maxLength={20} />
+        <input id="ob-nickname" className="rounded-full bg-white px-4 py-3 shadow-soft" placeholder="닉네임 · ニックネーム" value={nickname} onChange={(e) => setNickname(e.target.value)} required maxLength={20} />
         <div className="flex gap-2" role="group" aria-label="국가 · 国">
           {/* 나라 선택 — 파스텔 필드에는 딥 잉크 텍스트 (KR=네이비, JP=로즈) */}
           {(["KR", "JP"] as const).map((c) => (
             <button type="button" key={c} aria-pressed={country === c}
               className={`btn flex-1 py-3 ${country === c
-                ? (c === "KR" ? "bg-tomo-blue/40 text-tomo-navy shadow-[var(--shadow-soft)]" : "bg-tomo-pink/45 text-tomo-rose shadow-[var(--shadow-soft)]")
+                ? (c === "KR" ? "bg-tomo-blue/40 text-tomo-navy shadow-soft" : "bg-tomo-pink/45 text-tomo-rose shadow-soft")
                 : "bg-white text-ink-soft"}`}
               onClick={() => { setCountry(c); setRegion(REGIONS[c][0]); setLanguage(c === "KR" ? "ko" : "ja"); }}>
               {c === "KR" ? "한국" : "日本"}
@@ -50,11 +50,11 @@ export default function OnboardingPage() {
           ))}
         </div>
         <label htmlFor="ob-region" className="sr-only">지역 · 地域</label>
-        <select id="ob-region" className="rounded-full bg-white px-4 py-3 shadow-[var(--shadow-soft)]" value={region} onChange={(e) => setRegion(e.target.value)}>
+        <select id="ob-region" className="rounded-full bg-white px-4 py-3 shadow-soft" value={region} onChange={(e) => setRegion(e.target.value)}>
           {REGIONS[country].map((r) => <option key={r}>{r}</option>)}
         </select>
         <label htmlFor="ob-language" className="sr-only">언어 · 言語</label>
-        <select id="ob-language" className="rounded-full bg-white px-4 py-3 shadow-[var(--shadow-soft)]" value={language} onChange={(e) => setLanguage(e.target.value as "ko" | "ja")}>
+        <select id="ob-language" className="rounded-full bg-white px-4 py-3 shadow-soft" value={language} onChange={(e) => setLanguage(e.target.value as "ko" | "ja")}>
           <option value="ko">한국어</option>
           <option value="ja">日本語</option>
         </select>

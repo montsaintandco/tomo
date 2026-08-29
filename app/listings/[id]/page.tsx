@@ -29,7 +29,7 @@ export default async function ListingDetail({ params }: { params: { id: string }
   return (
     <main className="mx-auto max-w-md pb-32 md:grid md:max-w-5xl md:grid-cols-2 md:items-start md:gap-10 md:px-6 md:pb-16 md:pt-8">
       {/* 이미지 위 뒤로가기 — 상세는 이미지가 헤더다. 데스크톱은 좌측 고정 컬럼 */}
-      <div className="relative md:sticky md:top-24 md:overflow-hidden md:rounded-card md:shadow-[var(--shadow-soft)]">
+      <div className="relative md:sticky md:top-24 md:overflow-hidden md:rounded-card md:shadow-soft">
         <Link href="/" aria-label="피드로 돌아가기"
           className="press absolute left-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-tomo-navy/45 backdrop-blur-sm">
           <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2.2}

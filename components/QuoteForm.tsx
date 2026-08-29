@@ -54,7 +54,7 @@ function Field({ label, value, onChange }: { label: string; value: string; onCha
     <label className="block">
       <span className="mb-0.5 block text-[10px] text-ink-soft">{label} (¥)</span>
       <input type="number" min={0} value={value} onChange={(e) => onChange(e.target.value)}
-        className="tnum w-full rounded-full bg-white px-2.5 py-1 text-sm shadow-[var(--shadow-soft)]" />
+        className="tnum w-full rounded-full bg-white px-2.5 py-1 text-sm shadow-soft" />
     </label>
   );
 }

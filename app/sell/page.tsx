@@ -62,16 +62,16 @@ export default function SellPage() {
             onChange={(e) => setFiles(Array.from(e.target.files ?? []))} />
         </label>
         <label className="text-sm font-bold">제목
-          <input className="mt-1 w-full rounded-full bg-white px-4 py-3 font-normal shadow-[var(--shadow-soft)]" value={title} onChange={(e) => setTitle(e.target.value)} required maxLength={80} />
+          <input className="mt-1 w-full rounded-full bg-white px-4 py-3 font-normal shadow-soft" value={title} onChange={(e) => setTitle(e.target.value)} required maxLength={80} />
         </label>
         <label className="text-sm font-bold">설명
-          <textarea className="mt-1 w-full rounded-card bg-white px-4 py-3 font-normal shadow-[var(--shadow-soft)]" rows={5} value={description} onChange={(e) => setDescription(e.target.value)} required maxLength={2000} />
+          <textarea className="mt-1 w-full rounded-card bg-white px-4 py-3 font-normal shadow-soft" rows={5} value={description} onChange={(e) => setDescription(e.target.value)} required maxLength={2000} />
         </label>
         <label className="text-sm font-bold">가격
-          <input className="tnum mt-1 w-full rounded-full bg-white px-4 py-3 font-normal shadow-[var(--shadow-soft)]" type="number" min={1} value={price} onChange={(e) => setPrice(e.target.value)} required />
+          <input className="tnum mt-1 w-full rounded-full bg-white px-4 py-3 font-normal shadow-soft" type="number" min={1} value={price} onChange={(e) => setPrice(e.target.value)} required />
         </label>
         <label className="text-sm font-bold">카테고리
-          <select className="mt-1 w-full rounded-full bg-white px-4 py-3 font-normal shadow-[var(--shadow-soft)]" value={category} onChange={(e) => setCategory(e.target.value)}>
+          <select className="mt-1 w-full rounded-full bg-white px-4 py-3 font-normal shadow-soft" value={category} onChange={(e) => setCategory(e.target.value)}>
             {CATEGORIES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
         </label>
@@ -80,7 +80,7 @@ export default function SellPage() {
           <div className="flex gap-2">
             {([["direct","직거래"],["shipping","배송"],["both","둘 다"]] as const).map(([v, l]) => (
               <button type="button" key={v} aria-pressed={tradeMethod === v}
-                className={`btn flex-1 py-2 text-sm ${tradeMethod === v ? "bg-tomo-navy text-white shadow-[var(--shadow-soft)]" : "bg-white text-ink-soft"}`}
+                className={`btn flex-1 py-2 text-sm ${tradeMethod === v ? "bg-tomo-navy text-white shadow-soft" : "bg-white text-ink-soft"}`}
                 onClick={() => setTradeMethod(v)}>{l}</button>
             ))}
           </div>

@@ -26,6 +26,12 @@ const config: Config = {
         "ink-faint": "#93A0AB",
       },
       borderRadius: { card: "20px" },
+      // 네이비 틴트 섀도우 토큰 — shadow-[var(...)] 임의값은 box-shadow로 생성되지 않음
+      boxShadow: {
+        soft: "var(--shadow-soft)",
+        lift: "var(--shadow-lift)",
+        float: "var(--shadow-float)",
+      },
     },
   },
   plugins: [],
