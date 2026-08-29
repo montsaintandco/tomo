@@ -3,6 +3,7 @@ import { getViewer, displayTitle } from "@/lib/listings";
 import { formatPrice, type Currency } from "@/lib/currency";
 import HeartGauge from "@/components/HeartGauge";
 import { CountryChip } from "@/components/Brand";
+import LogoutButton from "@/components/LogoutButton";
 import { SOURCE_LABEL, type MarketSource } from "@/lib/market/types";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -49,11 +50,14 @@ export default async function MyPage() {
               {profile?.region}
             </p>
           </div>
-          {viewer.isAdmin && (
-            <Link href="/admin" className="btn bg-tomo-navy px-3 py-1.5 text-xs text-white">
-              운영자
-            </Link>
-          )}
+          <div className="flex items-center gap-2">
+            {viewer.isAdmin && (
+              <Link href="/admin" className="btn bg-tomo-navy px-3 py-1.5 text-xs text-white">
+                운영자
+              </Link>
+            )}
+            <LogoutButton />
+          </div>
         </div>
         <HeartGauge temp={Number(profile?.trust_temp ?? 36.5)} />
       </div>

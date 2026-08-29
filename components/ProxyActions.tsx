@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 
@@ -7,9 +7,11 @@ export default function ProxyActions({ id, status, isOwner, isAdmin }: {
   id: string; status: string; isOwner: boolean; isAdmin: boolean;
 }) {
   const [busy, setBusy] = useState(false);
+  const [isPending, startTransition] = useTransition();
   const [error, setError] = useState("");
   const [tracking, setTracking] = useState("");
   const router = useRouter();
+  const working = busy || isPending;
 
   // 현재 상태·주체에서 가능한 액션 (DB advance_proxy 매트릭스와 정합)
   const actions: { label: string; to: string; tracking?: boolean; outline?: boolean }[] = [];
@@ -36,8 +38,10 @@ export default function ProxyActions({ id, status, isOwner, isAdmin }: {
     const { error } = await supabase.rpc("advance_proxy", {
       p_id: id, p_to: to, p_tracking: withTracking ? (tracking.trim() || null) : null,
     });
-    if (error) { setError(error.message); setBusy(false); return; }
-    router.refresh();
+    setBusy(false);
+    if (error) { setError(error.message); return; }
+    // refresh 완료까지 isPending으로 잠금 — 새 상태의 다음 액션이 바로 눌리게
+    startTransition(() => router.refresh());
   }
 
   return (
@@ -48,10 +52,10 @@ export default function ProxyActions({ id, status, isOwner, isAdmin }: {
           className="rounded-full bg-white px-4 py-2.5 text-sm shadow-[var(--shadow-soft)] placeholder:text-ink-soft" />
       )}
       {actions.map((a) => (
-        <button key={a.to} onClick={() => run(a.to, a.tracking)} disabled={busy}
+        <button key={a.to} onClick={() => run(a.to, a.tracking)} disabled={working}
           className={`btn w-full py-3 ${
             a.outline ? "border-[1.5px] border-tomo-navy/15 bg-white text-ink-soft" : "bg-tomo-coral-deep text-white"}`}>
-          {busy ? "처리 중…" : a.label}
+          {working ? "처리 중…" : a.label}
         </button>
       ))}
       {error && <p className="text-xs text-tomo-rose">{error}</p>}
