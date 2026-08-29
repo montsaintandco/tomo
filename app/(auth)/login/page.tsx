@@ -36,12 +36,21 @@ function LoginForm() {
           return setError("이메일 또는 비밀번호가 올바르지 않아요. 처음이라면 회원가입을 눌러 주세요 · メールまたはパスワードが正しくありません");
         setError(error.message);
       } else {
-        const { error } = await supabase.auth.signUp({ email, password });
-        if (!error) return router.push("/onboarding");
+        const { data, error } = await supabase.auth.signUp({ email, password });
+        if (!error) {
+          // 이메일 인증이 켜진 프로젝트면 세션 없이 성공 — 온보딩으로 보내면 로그인으로 튕기므로 안내
+          if (!data.session)
+            return setError("가입 확인 메일을 보냈어요. 메일의 링크로 인증한 뒤 로그인해 주세요 · 確認メールのリンクを開いてからログインしてください");
+          return router.push("/onboarding");
+        }
         if (/already registered|already exists|user already/i.test(error.message))
           return setError("이미 가입된 이메일이에요. 로그인 탭에서 로그인해 주세요 · 登録済みのメールです");
+        if (/rate limit/i.test(error.message))
+          return setError("지금은 가입 요청이 많아요. 잠시 후 다시 시도해 주세요 · しばらくしてからもう一度お試しください");
         setError(error.message);
       }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "요청에 실패했어요 · 失敗しました。もう一度お試しください");
     } finally {
       setBusy(false);
     }
