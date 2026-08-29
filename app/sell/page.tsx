@@ -23,14 +23,16 @@ export default function SellPage() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true); setError("");
+    const supabase = createBrowserSupabase();
+    const uploadedPaths: string[] = [];
     try {
-      const supabase = createBrowserSupabase();
       const { data: auth } = await supabase.auth.getUser();
       const images: string[] = [];
       for (const f of files.slice(0, 5)) {
         const path = `${auth.user!.id}/${Date.now()}-${Math.random().toString(36).slice(2)}`;
         const { error: upErr } = await supabase.storage.from("listing-images").upload(path, f);
         if (upErr) throw upErr;
+        uploadedPaths.push(path);
         images.push(supabase.storage.from("listing-images").getPublicUrl(path).data.publicUrl);
       }
       const res = await fetch("/api/listings", {
@@ -42,6 +44,9 @@ export default function SellPage() {
       if (!res.ok) throw new Error(json.error);
       router.push(`/listings/${json.id}`);
     } catch (err) {
+      // 리스팅이 만들어지지 못했으면 방금 올린 이미지는 고아 — 즉시 정리 (실패해도 무시)
+      if (uploadedPaths.length > 0)
+        await supabase.storage.from("listing-images").remove(uploadedPaths).catch(() => {});
       setError(err instanceof Error ? err.message : "등록 실패");
     } finally {
       setBusy(false);
@@ -70,13 +75,15 @@ export default function SellPage() {
             {CATEGORIES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
         </label>
-        <fieldset className="flex gap-2">
+        <fieldset>
           <legend className="mb-1 text-sm font-bold">거래 방법</legend>
-          {([["direct","직거래"],["shipping","배송"],["both","둘 다"]] as const).map(([v, l]) => (
-            <button type="button" key={v} aria-pressed={tradeMethod === v}
-              className={`btn flex-1 py-2 text-sm ${tradeMethod === v ? "bg-tomo-navy text-white shadow-[var(--shadow-soft)]" : "bg-white text-ink-soft"}`}
-              onClick={() => setTradeMethod(v)}>{l}</button>
-          ))}
+          <div className="flex gap-2">
+            {([["direct","직거래"],["shipping","배송"],["both","둘 다"]] as const).map(([v, l]) => (
+              <button type="button" key={v} aria-pressed={tradeMethod === v}
+                className={`btn flex-1 py-2 text-sm ${tradeMethod === v ? "bg-tomo-navy text-white shadow-[var(--shadow-soft)]" : "bg-white text-ink-soft"}`}
+                onClick={() => setTradeMethod(v)}>{l}</button>
+            ))}
+          </div>
         </fieldset>
         <label className="flex items-center gap-2 text-sm font-bold">
           <input type="checkbox" className="h-4 w-4 accent-[#C14E4C]" checked={crossBorder} onChange={(e) => setCrossBorder(e.target.checked)} />
@@ -85,7 +92,7 @@ export default function SellPage() {
         <button disabled={busy} className="btn bg-tomo-coral-deep py-3 text-white">
           {busy ? "등록 중…" : "등록하기 · 出品"}
         </button>
-        {error && <p className="text-sm text-tomo-rose">{error}</p>}
+        {error && <p role="alert" className="text-sm text-tomo-rose">{error}</p>}
       </form>
     </main>
   );

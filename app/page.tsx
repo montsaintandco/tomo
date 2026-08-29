@@ -41,7 +41,9 @@ export default async function Home({ searchParams }: { searchParams: { tab?: str
     query = query.in("id", ids.length > 0 ? ids : ["00000000-0000-0000-0000-000000000000"]);
   }
 
-  const { data: listings } = localNeedsLogin ? { data: [] } : await query;
+  const { data: listings, error: feedError } = localNeedsLogin
+    ? { data: [], error: null }
+    : await query;
 
   return (
     <main className="mx-auto max-w-md md:max-w-6xl md:px-6">
@@ -117,7 +119,7 @@ export default async function Home({ searchParams }: { searchParams: { tab?: str
         </Link>
 
         {/* 피드 섹션 헤딩 — 히어로 다음 스크롤 리듬 (데스크톱 전용) */}
-        {!localNeedsLogin && (listings ?? []).length > 0 && (
+        {!feedError && !localNeedsLogin && (listings ?? []).length > 0 && (
           <div className="mb-5 hidden items-baseline justify-between md:flex">
             <h2 className="text-lg font-bold text-ink">
               {q ? `'${q}' 검색 결과` : tab === "local" ? "내 동네 물건" : tab === "travel" ? "여행 중 직거래" : "지금 올라온 물건"}
@@ -126,7 +128,19 @@ export default async function Home({ searchParams }: { searchParams: { tab?: str
           </div>
         )}
 
-        {localNeedsLogin ? (
+        {feedError ? (
+          <div role="alert" className="mt-12 flex flex-col items-center px-6 text-center">
+            <TomoSymbol />
+            <p className="mt-3 text-sm font-bold text-ink">
+              상품을 불러오지 못했어요 · 商品を読み込めませんでした
+            </p>
+            <p className="mt-1 text-xs text-ink-soft">잠시 후 다시 시도해 주세요</p>
+            <Link href={`/?${new URLSearchParams({ ...(tab !== "all" && { tab }), ...(q && { q }) })}`}
+              className="btn mt-4 inline-block bg-tomo-navy px-6 py-2.5 text-sm text-white">
+              다시 시도
+            </Link>
+          </div>
+        ) : localNeedsLogin ? (
           <div className="mt-12 flex flex-col items-center gap-3 px-6 text-center">
             <TomoSymbol />
             <p className="text-sm leading-relaxed text-ink-soft">
