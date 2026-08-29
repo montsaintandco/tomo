@@ -8,10 +8,11 @@ export default function ProxyRequestButton(props: {
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [msg, setMsg] = useState("");
   const router = useRouter();
 
   async function submit() {
-    setBusy(true); setError("");
+    setBusy(true); setError(""); setMsg("");
     try {
       const res = await fetch("/api/proxy", {
         method: "POST",
@@ -19,6 +20,8 @@ export default function ProxyRequestButton(props: {
         body: JSON.stringify(props),
       });
       const json = await res.json().catch(() => ({}));
+      // 503 = 서비스 준비 중 — 오류가 아니라 대기 상태 (안전결제와 동일 관행)
+      if (res.status === 503) { setMsg("대행 신청 준비 중이에요 · 代行準備中"); setBusy(false); return; }
       if (!res.ok) throw new Error(json.error || "신청 실패");
       router.push(`/proxy/${json.id}`);
     } catch (e) {
@@ -30,9 +33,10 @@ export default function ProxyRequestButton(props: {
   return (
     <div>
       <button onClick={submit} disabled={busy}
-        className="w-full rounded-full bg-tomo-coral-deep py-3 font-bold text-white disabled:opacity-50">
+        className="btn w-full bg-tomo-coral-deep py-3 text-white">
         {busy ? "신청 중…" : "대행 신청하기 · 代行を依頼"}
       </button>
+      {msg && <p className="mt-1 text-center text-xs text-ink-soft">{msg}</p>}
       {error && <p className="mt-1 text-center text-xs text-tomo-rose">{error}</p>}
     </div>
   );

@@ -1,5 +1,5 @@
 import { createServerSupabase } from "@/lib/supabase/server";
-import { getViewer } from "@/lib/listings";
+import { getViewer, displayTitle } from "@/lib/listings";
 import { formatPrice, type Currency } from "@/lib/currency";
 import HeartGauge from "@/components/HeartGauge";
 import { CountryChip } from "@/components/Brand";
@@ -28,7 +28,7 @@ export default async function MyPage() {
   const [{ data: profile }, { data: buying }, { data: selling }, { data: proxies }] = await Promise.all([
     supabase.from("profiles").select("nickname, country, region, trust_temp").eq("id", viewer.id).single(),
     supabase.from("transactions")
-      .select("id, status, item_price, currency, listings(title, images)")
+      .select("id, status, item_price, currency, listings(title, source_language, images, listing_translations(language, title))")
       .eq("buyer_id", viewer.id).order("created_at", { ascending: false }).limit(10),
     supabase.from("listings")
       .select("id, title, price, currency, status, images")
@@ -74,10 +74,13 @@ export default async function MyPage() {
 
       <Section title="구매 내역">
         {(buying ?? []).map((t) => {
-          const l = t.listings as unknown as { title: string; images: string[] } | null;
+          const l = t.listings as unknown as {
+            title: string; source_language: string; images: string[];
+            listing_translations: { language: string; title: string }[];
+          } | null;
           return (
             <Row key={t.id} href={`/transactions/${t.id}`}
-              image={l?.images?.[0]} title={l?.title ?? "상품"}
+              image={l?.images?.[0]} title={l ? displayTitle(l, viewer.language) : "상품"}
               sub={TX_LABEL[t.status] ?? t.status}
               right={formatPrice(t.item_price, t.currency as Currency)} />
           );

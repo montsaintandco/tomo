@@ -45,12 +45,12 @@ export default function ProxyActions({ id, status, isOwner, isAdmin }: {
       {actions.some((a) => a.tracking) && (
         <input value={tracking} onChange={(e) => setTracking(e.target.value)}
           placeholder="국제 운송장 번호" maxLength={100}
-          className="rounded-full border px-4 py-2 text-sm" />
+          className="rounded-full bg-white px-4 py-2.5 text-sm shadow-[var(--shadow-soft)] placeholder:text-ink-soft" />
       )}
       {actions.map((a) => (
         <button key={a.to} onClick={() => run(a.to, a.tracking)} disabled={busy}
-          className={`w-full rounded-full py-3 font-bold disabled:opacity-50 ${
-            a.outline ? "border border-tomo-navy/15 text-ink-soft" : "bg-tomo-coral-deep text-white"}`}>
+          className={`btn w-full py-3 ${
+            a.outline ? "border-[1.5px] border-tomo-navy/15 bg-white text-ink-soft" : "bg-tomo-coral-deep text-white"}`}>
           {busy ? "처리 중…" : a.label}
         </button>
       ))}
