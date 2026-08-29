@@ -23,6 +23,32 @@ function LoginForm() {
   // 온보딩이 미완이면 보호 경로 진입 시 미들웨어가 다시 온보딩으로 보냄
   const dest = next && next.startsWith("/") ? next : "/onboarding";
 
+  // 구글 OAuth — 콜백에서 세션 교환 후 dest로 (신규 유저는 온보딩이 받는다)
+  async function googleLogin() {
+    setError(""); setBusy(true);
+    const supabase = createBrowserSupabase();
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${location.origin}/auth/callback?next=${encodeURIComponent(dest)}`,
+        skipBrowserRedirect: true,
+      },
+    });
+    if (error || !data?.url) {
+      setError(error?.message ?? "구글 로그인 시작 실패 · Googleログインに失敗しました");
+      setBusy(false);
+      return;
+    }
+    // 프로바이더 미설정이면 400 JSON 페이지로 떨어지므로 먼저 확인 (설정돼 있으면 redirect라 status 0)
+    const probe = await fetch(data.url, { redirect: "manual" }).catch(() => null);
+    if (probe?.status === 400) {
+      setError("구글 로그인 준비 중이에요 · Googleログイン準備中");
+      setBusy(false);
+      return;
+    }
+    window.location.assign(data.url);
+  }
+
   // 의도를 명시적으로: 로그인 실패가 조용히 신규 가입으로 흐르지 않는다
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -62,6 +88,18 @@ function LoginForm() {
         <Wordmark className="text-3xl" />
         <p className="text-xs text-ink-soft">한국과 일본을 잇는 중고마켓 · 韓国と日本をつなぐフリマ</p>
       </div>
+      <button type="button" onClick={googleLogin} disabled={busy}
+        className="btn flex items-center justify-center gap-2.5 bg-white py-3 text-sm text-ink shadow-soft">
+        {/* 구글 공식 4색 G 로고 */}
+        <svg viewBox="0 0 18 18" className="h-4 w-4" aria-hidden>
+          <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.7-1.57 2.68-3.88 2.68-6.62z" />
+          <path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.8.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.7H.96v2.33A9 9 0 0 0 9 18z" />
+          <path fill="#FBBC05" d="M3.97 10.72a5.41 5.41 0 0 1 0-3.44V4.95H.96a9 9 0 0 0 0 8.1l3.01-2.33z" />
+          <path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.59A9 9 0 0 0 .96 4.95l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58z" />
+        </svg>
+        구글로 계속하기 · Googleで続行
+      </button>
+      <p className="text-center text-[11px] text-ink-soft">또는 이메일로 · またはメールで</p>
       <div className="flex gap-1.5" role="tablist" aria-label="로그인 방식">
         {MODES.map(([v, l]) => (
           <button key={v} type="button" role="tab" aria-selected={mode === v}
