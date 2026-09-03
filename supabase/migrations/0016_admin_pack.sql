@@ -1,4 +1,7 @@
 -- 관리 팩: 상품 숨김(모더레이션)·사용자 정지·분쟁 처리·어드민 함수·탈퇴
+-- 컬럼 먼저 — SQL 함수는 정의 시점에 본문을 검증한다
+alter table profiles add column if not exists suspended boolean not null default false;
+
 create or replace function is_admin_user() returns boolean
   language sql stable security definer set search_path = public as
   $$ select coalesce((select is_admin from profiles where id = auth.uid()), false) $$;
@@ -37,7 +40,6 @@ revoke all on function admin_set_listing_hidden(uuid, boolean) from public;
 grant execute on function admin_set_listing_hidden(uuid, boolean) to authenticated;
 
 -- ── 사용자 정지: 글쓰기 전부 차단 (RESTRICTIVE 정책 = 기존 정책과 AND) ──
-alter table profiles add column suspended boolean not null default false;
 create policy "suspended cannot list" on listings as restrictive for insert with check (not is_suspended());
 create policy "suspended cannot chat" on conversations as restrictive for insert with check (not is_suspended());
 create policy "suspended cannot message" on messages as restrictive for insert with check (not is_suspended());
