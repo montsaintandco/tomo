@@ -1,4 +1,4 @@
-# TOMO 프로젝트 핸드오프 (2026-08-26, 이월 이슈 정리 반영)
+# TOMO 프로젝트 핸드오프 (2026-09-03, Next 16 + SP1 마켓 허브 홈 반영)
 
 한일 크로스보더 중고거래 플랫폼. Plan 01(기반)·02(상품)·03(채팅)·04(에스크로, Stripe 키 대기)·05(오픈마켓: 외부마켓 검색·대행구매) 완료 상태.
 
@@ -19,7 +19,16 @@ NEXT_PUBLIC_SUPABASE_URL=https://zftztnkczlblnkgaijzc.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpmdHp0bmtjemxibG5rZ2FpanpjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ1ODc3ODMsImV4cCI6MjEwMDE2Mzc4M30.uRRfCrw71ZqA8mkjH9UJ0OW55aeQ362xX3N2Xo17GPI
 ```
 
-Node 18+ 필요.
+Node 20+ 필요 (Next 16). `.env.local` 없으면 `next build`가 /onboarding 프리렌더에서 실패한다.
+
+## 2026-09-03 세션 반영
+
+- **Next 14 → 16.3.3 / React 19 / ESLint 9(flat config)**, `npm audit` 0건. `middleware.ts` → `proxy.ts`. 린트는 `npm run lint`(= `eslint .`).
+- **홈 = 마켓 허브** (`app/page.tsx` 파라미터 없을 때 → `components/HomeHub.tsx`): 신뢰 스트립 → 상대국 인기 캐러셀(`lib/market/trending.ts`, 큐레이션 키워드 `trending-data.ts`, `unstable_cache` 1h, 소스별 4초 타임아웃, DB 쓰기 없음) → 국내 2열 그리드 → 여행 직거래 → 푸터(사업자 정보 "준비 중" 플레이스홀더 — 값 주면 채움). `?q=`/`?tab=`은 기존 리스트 모드.
+- **DESIGN.md v2**: 브랜드 유지, 흰 페이지, 아이보리는 틴트만, 라운드 12/10, Pretendard 11–17px 램프. Pretendard CDN 경로가 404였던 걸 npm 미러로 교체(런칭 전 셀프호스팅 권장).
+- impeccable: PRODUCT.md schema 1, 크리틱 스냅샷 `.impeccable/critique/`, 라이브 모드 설정됨. 설계 문서 `docs/superpowers/specs/`, 계획 `docs/superpowers/plans/`.
+- **남은 재디자인**: SP2 커머스(상품 상세·/global·외부상품 상세), SP3 채팅·거래·프로필, SP4 폼·어드민 — 각각 스펙→계획 사이클로, v2 토큰 상속.
+- 시드 상품에 `[test]` 접두 2건 남아 있음(의도적 유지). vitest 43개.
 
 ## 인프라
 
