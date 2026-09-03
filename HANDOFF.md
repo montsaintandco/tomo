@@ -44,7 +44,8 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzd
 ## 인프라
 
 - Supabase: 프로젝트 `tomo` (id `zftztnkczlblnkgaijzc`, 서울 리전, seoulbuy 조직 — 이든에이치 계정)
-  - 마이그레이션 13개 적용 완료 (`supabase/migrations/` = DB 실제 상태와 일치. 0011 external_items, 0012 proxy_requests, 0013 storage own-folder delete)
+  - 마이그레이션 13개 적용 완료 (`supabase/migrations/` = DB 실제 상태와 일치. 0011 external_items, 0012 proxy_requests, 0013 storage own-folder delete, 0013 conversation participant delete)
+  - **0014_wishlists.sql은 파일만 있고 DB 미적용** — 찜 기능(상세 ♡ 토글·마이페이지 찜 목록·`wishlist_count` 함수)은 적용 전까지 조용히 비활성. 대시보드 SQL 에디터에서 실행하거나 Supabase MCP를 이든에이치 계정으로 연결해 적용할 것. 적용 후 `npm test`의 wishlist RLS 테스트가 통과한다
   - Auth: 이메일 확인 꺼짐(개발용). **Google 로그인 설정 완료(2026-09-03)** — GCP 프로젝트 `My First Project`(id `disco-parsec-261005`, mellowdazzle@gmail.com 계정), OAuth 클라이언트 `TOMO web`(승인된 원본: 배포 URL·localhost:3000, 리디렉션 URI: `https://zftztnkczlblnkgaijzc.supabase.co/auth/v1/callback`). Supabase Site URL = 배포 URL, Redirect URLs = 배포·로컬 `/auth/callback`. 배포본에서 구글 버튼 → 온보딩 도달 확인. 동의 화면은 "외부·테스트" 상태라 테스트 사용자 외 계정으로 로그인하려면 GCP 인증 플랫폼 → 대상에서 "앱 게시" 필요
 - 테스트 계정: `tomo.test.alice@gmail.com`(한국/서울 마포구), `tomo.test.bob@gmail.com`(일본/신주쿠), `tomo.test.center@gmail.com`(센터 admin, is_admin=true) — 비밀번호 모두 `test-pass-1234`
 - 데모 상품 4건 시드됨. 재시드: `npx tsx scripts/seed-demo.ts` (멱등)

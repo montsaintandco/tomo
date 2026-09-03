@@ -73,6 +73,15 @@ describe("RLS", () => {
     expect(error).not.toBeNull();
   });
 
+  it("wishlist: blocks wishing as someone else, allows own, count is public", async () => {
+    const { error } = await bob.from("wishlists").insert({ user_id: aliceId, listing_id: listingId });
+    expect(error).not.toBeNull();
+    const { error: ok } = await bob.from("wishlists").insert({ user_id: bobId, listing_id: listingId });
+    expect(ok).toBeNull();
+    const { data: n } = await alice.rpc("wishlist_count", { lid: listingId });
+    expect(n).toBe(1);
+  });
+
   it("allows participants to read their conversation", async () => {
     const { data } = await alice.from("conversations").select().eq("id", convId);
     expect(data).toHaveLength(1);

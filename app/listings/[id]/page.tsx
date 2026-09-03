@@ -6,6 +6,7 @@ import OriginalToggle from "@/components/OriginalToggle";
 import ChatButton from "@/components/ChatButton";
 import CheckoutButton from "@/components/CheckoutButton";
 import ShareButton from "@/components/ShareButton";
+import WishButton from "@/components/WishButton";
 import TrustStrip from "@/components/TrustStrip";
 import { CountryChip, TomoSymbol } from "@/components/Brand";
 import HeartGauge from "@/components/HeartGauge";
@@ -27,6 +28,15 @@ export default async function ListingDetail(props: { params: Promise<{ id: strin
     .select("*, listing_translations(language, title, description), profiles!listings_seller_id_fkey(id, nickname, trust_temp, region, country)")
     .eq("id", params.id).maybeSingle();
   if (!l) notFound();
+
+  // 찜 — 개수는 공개 함수, 내 찜 여부는 본인 행 RLS
+  const [wishRes, mineRes] = await Promise.all([
+    supabase.rpc("wishlist_count", { lid: l.id }),
+    viewer.guest ? Promise.resolve({ data: null })
+      : supabase.from("wishlists").select("listing_id").eq("user_id", viewer.id).eq("listing_id", l.id).maybeSingle(),
+  ]);
+  const wishCount = typeof wishRes.data === "number" ? wishRes.data : 0;
+  const wished = !!mineRes.data;
 
   const needsTranslation = l.source_language !== lang;
   const tr = l.listing_translations.find((x: { language: string }) => x.language === lang);
@@ -125,14 +135,18 @@ export default async function ListingDetail(props: { params: Promise<{ id: strin
             lang={lang}
             between={priceBlock}
           />
+          {/* 액션 행 — 메루카리 「いいね · 共有」 */}
           <div className="mt-3 flex items-center justify-between gap-2">
-            {travelDeal ? (
+            <span className="flex items-center gap-2">
+              <WishButton listingId={l.id} initialLiked={wished} initialCount={wishCount} guest={!!viewer.guest} lang={lang} />
+              <ShareButton title={tr?.title ?? l.title} lang={lang} />
+            </span>
+            {travelDeal && (
               <span className="grad-bridge-soft inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold text-tomo-navy">
                 <svg viewBox="0 0 24 24" className="h-2.5 w-2.5" aria-hidden><path d={HEART} fill="#C14E4C" /></svg>
                 {t(lang, "detail.travelLead")}
               </span>
-            ) : <span />}
-            <ShareButton title={tr?.title ?? l.title} lang={lang} />
+            )}
           </div>
         </div>
 

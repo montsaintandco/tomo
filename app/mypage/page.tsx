@@ -29,7 +29,7 @@ export default async function MyPage() {
   if (!viewer) redirect("/login?next=/mypage");
   const lang: Lang = viewer.language;
 
-  const [{ data: profile }, { data: buying }, { data: selling }, { data: proxies }] = await Promise.all([
+  const [{ data: profile }, { data: buying }, { data: selling }, { data: proxies }, { data: wishes }] = await Promise.all([
     supabase.from("profiles").select("nickname, country, region, trust_temp").eq("id", viewer.id).single(),
     supabase.from("transactions")
       .select("id, status, item_price, currency, listings(title, source_language, images, listing_translations(language, title))")
@@ -39,6 +39,9 @@ export default async function MyPage() {
       .eq("seller_id", viewer.id).order("created_at", { ascending: false }).limit(10),
     supabase.from("proxy_requests")
       .select("id, status, quote_total, external_items(source, title, title_translated, images)")
+      .eq("user_id", viewer.id).order("created_at", { ascending: false }).limit(10),
+    supabase.from("wishlists")
+      .select("listing_id, listings(id, title, price, currency, status, images, source_language, listing_translations(language, title))")
       .eq("user_id", viewer.id).order("created_at", { ascending: false }).limit(10),
   ]);
 
@@ -82,6 +85,26 @@ export default async function MyPage() {
             );
           })}
           {(proxies ?? []).length === 0 && <Empty text={t(lang, "my.noProxy")} />}
+        </div>
+      </section>
+
+      <section className="mt-8" aria-label={t(lang, "my.wishlist")}>
+        <SectionHeader lang={lang} title={t(lang, "my.wishlist")} />
+        <div className="flex flex-col gap-2">
+          {(wishes ?? []).map((w) => {
+            const l = w.listings as unknown as {
+              id: string; title: string; price: number; currency: string; status: string; images: string[];
+              source_language: string; listing_translations: { language: string; title: string }[];
+            } | null;
+            if (!l) return null;
+            return (
+              <Row key={l.id} href={`/listings/${l.id}`}
+                image={l.images?.[0]} title={displayTitle(l, lang)}
+                sub={t(lang, l.status === "active" ? "status.selling" : l.status === "reserved" ? "badge.reserved" : "status.soldDone")}
+                right={formatPrice(l.price, l.currency as Currency)} />
+            );
+          })}
+          {(wishes ?? []).length === 0 && <Empty text={t(lang, "my.noWishlist")} />}
         </div>
       </section>
 

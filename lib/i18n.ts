@@ -138,6 +138,11 @@ const D = {
   "detail.safeTitle": ["안심 거래", "あんしん・あんぜんへの取り組み"],
   "ship.intl": ["국제배송비 별도 · 결제 시 계산", "国際送料別・決済時に計算"],
   "method.bothLong": ["직거래 · 배송", "直接取引・配送"],
+  "detail.wish": ["찜", "いいね"],
+  "detail.wishAria": ["찜하기", "いいねする"],
+  "detail.unwishAria": ["찜 해제", "いいねを取り消す"],
+  "my.wishlist": ["찜한 상품", "いいねした商品"],
+  "my.noWishlist": ["찜한 상품이 없어요", "いいねした商品がありません"],
 
   // ── SP2: 해외직구 ──
   "global.title": ["해외직구", "海外購入"],
