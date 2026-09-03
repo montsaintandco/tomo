@@ -102,8 +102,7 @@ end $$;
 revoke all on function resolve_dispute(uuid, tx_status, text) from public;
 grant execute on function resolve_dispute(uuid, tx_status, text) to authenticated;
 
--- 운영자: 분쟁 거래 열람 (당사자 정책에 추가)
-create policy "admin reads transactions" on transactions for select using (is_admin_user());
+-- 운영자의 거래 열람(분쟁 큐)은 0010 "admin reads transactions" 정책이 이미 커버한다
 
 -- ── 후기·환율·외부상품 운영 권한 ──
 create policy "admin deletes reviews" on reviews for delete using (is_admin_user());
