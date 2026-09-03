@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { convertPrice, formatPrice, type Currency } from "@/lib/currency";
 import { SOURCE_LABEL, type MarketSource } from "@/lib/market/types";
+import { t, type Lang } from "@/lib/i18n";
 import { TomoSymbol } from "@/components/Brand";
 
 export type ExternalCardItem = {
@@ -11,8 +12,8 @@ export type ExternalCardItem = {
 
 // 메루카리식 밀집 카드 — 이미지 우선, 구매자 통화 가격이 가장 굵게 (Price-Loudest는 구매자의 숫자다)
 // rate는 "외화 → 뷰어 통화" 환율. 같은 통화면 환산 없이 원값 표시
-export default function ExternalItemCard({ item, rate, viewerCurrency }: {
-  item: ExternalCardItem; rate: number; viewerCurrency: Currency;
+export default function ExternalItemCard({ item, rate, viewerCurrency, lang = "ko" }: {
+  item: ExternalCardItem; rate: number; viewerCurrency: Currency; lang?: Lang;
 }) {
   const foreign = item.currency !== viewerCurrency;
   const originalLang = item.currency === "JPY" ? "ja" : "ko";
@@ -34,12 +35,12 @@ export default function ExternalItemCard({ item, rate, viewerCurrency }: {
         </span>
         {item.auction && (
           <span className="absolute bottom-1.5 left-1.5 rounded-full bg-tomo-coral-deep px-2 py-0.5 text-[11px] font-bold text-white">
-            입찰중
+            {t(lang, "badge.auction")}
           </span>
         )}
         {item.soldOut && (
           <span className="absolute inset-0 flex items-center justify-center bg-tomo-navy/75 text-sm font-bold text-white">
-            품절
+            {t(lang, "badge.soldOut")}
           </span>
         )}
       </div>
@@ -50,11 +51,11 @@ export default function ExternalItemCard({ item, rate, viewerCurrency }: {
           {item.titleTranslated ?? item.title}
         </p>
         <p className="tnum text-[15px] font-extrabold text-ink">
-          {foreign ? `약 ${formatPrice(convertPrice(item.price, item.currency, rate), viewerCurrency)}` : formatPrice(item.price, item.currency)}
+          {foreign ? `${t(lang, "price.approx")} ${formatPrice(convertPrice(item.price, item.currency, rate), viewerCurrency)}` : formatPrice(item.price, item.currency)}
         </p>
         <p className="tnum text-[11px] font-bold text-ink-soft">
-          {foreign ? formatPrice(item.price, item.currency) : " "}
-          {item.auction && <span className="ml-1 font-normal">· 현재가</span>}
+          {foreign ? formatPrice(item.price, item.currency) : " "}
+          {item.auction && <span className="ml-1 font-normal">· {t(lang, "price.current")}</span>}
         </p>
       </div>
     </Link>

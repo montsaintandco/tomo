@@ -2,10 +2,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Wordmark, TomoSymbol } from "@/components/Brand";
+import { t, type Lang } from "@/lib/i18n";
 
 // 전역 푸터 — 모바일은 컴팩트, 데스크톱은 브랜드 밴드 + 메뉴. 채팅방(h-dvh 고정)과 인증 화면에서는 숨김
 // 회사/법적 정보 값은 사용자가 제공할 때까지 "준비 중". 날조 금지
-export default function SiteFooter() {
+export default function SiteFooter({ lang = "ko" }: { lang?: Lang }) {
   const path = usePathname();
   if (path.startsWith("/login") || path.startsWith("/onboarding") || /^\/chat\/./.test(path)) return null;
 
@@ -14,7 +15,7 @@ export default function SiteFooter() {
       {/* 브랜드 밴드 — 디자인 테제를 브랜드 보이스로 (데스크톱) */}
       <div className="hidden border-b border-tomo-navy/5 md:block">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-8 px-6 py-8">
-          <p className="text-[22px] font-extrabold text-tomo-navy">두 말풍선이 만나면, 하트가 돼요</p>
+          <p className="text-[22px] font-extrabold text-tomo-navy">{t(lang, "footer.thesis")}</p>
           <TomoSymbol className="h-16 w-24 shrink-0" />
         </div>
       </div>
@@ -22,33 +23,30 @@ export default function SiteFooter() {
       <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-6 md:flex-row md:items-start md:justify-between md:gap-8 md:px-6 md:py-10">
         <div>
           <Wordmark className="text-lg md:text-xl" />
-          <p className="mt-2 text-[12px] md:text-sm">한국과 일본을 잇는 중고거래 · 韓国と日本をつなぐフリマ</p>
-          <p className="mt-3 hidden max-w-md text-xs leading-relaxed md:block">
-            모든 거래는 에스크로 결제로 보호되고, 국제 거래는 나리타·서울 센터 검수를 거쳐
-            배송됩니다. 채팅은 한국어·일본어 자동번역으로 이어집니다.
-          </p>
+          <p className="mt-2 text-[12px] md:text-sm">{t(lang, "footer.tagline")}</p>
+          <p className="mt-3 hidden max-w-md text-xs leading-relaxed md:block">{t(lang, "footer.desc")}</p>
           <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[12px] md:text-xs">
-            <dt className="font-bold text-ink">사업자 정보</dt><dd>준비 중</dd>
-            <dt className="font-bold text-ink">고객센터</dt><dd><Link href="/chat" className="underline hover:text-ink">채팅으로 문의</Link></dd>
+            <dt className="font-bold text-ink">{t(lang, "footer.company")}</dt><dd>{t(lang, "footer.pending")}</dd>
+            <dt className="font-bold text-ink">{t(lang, "footer.support")}</dt><dd><Link href="/chat" className="underline hover:text-ink">{t(lang, "footer.supportLink")}</Link></dd>
           </dl>
-          <p className="mt-2 text-[11px]">이용약관 · 개인정보처리방침 — 준비 중</p>
+          <p className="mt-2 text-[11px]">{t(lang, "footer.legal")}</p>
         </div>
-        <nav aria-label="푸터 메뉴" className="hidden gap-12 text-sm md:flex">
+        <nav aria-label={t(lang, "footer.menu")} className="hidden gap-12 text-sm md:flex">
           <div>
-            <p className="mb-2 text-xs font-bold text-ink">거래</p>
+            <p className="mb-2 text-xs font-bold text-ink">{t(lang, "footer.trade")}</p>
             <ul className="flex flex-col gap-1.5">
-              <li><Link className="hover:text-ink" href="/">홈</Link></li>
-              <li><Link className="hover:text-ink" href="/?tab=travel">여행 직거래</Link></li>
-              <li><Link className="hover:text-ink" href="/global">해외직구·구매대행</Link></li>
-              <li><Link className="hover:text-ink" href="/sell">판매하기</Link></li>
+              <li><Link className="hover:text-ink" href="/">{t(lang, "nav.home")}</Link></li>
+              <li><Link className="hover:text-ink" href="/?tab=travel">{t(lang, "tab.travel")}</Link></li>
+              <li><Link className="hover:text-ink" href="/global">{t(lang, "nav.global")}</Link></li>
+              <li><Link className="hover:text-ink" href="/sell">{t(lang, "nav.sellFull")}</Link></li>
             </ul>
           </div>
           <div>
-            <p className="mb-2 text-xs font-bold text-ink">내 활동</p>
+            <p className="mb-2 text-xs font-bold text-ink">{t(lang, "footer.mine")}</p>
             <ul className="flex flex-col gap-1.5">
-              <li><Link className="hover:text-ink" href="/chat">채팅</Link></li>
-              <li><Link className="hover:text-ink" href="/mypage">마이페이지</Link></li>
-              <li><Link className="hover:text-ink" href="/profile/me">내 프로필</Link></li>
+              <li><Link className="hover:text-ink" href="/chat">{t(lang, "nav.chat")}</Link></li>
+              <li><Link className="hover:text-ink" href="/mypage">{t(lang, "nav.mypage")}</Link></li>
+              <li><Link className="hover:text-ink" href="/profile/me">{t(lang, "footer.profile")}</Link></li>
             </ul>
           </div>
         </nav>

@@ -197,7 +197,8 @@ v1은 파스텔을 사방에 칠한 카와이 세계였다. v2는 브랜드(하�
 ### Named Rules
 **The Price-Loudest Rule.** 모든 상거래 표면에서 가격이 가장 굵다(800, tabular-nums). 제목은 400을 지킨다. 해외 상품이면 구매자 통화 숫자가 큰 쪽이다.
 **The 17-Ceiling Rule.** Pretendard의 최대 단계는 17px/800 섹션 타이틀이다. 더 큰 헤딩이 필요하면 그건 워드마크(Cafe24)의 자리이지 본문 서체의 자리가 아니다.
-**The Two-Tongue Rule.** 힌트·빈 상태·푸터 태그라인은 한 호흡에 두 언어("다 봤어요 · 全部見ました"), 한국어 먼저, 가운뎃점으로 잇는다.
+**The One-Tongue-Per-Viewer Rule.** UI는 뷰어 언어 하나로 말한다(`lib/i18n.ts`, `t(lang, key)`). 게스트 언어는 `tomo_lang` 쿠키 → Accept-Language 순으로 정하고, 헤더의 KR/JP 말풍선 토글(`LangToggle`)이 언어·나라·통화·인기 마켓을 한 번에 뒤집는다. 두 언어 병기는 워드마크 태그라인·메타 타이틀처럼 나라를 잇는 문장에만 남긴다.
+**The Two-Sided Home Rule.** 홈은 어느 나라에서 열어도 "사기(상대국 인기)"와 "팔기(상대국 사람들이 내 나라에서 찾는 것)" 양면을 보여준다. 팔기 칩은 상대국 말풍선 색(KR 뷰어→핑크, JP 뷰어→블루)을 쓴다.
 
 ## Layout
 

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { convertPrice, formatPrice, type Currency } from "@/lib/currency";
 import { displayTitle, type Viewer } from "@/lib/listings";
 import { CountryChip, TomoSymbol } from "@/components/Brand";
+import { t, type Lang } from "@/lib/i18n";
 
 export type FeedListing = {
   id: string; title: string; price: number; currency: Currency;
@@ -12,14 +13,14 @@ export type FeedListing = {
   listing_translations: { language: string; title: string }[];
 };
 
-function ago(iso: string): string {
+function ago(iso: string, lang: Lang): string {
   const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
-  if (m < 1) return "방금";
-  if (m < 60) return `${m}분 전`;
+  if (m < 1) return t(lang, "time.now");
+  if (m < 60) return t(lang, "time.min", { n: m });
   const h = Math.floor(m / 60);
-  if (h < 24) return `${h}시간 전`;
+  if (h < 24) return t(lang, "time.hour", { n: h });
   const d = Math.floor(h / 24);
-  return d < 30 ? `${d}일 전` : `${Math.floor(d / 30)}달 전`;
+  return d < 30 ? t(lang, "time.day", { n: d }) : t(lang, "time.month", { n: Math.floor(d / 30) });
 }
 
 // 당근식 가로 행 — 정보 밀도 높고 스캔이 빠름. 국가는 말풍선 칩이 말한다
@@ -27,6 +28,7 @@ export default function ListingRow({ listing, viewer }: {
   listing: FeedListing;
   viewer: Pick<Viewer, "country" | "language" | "rate" | "currency">;
 }) {
+  const lang: Lang = viewer.language;
   const foreign = listing.country !== viewer.country;
   const sold = listing.status === "sold";
   const reserved = listing.status === "reserved";
@@ -50,7 +52,7 @@ export default function ListingRow({ listing, viewer }: {
           )}
           {(sold || reserved) && (
             <span className="absolute inset-0 flex items-center justify-center bg-tomo-navy/75 text-xs font-bold text-white">
-              {sold ? "거래완료" : "예약중"}
+              {sold ? t(lang, "badge.sold") : t(lang, "badge.reserved")}
             </span>
           )}
         </div>
@@ -61,13 +63,13 @@ export default function ListingRow({ listing, viewer }: {
           </p>
           <p className="flex items-center gap-1.5 text-xs text-ink-soft">
             <CountryChip country={listing.country} />
-            <span className="truncate">{listing.region} · {ago(listing.created_at)}</span>
+            <span className="truncate">{listing.region} · {ago(listing.created_at, lang)}</span>
           </p>
           {/* 구매자 결정 숫자(내 통화)가 가장 크게, 판매자 원가는 작게 — Price-Loudest는 구매자의 숫자다 */}
           <p className={`tnum text-base font-extrabold ${sold ? "text-ink-faint" : "text-ink"}`}>
             {foreign ? (
               <>
-                약 {formatPrice(convertPrice(listing.price, listing.currency, viewer.rate), viewer.currency)}
+                {t(lang, "price.approx")} {formatPrice(convertPrice(listing.price, listing.currency, viewer.rate), viewer.currency)}
                 <span className="ml-1.5 text-xs font-bold text-ink-soft">{formatPrice(listing.price, listing.currency)}</span>
               </>
             ) : formatPrice(listing.price, listing.currency)}
@@ -79,7 +81,7 @@ export default function ListingRow({ listing, viewer }: {
                   <svg viewBox="0 0 24 24" className="h-2.5 w-2.5" aria-hidden>
                     <path d="M12 21C7.2 17.2 2.5 13.6 2.5 8.9 2.5 5.6 5 3.5 7.8 3.5c1.7 0 3.3.9 4.2 2.3.9-1.4 2.5-2.3 4.2-2.3 2.8 0 5.3 2.1 5.3 5.4 0 4.7-4.7 8.3-9.5 12.1z" fill="#C14E4C" />
                   </svg>
-                  여행 중 직거래 가능
+                  {t(lang, "card.travel")}
                 </span>
               )}
               {/* 모든 판매중 상품이 에스크로 대상 — 원칙 1: 안전장치를 숨기지 말 것 (외국 행에만 두면 국내는 미보호로 읽힌다) */}
@@ -89,7 +91,7 @@ export default function ListingRow({ listing, viewer }: {
                   <path d="M12 3.5l6.5 2.7v4.6c0 4.3-2.8 7.6-6.5 9.7-3.7-2.1-6.5-5.4-6.5-9.7V6.2z" />
                   <path d="m9.3 11.6 1.9 1.9 3.5-3.5" />
                 </svg>
-                안전결제
+                {t(lang, "card.safe")}
               </span>
             </span>
           )}

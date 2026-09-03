@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { t, type Lang } from "@/lib/i18n";
 
 // 단순 기하 아이콘 (Lucide 기본값 대신 자체 SVG — 브랜드 라운드감 유지, 1.7/2.1 스트로크 통일)
 const ICONS: Record<string, React.ReactNode> = {
@@ -11,19 +12,19 @@ const ICONS: Record<string, React.ReactNode> = {
 };
 
 const items = [
-  { href: "/", label: "홈", icon: "home" },
-  { href: "/global", label: "해외직구", icon: "globe" },
-  { href: "/sell", label: "판매", icon: "sell" },
-  { href: "/chat", label: "채팅", icon: "chat" },
-  { href: "/mypage", label: "마이", icon: "user" },
+  { href: "/", label: "nav.home", icon: "home" },
+  { href: "/global", label: "nav.global", icon: "globe" },
+  { href: "/sell", label: "nav.sell", icon: "sell" },
+  { href: "/chat", label: "nav.chat", icon: "chat" },
+  { href: "/mypage", label: "nav.my", icon: "user" },
 ] as const;
 
-export default function BottomNav() {
+export default function BottomNav({ lang = "ko" }: { lang?: Lang }) {
   const path = usePathname();
   if (path.startsWith("/login") || path.startsWith("/onboarding")) return null;
 
   return (
-    <nav aria-label="주요 메뉴"
+    <nav aria-label={t(lang, "nav.main")}
       className="fixed bottom-0 left-0 right-0 z-30 mx-auto max-w-md border-t border-tomo-navy/5 bg-white/95 backdrop-blur md:hidden">
       <ul className="flex items-end">
         {items.map((i) => {
@@ -41,7 +42,7 @@ export default function BottomNav() {
                       <path d="M12 5.5v13M5.5 12h13" />
                     </svg>
                   </span>
-                  <span className="-mt-1.5">{i.label}</span>
+                  <span className="-mt-1.5">{t(lang, i.label)}</span>
                 </Link>
               </li>
             );
@@ -59,7 +60,7 @@ export default function BottomNav() {
                     {ICONS[i.icon]}
                   </svg>
                 </span>
-                {i.label}
+                {t(lang, i.label)}
               </Link>
             </li>
           );

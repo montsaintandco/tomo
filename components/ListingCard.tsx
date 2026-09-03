@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { convertPrice, formatPrice } from "@/lib/currency";
 import { displayTitle, type Viewer } from "@/lib/listings";
+import { t } from "@/lib/i18n";
 import { CountryChip, TomoSymbol } from "@/components/Brand";
 import type { FeedListing } from "@/components/ListingRow";
 
@@ -25,7 +26,7 @@ export default function ListingCard({ listing, viewer }: {
       <p className="mt-1.5 line-clamp-2 text-[13px] leading-snug text-ink">{displayTitle(listing, viewer.language)}</p>
       <p className="tnum mt-0.5 text-[15px] font-extrabold text-ink">
         {foreign
-          ? `약 ${formatPrice(convertPrice(listing.price, listing.currency, viewer.rate), viewer.currency)}`
+          ? `${t(viewer.language, "price.approx")} ${formatPrice(convertPrice(listing.price, listing.currency, viewer.rate), viewer.currency)}`
           : formatPrice(listing.price, listing.currency)}
       </p>
       <p className="mt-0.5 flex items-center gap-1 text-[11px] text-ink-soft">

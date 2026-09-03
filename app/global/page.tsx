@@ -94,7 +94,7 @@ export default async function GlobalPage(props: {
           <div className="grid grid-cols-2 gap-x-3 gap-y-4 sm:grid-cols-3 md:grid-cols-4 md:gap-x-5 md:gap-y-7 lg:grid-cols-5">
             {items.map((it) => (
               <ExternalItemCard key={`${it.source}-${it.sourceId}`} item={it}
-                rate={viewer.rate} viewerCurrency={viewer.currency} />
+                rate={viewer.rate} viewerCurrency={viewer.currency} lang={viewer.language} />
             ))}
           </div>
         ) : (

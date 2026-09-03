@@ -3,10 +3,12 @@ import { getViewerOrGuest } from "@/lib/listings";
 import ListingRow, { type FeedListing } from "@/components/ListingRow";
 import { Wordmark, TomoSymbol } from "@/components/Brand";
 import HomeHub from "@/components/HomeHub";
+import LangToggle from "@/components/LangToggle";
+import { t } from "@/lib/i18n";
 import Link from "next/link";
 
 // 구매 루트: 전체 / 내 동네 직거래 / 상대국 여행 중 직거래 (해외 대행구매는 /global)
-const TABS = [["all", "전체"], ["local", "내 동네"], ["travel", "여행 직거래"]] as const;
+const TABS = [["all", "tab.all"], ["local", "tab.local"], ["travel", "tab.travel"]] as const;
 const FEED_LIMIT = 40;
 const FEED_SELECT = "id, title, price, currency, source_language, country, region, status, images, created_at, trade_method, cross_border_enabled, listing_translations(language, title)";
 
@@ -17,6 +19,7 @@ export default async function Home(props: { searchParams: Promise<{ tab?: string
   const tab = searchParams.tab ?? "all";
   const q = searchParams.q?.trim();
   const localNeedsLogin = tab === "local" && viewer.guest;
+  const lang = viewer.language;
   // 파라미터 없는 첫 진입 = 허브. 검색·탭은 기존 리스트 모드
   const hub = !q && !searchParams.tab;
 
@@ -67,23 +70,26 @@ export default async function Home(props: { searchParams: Promise<{ tab?: string
       {/* 워드마크 행은 스크롤과 함께 흘러간다 — 고정 크롬은 검색+탭만 (피드가 제품이다) */}
       <div className="flex items-center justify-between px-4 pb-2 pt-3 md:hidden">
         <Link href="/" className="press"><Wordmark /></Link>
-        {viewer.guest && (
-          <Link href="/login" className="btn bg-tomo-navy px-4 py-1.5 text-sm text-white">로그인</Link>
-        )}
+        <div className="flex items-center gap-3">
+          <LangToggle lang={lang} label={t(lang, "lang.toggle")} />
+          {viewer.guest && (
+            <Link href="/login" className="btn bg-tomo-navy px-4 py-2 text-sm text-white">{t(lang, "nav.login")}</Link>
+          )}
+        </div>
       </div>
       <header className="sticky top-0 z-20 bg-white/95 px-4 pb-3 pt-2 backdrop-blur md:static md:bg-transparent md:px-0 md:pb-4 md:pt-8 md:backdrop-blur-0">
         <form className="mb-3 md:max-w-xl" role="search">
-          <label htmlFor="feed-q" className="sr-only">상품 검색</label>
+          <label htmlFor="feed-q" className="sr-only">{t(lang, "search.label")}</label>
           <div className="relative">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}
               strokeLinecap="round" className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-faint md:left-4 md:h-[18px] md:w-[18px]" aria-hidden>
               <circle cx="11" cy="11" r="6.5" /><path d="m16 16 4.5 4.5" />
             </svg>
             {/* 16px 고정 — 14px 이하 입력은 iOS 사파리가 포커스 시 뷰포트를 확대한다 */}
-            <input id="feed-q" name="q" type="search" enterKeyHint="search" autoComplete="off" defaultValue={q ?? ""} placeholder="어떤 물건을 찾으세요?"
+            <input id="feed-q" name="q" type="search" enterKeyHint="search" autoComplete="off" defaultValue={q ?? ""} placeholder={t(lang, "search.placeholder")}
               className={`w-full rounded-full bg-tomo-ivory py-2.5 pl-10 text-base placeholder:text-ink-soft md:py-3.5 md:pl-12 ${q ? "pr-11" : "pr-4"}`} />
             {q && (
-              <Link href={tab !== "all" ? `/?tab=${tab}` : "/"} aria-label="검색어 지우기"
+              <Link href={tab !== "all" ? `/?tab=${tab}` : "/"} aria-label={t(lang, "search.clear")}
                 className="press absolute right-1 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full text-ink-soft hover:text-ink">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}
                   strokeLinecap="round" className="h-4 w-4" aria-hidden>
@@ -96,7 +102,7 @@ export default async function Home(props: { searchParams: Promise<{ tab?: string
         </form>
 
         {!hub && (
-        <nav className="flex gap-1.5" aria-label="구매 루트">
+        <nav className="flex gap-1.5" aria-label={t(lang, "tab.aria")}>
           {TABS.map(([v, l]) => {
             const params = new URLSearchParams();
             if (v !== "all") params.set("tab", v);
@@ -106,7 +112,7 @@ export default async function Home(props: { searchParams: Promise<{ tab?: string
               <Link key={v} href={qs ? `/?${qs}` : "/"} aria-current={tab === v ? "page" : undefined}
                 className={`press rounded-full px-3.5 py-3 text-[13px] font-bold transition-colors md:px-5 md:py-2 md:text-sm ${
                   tab === v ? "bg-tomo-navy text-white shadow-soft" : "bg-white text-ink-soft hover:text-ink"}`}>
-                {l}
+                {t(lang, l)}
               </Link>
             );
           })}
@@ -125,9 +131,9 @@ export default async function Home(props: { searchParams: Promise<{ tab?: string
         {!feedError && !localNeedsLogin && (listings ?? []).length > 0 && (
           <div className="mb-5 hidden items-baseline justify-between md:flex">
             <h2 className="text-lg font-bold text-ink">
-              {q ? `'${q}' 검색 결과` : tab === "local" ? "내 동네 물건" : tab === "travel" ? "여행 중 직거래" : "지금 올라온 물건"}
+              {q ? t(lang, "feed.results", { q }) : tab === "local" ? t(lang, "feed.localTitle") : tab === "travel" ? t(lang, "feed.travelTitle") : t(lang, "feed.latest")}
             </h2>
-            <p className="text-xs text-ink-soft">색이 나라를 말해요 — 블루는 한국, 핑크는 일본</p>
+            <p className="text-xs text-ink-soft">{t(lang, "feed.legend")}</p>
           </div>
         )}
 
@@ -135,22 +141,22 @@ export default async function Home(props: { searchParams: Promise<{ tab?: string
           <div role="alert" className="mt-12 flex flex-col items-center px-6 text-center">
             <TomoSymbol />
             <p className="mt-3 text-sm font-bold text-ink">
-              상품을 불러오지 못했어요 · 商品を読み込めませんでした
+              {t(lang, "feed.error")}
             </p>
-            <p className="mt-1 text-xs text-ink-soft">잠시 후 다시 시도해 주세요</p>
+            <p className="mt-1 text-xs text-ink-soft">{t(lang, "feed.errorSub")}</p>
             <Link href={`/?${new URLSearchParams({ ...(tab !== "all" && { tab }), ...(q && { q }) })}`}
               className="btn mt-4 inline-block bg-tomo-navy px-6 py-2.5 text-sm text-white">
-              다시 시도
+              {t(lang, "feed.retry")}
             </Link>
           </div>
         ) : localNeedsLogin ? (
           <div className="mt-12 flex flex-col items-center gap-3 px-6 text-center">
             <TomoSymbol />
             <p className="text-sm leading-relaxed text-ink-soft">
-              내 동네 상품은 로그인하고 동네를 설정하면 볼 수 있어요 · ログインして地域を設定すると表示されます
+              {t(lang, "empty.localGuest")}
             </p>
             <Link href="/login?next=/?tab=local" className="btn bg-tomo-navy px-6 py-2.5 text-sm text-white">
-              로그인하고 동네 설정
+              {t(lang, "empty.localCta")}
             </Link>
           </div>
         ) : (listings ?? []).length > 0 ? (
@@ -165,9 +171,7 @@ export default async function Home(props: { searchParams: Promise<{ tab?: string
             <div className="mb-4 mt-10 flex flex-col items-center gap-2">
               <TomoSymbol className="h-12 w-[4.5rem] opacity-70" />
               <p className="text-xs font-bold text-ink-soft">
-                {(listings ?? []).length < FEED_LIMIT
-                  ? "다 봤어요 · 全部見ました"
-                  : `최근 ${FEED_LIMIT}개까지만 보여요 · 最新${FEED_LIMIT}件まで表示しています`}
+                {(listings ?? []).length < FEED_LIMIT ? t(lang, "feed.end") : t(lang, "feed.cap", { n: FEED_LIMIT })}
               </p>
             </div>
           </>
@@ -175,18 +179,18 @@ export default async function Home(props: { searchParams: Promise<{ tab?: string
           <div className="mt-12 flex flex-col items-center px-6 text-center">
             <TomoSymbol />
             <p className="mt-3 text-sm text-ink-soft">
-              {q ? `'${q}' 검색 결과가 없어요 · 検索結果がありません`
-                : tab === "travel" ? "여행 중 직거래할 상품이 아직 없어요 · 旅行中の直接取引はまだありません"
-                : "아직 등록된 상품이 없어요 · まだ出品がありません"}
+              {q ? t(lang, "empty.search", { q })
+                : tab === "travel" ? t(lang, "empty.travel")
+                : t(lang, "empty.none")}
             </p>
             <p className="mt-1 text-xs text-ink-soft">
-              {q ? "다른 검색어로 찾아보거나 해외직구를 둘러보세요"
-                : tab === "travel" ? "상대 나라에서 직접 만나 거래할 수 있는 상품이 여기 모여요"
-                : "첫 상품을 등록해 보세요"}
+              {q ? t(lang, "empty.searchSub")
+                : tab === "travel" ? t(lang, "empty.travelSub")
+                : t(lang, "empty.sellFirst")}
             </p>
             <Link href={q ? `/global?q=${encodeURIComponent(q)}` : tab === "travel" ? "/global" : "/sell"}
               className="btn mt-4 inline-block bg-tomo-coral-deep px-6 py-2.5 text-sm text-white">
-              {q || tab === "travel" ? "해외직구 둘러보기" : "상품 등록하기"}
+              {q || tab === "travel" ? t(lang, "empty.globalCta") : t(lang, "empty.sellCta")}
             </Link>
           </div>
         )}
