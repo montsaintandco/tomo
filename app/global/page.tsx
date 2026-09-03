@@ -138,3 +138,5 @@ export default async function GlobalPage(props: {
     </main>
   );
 }
+
+export const metadata = { title: "해외직구 · 海外購入 | TOMO" };

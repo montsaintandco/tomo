@@ -46,7 +46,7 @@ export default async function MyPage() {
   ]);
 
   return (
-    <main className="mx-auto max-w-md p-4 pb-24 md:max-w-2xl md:px-6 md:pb-16 md:pt-8">
+    <main className="mx-auto max-w-md p-4 pb-8 standalone:pb-24 md:max-w-2xl md:px-6 md:pb-16 md:pt-8">
       <div className="card mb-6 p-4 md:p-6">
         <div className="mb-4 flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
@@ -176,3 +176,5 @@ function Row({ href, image, title, sub, right }: {
 function Empty({ text }: { text: string }) {
   return <p className="rounded-card bg-tomo-navy/5 p-3 text-center text-xs text-ink-soft">{text}</p>;
 }
+
+export const metadata = { title: "마이페이지 · マイページ | TOMO" };

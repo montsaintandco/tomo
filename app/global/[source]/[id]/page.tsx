@@ -76,11 +76,11 @@ export default async function ExternalItemPage(props: {
   const sourceLang: Lang = SOURCE_CURRENCY[source] === "JPY" ? "ja" : "ko";
 
   return (
-    <main className="mx-auto max-w-md pb-28 md:grid md:max-w-5xl md:grid-cols-2 md:items-start md:gap-10 md:px-6 md:pb-16 md:pt-8">
+    <main className="mx-auto max-w-md pb-24 standalone:pb-28 md:grid md:max-w-5xl md:grid-cols-2 md:items-start md:gap-10 md:px-6 md:pb-16 md:pt-8">
       {/* 이미지 컬럼 — 상품 상세와 같은 골격. 이미지 없으면 브랜드 심볼 */}
       <div className="relative md:sticky md:top-24 md:overflow-hidden md:rounded-card md:shadow-soft">
         <Link href="/global" aria-label={t(lang, "detail.back")}
-          className="press absolute left-3 top-3 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-tomo-navy/60 backdrop-blur-sm">
+          className="press absolute left-3 top-3 z-10 hidden standalone:flex h-11 w-11 items-center justify-center rounded-full bg-tomo-navy/60 backdrop-blur-sm">
           <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2.2}
             strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden>
             <path d="M15 5l-7 7 7 7" />
@@ -174,7 +174,7 @@ export default async function ExternalItemPage(props: {
         </a>
 
         {/* CTA — 모바일은 하단 고정 바, 데스크톱은 정보 컬럼 안에서 흐름 배치 */}
-        <div className="fixed bottom-0 left-0 right-0 z-20 mx-auto max-w-md border-t border-tomo-navy/5 bg-white/95 p-3 backdrop-blur md:static md:mt-2 md:max-w-none md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-0">
+        <div className="fixed bottom-0 standalone:bottom-[62px] left-0 right-0 z-20 mx-auto max-w-md border-t border-tomo-navy/5 bg-white/95 p-3 backdrop-blur md:static md:mt-2 md:max-w-none md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-0">
           {viewer.guest ? (
             <Link href={`/login?next=/global/${source}/${params.id}`}
               className="btn block bg-tomo-coral-deep py-3 text-center text-sm text-white">

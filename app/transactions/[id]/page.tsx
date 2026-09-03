@@ -65,7 +65,7 @@ export default async function TransactionPage(props: { params: Promise<{ id: str
   }
 
   return (
-    <main className="mx-auto max-w-md p-4 pb-24 md:max-w-2xl md:px-6 md:pb-16 md:pt-8">
+    <main className="mx-auto max-w-md p-4 pb-8 standalone:pb-24 md:max-w-2xl md:px-6 md:pb-16 md:pt-8">
       <h1 className="mb-3 text-[17px] font-extrabold leading-tight text-ink md:text-xl">{t(lang, "tx.title")}</h1>
 
       <Link href={`/listings/${l.id}`} className="card mb-4 flex items-center gap-3 p-3">

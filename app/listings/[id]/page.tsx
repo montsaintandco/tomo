@@ -115,11 +115,11 @@ export default async function ListingDetail(props: { params: Promise<{ id: strin
   );
 
   return (
-    <main className="mx-auto max-w-md pb-36 md:grid md:max-w-5xl md:grid-cols-2 md:items-start md:gap-10 md:px-6 md:pb-16 md:pt-8">
+    <main className="mx-auto max-w-md pb-24 standalone:pb-36 md:grid md:max-w-5xl md:grid-cols-2 md:items-start md:gap-10 md:px-6 md:pb-16 md:pt-8">
       {/* 이미지 위 뒤로가기 — 상세는 이미지가 헤더다. 데스크톱은 좌측 고정 컬럼 */}
       <div className="relative md:sticky md:top-24 md:overflow-hidden md:rounded-card md:shadow-soft">
         <Link href="/" aria-label={t(lang, "detail.back")}
-          className="press absolute left-3 top-3 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-tomo-navy/60 backdrop-blur-sm">
+          className="press absolute left-3 top-3 z-10 hidden standalone:flex h-11 w-11 items-center justify-center rounded-full bg-tomo-navy/60 backdrop-blur-sm">
           <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2.2}
             strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden>
             <path d="M15 5l-7 7 7 7" />
@@ -292,7 +292,7 @@ export default async function ListingDetail(props: { params: Promise<{ id: strin
 
         {/* 하단 바 — 메루카리식: [채팅] 가격 [구매하기]. 모바일 고정, 데스크톱은 흐름 배치 */}
         {canAct && !isMine && (
-          <div className="fixed bottom-[62px] left-0 right-0 z-20 mx-auto max-w-md border-t border-tomo-navy/5 bg-white/95 px-4 py-3 backdrop-blur md:static md:mx-0 md:max-w-none md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-0">
+          <div className="fixed bottom-0 standalone:bottom-[62px] left-0 right-0 z-20 mx-auto max-w-md border-t border-tomo-navy/5 bg-white/95 px-4 py-3 backdrop-blur md:static md:mx-0 md:max-w-none md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-0">
             {viewer.guest ? (
               <div className="flex items-center gap-3">
                 <span className="min-w-0 flex-1">
@@ -323,4 +323,14 @@ export default async function ListingDetail(props: { params: Promise<{ id: strin
       </div>
     </main>
   );
+}
+
+// 웹 문법: 상품명이 탭 제목·공유 카드 제목이다
+export async function generateMetadata(props: { params: Promise<{ id: string }> }): Promise<import("next").Metadata> {
+  const { id } = await props.params;
+  const supabase = await createServerSupabase();
+  const { data } = await supabase.from("listings").select("title, images").eq("id", id).maybeSingle();
+  if (!data) return { title: "TOMO" };
+  const img = (data.images as string[])?.[0];
+  return { title: `${data.title} | TOMO`, openGraph: { title: data.title, ...(img ? { images: [img] } : {}) } };
 }

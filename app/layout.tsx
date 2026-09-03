@@ -14,16 +14,20 @@ export const metadata: Metadata = {
     description: "한국과 일본을 잇는 중고마켓 · 韓国と日本をつなぐフリマ",
     type: "website",
   },
+  // PWA — 홈 화면에 추가하면 standalone 앱 (app/manifest.ts)
+  icons: { icon: "/icon-192.png", apple: "/apple-touch-icon.png" },
+  appleWebApp: { capable: true, title: "TOMO", statusBarStyle: "default" },
 };
 
-export const viewport: Viewport = { themeColor: "#FFFFFF" };
+// viewportFit cover — 설치된 앱에서 노치·홈 인디케이터 안전영역까지 그린다
+export const viewport: Viewport = { themeColor: "#FFFFFF", viewportFit: "cover" };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   // 뷰어 언어가 문서 언어다 — 스크린리더 발음·폰트 셰이핑·번역 방향의 기준
   const lang = await getRequestLang();
   return (
     <html lang={lang}>
-      <body className="bg-white pb-24 text-ink md:pb-0">
+      <body className="bg-white text-ink standalone:pb-24 md:pb-0">
         {/* impeccable direction contract · v2: brand-pinned, applied like a mature marketplace
         THESIS: 두 말풍선이 만나면 하트가 된다 — 브랜드(블루/핑크/코랄, 하트-O, 써라운드)는 그대로, 적용은 당근·메루카리급 프로덕트로.
         홈은 한쪽 매장이 아니라 다리: 어느 나라에서 열어도 "사기(상대국 인기)"와 "팔기(상대국이 찾는 것)" 양면이 내 언어·내 통화로 보인다.

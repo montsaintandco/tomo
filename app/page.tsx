@@ -71,7 +71,8 @@ export default async function Home(props: { searchParams: Promise<{ tab?: string
   return (
     <main className="mx-auto max-w-md md:max-w-6xl md:px-6">
       {/* 워드마크 행은 스크롤과 함께 흘러간다 — 고정 크롬은 검색+탭만 (피드가 제품이다) */}
-      <div className="flex items-center justify-between px-4 pb-2 pt-3 md:hidden">
+      {/* 설치된 앱에서만 — 브라우저에선 SiteHeader가 워드마크·토글·로그인을 맡는다 */}
+      <div className="hidden items-center justify-between px-4 pb-2 pt-3 standalone:flex md:hidden">
         <Link href="/" className="press"><Wordmark /></Link>
         <div className="flex items-center gap-3">
           <LangToggle lang={lang} label={t(lang, "lang.toggle")} />

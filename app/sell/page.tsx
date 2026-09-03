@@ -7,3 +7,5 @@ export default async function SellPage(props: { searchParams: Promise<{ hint?: s
   const lang = await getRequestLang();
   return <SellForm lang={lang} hint={hint?.slice(0, 80) ?? ""} />;
 }
+
+export const metadata = { title: "판매하기 · 出品する | TOMO" };

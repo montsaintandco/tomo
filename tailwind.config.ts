@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import plugin from "tailwindcss/plugin";
 
 const config: Config = {
   content: [
@@ -34,6 +35,12 @@ const config: Config = {
       },
     },
   },
-  plugins: [],
+  plugins: [
+    // 하이브리드: 브라우저에서 열면 웹사이트 문법(상단 헤더), 홈 화면에 설치하면 앱 문법(하단 탭바)
+    plugin(({ addVariant }) => {
+      addVariant("standalone", "@media (display-mode: standalone)");
+      addVariant("browser", "@media not all and (display-mode: standalone)");
+    }),
+  ],
 };
 export default config;

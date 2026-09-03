@@ -58,7 +58,7 @@ export default async function ChatListPage() {
   });
 
   return (
-    <main className="mx-auto max-w-md p-4 pb-24 md:max-w-2xl md:px-6 md:pb-16 md:pt-8">
+    <main className="mx-auto max-w-md p-4 pb-8 standalone:pb-24 md:max-w-2xl md:px-6 md:pb-16 md:pt-8">
       <h1 className="mb-3 text-[17px] font-extrabold leading-tight text-ink md:text-xl">{t(lang, "chat.title")}</h1>
       <ul className="flex flex-col">
         {sorted.map((c) => {
@@ -101,3 +101,5 @@ export default async function ChatListPage() {
     </main>
   );
 }
+
+export const metadata = { title: "채팅 · チャット | TOMO" };

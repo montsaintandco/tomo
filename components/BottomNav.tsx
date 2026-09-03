@@ -24,8 +24,9 @@ export default function BottomNav({ lang = "ko" }: { lang?: Lang }) {
   if (path.startsWith("/login") || path.startsWith("/onboarding")) return null;
 
   return (
+    // 설치된 앱(standalone)에서만 — 브라우저에서는 SiteHeader가 내비다. 노치 기기 안전영역만큼 아래 여백
     <nav aria-label={t(lang, "nav.main")}
-      className="fixed bottom-0 left-0 right-0 z-30 mx-auto max-w-md border-t border-tomo-navy/5 bg-white/95 backdrop-blur md:hidden">
+      className="fixed bottom-0 left-0 right-0 z-30 mx-auto hidden max-w-md border-t border-tomo-navy/5 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur standalone:block md:hidden">
       <ul className="flex items-end">
         {items.map((i) => {
           const active = i.href === "/" ? path === "/" : path.startsWith(i.href);

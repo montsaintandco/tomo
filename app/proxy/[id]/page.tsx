@@ -55,7 +55,7 @@ export default async function ProxyDetailPage(props: { params: Promise<{ id: str
     : r.quote_total != null ? formatPrice(r.quote_total, "JPY") : "";
 
   return (
-    <main className="mx-auto max-w-md p-4 pb-24 md:max-w-2xl md:px-6 md:pb-16 md:pt-8">
+    <main className="mx-auto max-w-md p-4 pb-8 standalone:pb-24 md:max-w-2xl md:px-6 md:pb-16 md:pt-8">
       <h1 className="mb-3 text-[17px] font-extrabold leading-tight text-ink md:text-xl">{t(lang, "proxy.title")}</h1>
 
       {item && (

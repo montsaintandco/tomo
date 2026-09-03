@@ -42,7 +42,7 @@ export default async function ProfilePage(props: { params: Promise<{ id: string 
   const reviews = (reviewsRaw ?? []) as unknown as Review[];
 
   return (
-    <main className="mx-auto max-w-md p-4 pb-24 md:max-w-2xl md:px-6 md:pb-16 md:pt-8">
+    <main className="mx-auto max-w-md p-4 pb-8 standalone:pb-24 md:max-w-2xl md:px-6 md:pb-16 md:pt-8">
       <div className="card mb-6 p-4 md:p-6">
         <div className="mb-4 flex items-center gap-3">
           <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-tomo-navy/5 text-[17px] font-extrabold text-tomo-navy">

@@ -67,7 +67,7 @@ export default function SellForm({ lang, hint }: { lang: Lang; hint: string }) {
   }
 
   return (
-    <main className="mx-auto max-w-md p-4 pb-24 md:max-w-2xl md:px-6 md:pb-16 md:pt-8">
+    <main className="mx-auto max-w-md p-4 pb-8 standalone:pb-24 md:max-w-2xl md:px-6 md:pb-16 md:pt-8">
       <h1 className="text-[17px] font-extrabold leading-tight text-ink md:text-xl">{t(lang, "sell.title")}</h1>
       <p className="mb-4 mt-0.5 text-[12px] text-ink-soft">{t(lang, "sell.sub")}</p>
       <form onSubmit={submit} className="flex flex-col gap-4">
