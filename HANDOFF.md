@@ -2,14 +2,14 @@
 
 한일 크로스보더 중고거래 플랫폼. Plan 01(기반)·02(상품)·03(채팅)·04(에스크로, Stripe 키 대기)·05(오픈마켓: 외부마켓 검색·대행구매) 완료 상태.
 
-## 재개 방법
+## 재개 방법 (다른 컴퓨터에서)
 
 ```bash
-git clone https://github.com/montsaintandco/tomo.git
+git clone https://github.com/montsaintandco/tomo.git   # 이미 있으면: git pull
 cd tomo
 npm install
 npm run dev   # http://localhost:3000
-npm test      # vitest 35개 통과해야 정상
+npm test      # vitest 47개 통과해야 정상 (라이브 Supabase라 첫 실행 JWT 시계 오차로 1~2개 튀면 재실행)
 ```
 
 `.env.local`은 gitignore라 직접 생성 (둘 다 공개값 — anon key는 RLS로 보호됨):
@@ -19,7 +19,14 @@ NEXT_PUBLIC_SUPABASE_URL=https://zftztnkczlblnkgaijzc.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpmdHp0bmtjemxibG5rZ2FpanpjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ1ODc3ODMsImV4cCI6MjEwMDE2Mzc4M30.uRRfCrw71ZqA8mkjH9UJ0OW55aeQ362xX3N2Xo17GPI
 ```
 
-Node 20+ 필요 (Next 16). `.env.local` 없으면 `next build`가 /onboarding 프리렌더에서 실패한다.
+- Node 20+ 필요 (Next 16). `.env.local` 없으면 `next build`가 /onboarding 프리렌더에서 실패한다.
+- 푸시 권한: 레포 소유자는 `montsaintandco`. `gh auth status`로 활성 계정 확인, 아니면 `gh auth switch --user montsaintandco`. master 푸시 = Vercel 자동 배포(https://tomo-montsaintandcos-projects.vercel.app).
+- 여러 세션을 병행하면 시작 전 반드시 `git pull` — 2026-09-03에 두 세션이 갈라져 10개 파일 충돌을 수동 병합했다.
+- Claude Code 플러그인(impeccable·superpowers·ponytail·claude-seo)은 머신별 설치라 새 컴퓨터엔 없을 수 있음. 없어도 코드 작업엔 지장 없고, 디자인 라운드를 돌릴 때만 impeccable을 다시 설치하면 된다. `.impeccable/`(config·크리틱 스냅샷·라이브 설정)은 레포에 포함돼 있다.
+
+**새 세션 시작 프롬프트 (그대로 붙여넣기)**
+
+> TOMO 프로젝트 이어서. HANDOFF.md 읽고 진행. 최근 상태: Next 16, 홈은 양방향 마켓 허브(SP1 완료, DESIGN.md v2). 다음은 SP2(상품 상세·/global·외부상품 상세를 v2 토큰과 i18n 사전으로 재디자인) — docs/superpowers/specs/2026-09-03-home-hub-design-system-v2-design.md의 분해 기준. 스펙→계획→구현 순서로, 결정은 지금까지처럼 한국 구매자 우선·브랜드 유지·10px은 11px로.
 
 ## 2026-09-03 세션 반영
 
