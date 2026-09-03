@@ -47,7 +47,7 @@ export default async function ProfilePage(props: { params: Promise<{ id: string 
             </p>
           </div>
         </div>
-        <HeartGauge temp={Number(p.trust_temp)} />
+        <HeartGauge temp={Number(p.trust_temp)} lang={viewer.language} />
       </div>
 
       <h2 className="mb-2 text-sm font-bold text-ink-soft">판매 상품 · 出品</h2>

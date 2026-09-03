@@ -59,7 +59,7 @@ export default async function MyPage() {
             <LogoutButton />
           </div>
         </div>
-        <HeartGauge temp={Number(profile?.trust_temp ?? 36.5)} />
+        <HeartGauge temp={Number(profile?.trust_temp ?? 36.5)} lang={viewer.language} />
       </div>
 
       <Section title="구매대행" href="/global" hrefLabel="더 둘러보기">

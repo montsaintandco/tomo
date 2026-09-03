@@ -1,10 +1,11 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { t, type Lang } from "@/lib/i18n";
 
-export default function ProxyRequestButton(props: {
+export default function ProxyRequestButton({ lang = "ko", ...props }: {
   source: string; sourceId: string; title: string; price: number;
-  currency: string; url: string; images: string[]; sellerName: string;
+  currency: string; url: string; images: string[]; sellerName: string; lang?: Lang;
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -21,11 +22,11 @@ export default function ProxyRequestButton(props: {
       });
       const json = await res.json().catch(() => ({}));
       // 503 = 서비스 준비 중 — 오류가 아니라 대기 상태 (안전결제와 동일 관행)
-      if (res.status === 503) { setMsg("대행 신청 준비 중이에요 · 代行準備中"); setBusy(false); return; }
-      if (!res.ok) throw new Error(json.error || "신청 실패");
+      if (res.status === 503) { setMsg(t(lang, "ext.requestPending")); setBusy(false); return; }
+      if (!res.ok) throw new Error(json.error || t(lang, "ext.requestFail"));
       router.push(`/proxy/${json.id}`);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "신청 실패");
+      setError(e instanceof Error ? e.message : t(lang, "ext.requestFail"));
       setBusy(false);
     }
   }
@@ -33,11 +34,11 @@ export default function ProxyRequestButton(props: {
   return (
     <div>
       <button onClick={submit} disabled={busy}
-        className="btn w-full bg-tomo-coral-deep py-3 text-white">
-        {busy ? "신청 중…" : "대행 신청하기 · 代行を依頼"}
+        className="btn w-full bg-tomo-coral-deep py-3 text-sm text-white">
+        {busy ? t(lang, "ext.requesting") : t(lang, "ext.request")}
       </button>
       {msg && <p className="mt-1 text-center text-xs text-ink-soft">{msg}</p>}
-      {error && <p className="mt-1 text-center text-xs text-tomo-rose">{error}</p>}
+      {error && <p role="alert" className="mt-1 text-center text-xs text-tomo-rose">{error}</p>}
     </div>
   );
 }

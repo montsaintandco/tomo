@@ -1,8 +1,9 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { t, type Lang } from "@/lib/i18n";
 
-export default function ChatButton({ listingId }: { listingId: string }) {
+export default function ChatButton({ listingId, lang = "ko" }: { listingId: string; lang?: Lang }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
@@ -19,7 +20,7 @@ export default function ChatButton({ listingId }: { listingId: string }) {
       if (!res.ok) throw new Error(json.error);
       router.push(`/chat/${json.id}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "채팅 시작 실패");
+      setError(err instanceof Error ? err.message : t(lang, "detail.chatFail"));
       setBusy(false);
     }
   }
@@ -27,10 +28,10 @@ export default function ChatButton({ listingId }: { listingId: string }) {
   return (
     <div className="flex-1">
       <button onClick={start} disabled={busy}
-        className="btn w-full border-[1.5px] border-tomo-navy bg-white py-3 text-center text-tomo-navy">
-        {busy ? "연결 중…" : "채팅하기"}
+        className="btn w-full border-[1.5px] border-tomo-navy bg-white py-3 text-center text-sm text-tomo-navy">
+        {busy ? t(lang, "detail.connecting") : t(lang, "detail.chat")}
       </button>
-      {error && <p className="mt-1 text-xs text-tomo-rose">{error}</p>}
+      {error && <p role="alert" className="mt-1 text-xs text-tomo-rose">{error}</p>}
     </div>
   );
 }

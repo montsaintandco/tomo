@@ -267,6 +267,12 @@ ListingCard와 같은 뼈대. 오버레이 뱃지: 좌상단 소스 라벨 `bg-t
 ### HomeHub (section order)
 `div.px-4.pb-6.pt-1` 안에서: ① TrustStrip → ② "{상대국}에서 지금 인기" (Suspense 스트리밍, 테마별 SectionHeader + MarketCarousel, 전부 실패 시 조용히 비움) → ③ "토모에서 바로 거래" 2열 ListingCard 그리드(빈 상태는 TomoSymbol + 이중 언어 카피) → ④ "{상대국} 여행 가서 직거래" ListingCard 캐러셀(있을 때만) → ⑤ SiteFooter. 섹션 간격은 전부 `mt-8`. 파라미터(`q`, `tab`) 없는 첫 진입만 허브이고, 검색·탭은 ListingRow 리스트 모드.
 
+### Detail surfaces (SP2 — 상품 상세 · 외부상품 상세)
+같은 골격: 모바일은 풀블리드 정사각 이미지(스와이프, 우하단 `사진 N장` 11px 스크림 필, 좌상단 44px 뒤로가기 `bg-tomo-navy/60 backdrop-blur`) → 정보 컬럼 `p-4 gap-4`; 데스크톱은 2컬럼 `max-w-5xl`, 이미지가 `sticky top-24 rounded-card shadow-soft`. 제목 17px/700 ink(원문/번역 토글은 `bg-tomo-navy/5` 네이비 13px/700 필, `aria-pressed`, `lang` 속성이 표시 언어를 따라간다). **가격은 구매자 통화 17px/800 tnum이 큰 숫자**, 해외면 원가 12px/700 ink-soft가 한 줄 아래. 안내(해외 상품·여행 직거래·예약/완료)는 전부 `rounded-card bg-tomo-navy/5 p-3.5` 웰 + 네이비 700 리드 + 13px ink 본문 — 채팅 말풍선 모양·블루 틴트·브리지 배경은 쓰지 않으며, 여행 직거래는 웰 안의 `.grad-bridge-soft` 뱃지 하나가 유일한 그라데이션이다. 판매자 카드 `.card`: 아바타 `bg-tomo-navy/5` 네이비 700 이니셜(나라는 CountryChip이 말한다), 모바일 온도 필 `bg-tomo-navy/5` 네이비 11px/700 + 코랄딥 하트, 데스크톱은 HeartGauge(숫자 17px/800 코랄딥, Pretendard). 외부상품의 예상 금액표는 같은 navy/5 웰에 13px 행, 합계 행은 `border-tomo-navy/10` 헤어라인 위에 구매자 통화 15px/800 네이비 + 원가 11px/700 ink-soft, 주의 문구 11px ink-faint. 부가정보는 `dl.card` 2열(dt 700 ink). CTA는 모바일 하단 고정 바(`bottom-[62px]`, `bg-white/95 backdrop-blur`) / 데스크톱 흐름 배치, 코랄딥 하나 + 네이비 아웃라인 하나(채팅)까지만.
+
+### Global market page (SP2 — /global)
+헤더 `sticky bg-white/95 backdrop-blur`: h1 17px/800(데스크톱 20px) + 12px ink-soft 서브 + 게스트 로그인 네이비 필. 검색은 홈과 같은 아이보리 틴트 16px 필 + 지우기 ×. 소스 탭은 세그먼트 탭 규격(모바일 `py-3` 44px, 데스크톱 `py-2`), 라벨은 `source.*` 사전. "번역해서 찾았어요: …" 12px ink-soft 한 줄. 그리드는 2/3/4/5열 ExternalItemCard, 빈 상태는 TomoSymbol + 사전 카피.
+
 ### Brand Primitives (signature, unchanged)
 `Wordmark`(TOM + 코랄 하트 SVG, `.heartbeat` 2.6s — 페이지의 유일한 상시 모션), `TomoSymbol`(블루+핑크 말풍선 겹침에 코랄 하트 — 빈 상태·이미지 없는 썸·피드 엔드캡), `CountryChip`. 모든 하트는 동일 SVG 패스.
 
