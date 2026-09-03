@@ -9,6 +9,9 @@ alter table listings
 update listings set bumped_at = created_at;
 create index on listings (status, bumped_at desc);
 
+-- 찜 시점 가격 — 마이페이지에서 "값내림" 표시 (메루카리: 찜한 상품 값내림 알림)
+alter table wishlists add column price_at_wish integer;
+
 -- 나눔 = 가격 0
 alter table listings drop constraint listings_price_check;
 alter table listings add constraint listings_price_check check (price >= 0);

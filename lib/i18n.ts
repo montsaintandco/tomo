@@ -191,6 +191,12 @@ const D = {
   "offers.status.pending": ["대기", "返答待ち"],
   "offers.status.accepted": ["수락", "承諾済み"],
   "offers.status.declined": ["거절", "見送り"],
+  // ── 팩 B: 탐색 ──
+  "home.categories": ["카테고리", "カテゴリー"],
+  "cat.all": ["전체", "すべて"],
+  "detail.moreFromSeller": ["{name}님의 다른 상품", "{name}さんの他の商品"],
+  "detail.similar": ["비슷한 상품", "関連商品"],
+  "my.priceDrop": ["값내림 {diff}", "値下げ {diff}"],
 
   // ── SP2: 해외직구 ──
   "global.title": ["해외직구", "海外購入"],

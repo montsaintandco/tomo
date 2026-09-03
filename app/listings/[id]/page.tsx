@@ -12,6 +12,8 @@ import SellerPanel, { type ReceivedOffer } from "@/components/SellerPanel";
 import TrustStrip from "@/components/TrustStrip";
 import { CountryChip, TomoSymbol } from "@/components/Brand";
 import HeartGauge from "@/components/HeartGauge";
+import ListingCard from "@/components/ListingCard";
+import type { FeedListing } from "@/components/ListingRow";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -47,6 +49,14 @@ export default async function ListingDetail(props: { params: Promise<{ id: strin
           .eq("listing_id", l.id).order("created_at", { ascending: false })
       : Promise.resolve({ data: null }),
     isMine ? Promise.resolve(null) : supabase.rpc("increment_view", { lid: l.id }),
+  ]);
+  // 상세 하단 탐색 (당근·메루카리): 판매자의 다른 상품 + 같은 카테고리
+  const CARD_SELECT = "id, title, price, currency, source_language, country, region, status, images, created_at, trade_method, cross_border_enabled, listing_translations(language, title)";
+  const [{ data: moreFromSeller }, { data: similar }] = await Promise.all([
+    supabase.from("listings").select(CARD_SELECT).eq("seller_id", seller.id).eq("status", "active").neq("id", l.id)
+      .order("bumped_at", { ascending: false }).limit(6),
+    supabase.from("listings").select(CARD_SELECT).eq("category", l.category).eq("status", "active").neq("id", l.id).neq("seller_id", seller.id)
+      .order("bumped_at", { ascending: false }).limit(6),
   ]);
   const wishCount = typeof wishRes.data === "number" ? wishRes.data : 0;
   const chatCount = typeof chatRes.data === "number" ? chatRes.data : 0;
@@ -165,7 +175,7 @@ export default async function ListingDetail(props: { params: Promise<{ id: strin
           {/* 액션 행 — 메루카리 「いいね · 共有」 */}
           <div className="mt-3 flex items-center justify-between gap-2">
             <span className="flex flex-wrap items-center gap-2">
-              <WishButton listingId={l.id} initialLiked={wished} initialCount={wishCount} guest={!!viewer.guest} lang={lang} />
+              <WishButton listingId={l.id} price={l.price} initialLiked={wished} initialCount={wishCount} guest={!!viewer.guest} lang={lang} />
               <ShareButton title={tr?.title ?? l.title} lang={lang} />
             </span>
             {travelDeal && (
@@ -257,6 +267,27 @@ export default async function ListingDetail(props: { params: Promise<{ id: strin
           <p className="rounded-card bg-tomo-navy/5 p-3 text-center text-sm font-bold text-ink-soft">
             {l.status === "sold" ? t(lang, "detail.sold") : t(lang, "detail.reserved")}
           </p>
+        )}
+
+        {((moreFromSeller ?? []).length > 0 || (similar ?? []).length > 0) && (
+          <div className="flex flex-col gap-6 md:col-span-2">
+            {(moreFromSeller ?? []).length > 0 && (
+              <section>
+                <h2 className="mb-2 text-[15px] font-extrabold text-ink">{t(lang, "detail.moreFromSeller", { name: seller.nickname })}</h2>
+                <ul className="grid grid-cols-3 gap-x-3 gap-y-4 md:grid-cols-6">
+                  {(moreFromSeller ?? []).map((m) => <li key={m.id}><ListingCard listing={m as unknown as FeedListing} viewer={viewer} /></li>)}
+                </ul>
+              </section>
+            )}
+            {(similar ?? []).length > 0 && (
+              <section>
+                <h2 className="mb-2 text-[15px] font-extrabold text-ink">{t(lang, "detail.similar")}</h2>
+                <ul className="grid grid-cols-3 gap-x-3 gap-y-4 md:grid-cols-6">
+                  {(similar ?? []).map((m) => <li key={m.id}><ListingCard listing={m as unknown as FeedListing} viewer={viewer} /></li>)}
+                </ul>
+              </section>
+            )}
+          </div>
         )}
 
         {/* 하단 바 — 메루카리식: [채팅] 가격 [구매하기]. 모바일 고정, 데스크톱은 흐름 배치 */}

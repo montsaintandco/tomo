@@ -7,8 +7,8 @@ import { t, type Lang } from "@/lib/i18n";
 const HEART = "M12 21C7.2 17.2 2.5 13.6 2.5 8.9 2.5 5.6 5 3.5 7.8 3.5c1.7 0 3.3.9 4.2 2.3.9-1.4 2.5-2.3 4.2-2.3 2.8 0 5.3 2.1 5.3 5.4 0 4.7-4.7 8.3-9.5 12.1z";
 
 // 찜 토글 — RLS가 본인 행만 허용하므로 API 라우트 없이 브라우저 클라이언트로 직접 쓴다
-export default function WishButton({ listingId, initialLiked, initialCount, guest, lang }: {
-  listingId: string; initialLiked: boolean; initialCount: number; guest: boolean; lang: Lang;
+export default function WishButton({ listingId, price, initialLiked, initialCount, guest, lang }: {
+  listingId: string; price: number; initialLiked: boolean; initialCount: number; guest: boolean; lang: Lang;
 }) {
   const [liked, setLiked] = useState(initialLiked);
   const [count, setCount] = useState(initialCount);
@@ -26,7 +26,7 @@ export default function WishButton({ listingId, initialLiked, initialCount, gues
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push(`/login?next=/listings/${listingId}`); return; }
       const { error } = next
-        ? await supabase.from("wishlists").insert({ user_id: user.id, listing_id: listingId })
+        ? await supabase.from("wishlists").insert({ user_id: user.id, listing_id: listingId, price_at_wish: price })
         : await supabase.from("wishlists").delete().eq("user_id", user.id).eq("listing_id", listingId);
       if (error && error.code !== "23505") throw error;   // 이미 찜한 경우는 성공으로 본다
     } catch {

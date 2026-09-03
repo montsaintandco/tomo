@@ -41,7 +41,7 @@ export default async function MyPage() {
       .select("id, status, quote_total, external_items(source, title, title_translated, images)")
       .eq("user_id", viewer.id).order("created_at", { ascending: false }).limit(10),
     supabase.from("wishlists")
-      .select("listing_id, listings(id, title, price, currency, status, images, source_language, listing_translations(language, title))")
+      .select("listing_id, price_at_wish, listings(id, title, price, currency, status, images, source_language, listing_translations(language, title))")
       .eq("user_id", viewer.id).order("created_at", { ascending: false }).limit(10),
   ]);
 
@@ -97,10 +97,13 @@ export default async function MyPage() {
               source_language: string; listing_translations: { language: string; title: string }[];
             } | null;
             if (!l) return null;
+            // 찜한 뒤 값이 내렸으면 앞에 알림 (메루카리 값내림 알림의 무알림 버전)
+            const was = (w as { price_at_wish?: number | null }).price_at_wish;
+            const drop = was && l.price < was ? `${t(lang, "my.priceDrop", { diff: formatPrice(was - l.price, l.currency as Currency) })} · ` : "";
             return (
               <Row key={l.id} href={`/listings/${l.id}`}
                 image={l.images?.[0]} title={displayTitle(l, lang)}
-                sub={t(lang, l.status === "active" ? "status.selling" : l.status === "reserved" ? "badge.reserved" : "status.soldDone")}
+                sub={drop + t(lang, l.status === "active" ? "status.selling" : l.status === "reserved" ? "badge.reserved" : "status.soldDone")}
                 right={l.price === 0 ? t(lang, "price.free") : formatPrice(l.price, l.currency as Currency)} />
             );
           })}

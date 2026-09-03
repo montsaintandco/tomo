@@ -10,6 +10,7 @@ import SectionHeader from "@/components/SectionHeader";
 import MarketCarousel, { CarouselSkeleton } from "@/components/MarketCarousel";
 import ListingCard from "@/components/ListingCard";
 import { TomoSymbol } from "@/components/Brand";
+import CategoryChips from "@/components/CategoryChips";
 
 // 한 요청 안에서 두 Suspense 블록이 같은 프로미스를 공유한다 (테마 캐시는 별도로 1h)
 const getSections = cache((country: "KR" | "JP") => getTrendingSections(country));
@@ -102,6 +103,10 @@ export default function HomeHub({ viewer, listings, travel }: {
   return (
     <div className="px-4 pb-6 pt-1 md:px-0 md:pb-16">
       <TrustStrip lang={lang} />
+
+      <div className="mt-4">
+        <CategoryChips lang={lang} />
+      </div>
 
       <Suspense fallback={
         <section className="mt-8" aria-hidden>

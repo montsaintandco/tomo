@@ -4,6 +4,7 @@ import ListingRow, { type FeedListing } from "@/components/ListingRow";
 import { Wordmark, TomoSymbol } from "@/components/Brand";
 import HomeHub from "@/components/HomeHub";
 import LangToggle from "@/components/LangToggle";
+import CategoryChips, { isCategory } from "@/components/CategoryChips";
 import { t } from "@/lib/i18n";
 import Link from "next/link";
 
@@ -12,16 +13,17 @@ const TABS = [["all", "tab.all"], ["local", "tab.local"], ["travel", "tab.travel
 const FEED_LIMIT = 40;
 const FEED_SELECT = "id, title, price, currency, source_language, country, region, status, images, created_at, trade_method, cross_border_enabled, listing_translations(language, title)";
 
-export default async function Home(props: { searchParams: Promise<{ tab?: string; q?: string }> }) {
+export default async function Home(props: { searchParams: Promise<{ tab?: string; q?: string; cat?: string }> }) {
   const searchParams = await props.searchParams;
   const supabase = await createServerSupabase();
   const viewer = await getViewerOrGuest(supabase);
   const tab = searchParams.tab ?? "all";
   const q = searchParams.q?.trim();
+  const cat = isCategory(searchParams.cat) ? searchParams.cat : undefined;
   const localNeedsLogin = tab === "local" && viewer.guest;
   const lang = viewer.language;
-  // 파라미터 없는 첫 진입 = 허브. 검색·탭은 기존 리스트 모드
-  const hub = !q && !searchParams.tab;
+  // 파라미터 없는 첫 진입 = 허브. 검색·탭·카테고리는 기존 리스트 모드
+  const hub = !q && !searchParams.tab && !cat;
 
   // 판매중 → 예약중 → 거래완료 순으로 노출 (당근·메루카리 관행: 끝난 거래는 뒤로)
   let query = supabase.from("listings")
@@ -30,6 +32,7 @@ export default async function Home(props: { searchParams: Promise<{ tab?: string
     .order("bumped_at", { ascending: false })
     .limit(FEED_LIMIT);
 
+  if (cat) query = query.eq("category", cat);
   if (tab === "local" && !viewer.guest) {
     query = query.eq("country", viewer.country).eq("region", viewer.region).in("trade_method", ["direct", "both"]);
   } else if (tab === "travel") {
@@ -99,6 +102,7 @@ export default async function Home(props: { searchParams: Promise<{ tab?: string
             )}
           </div>
           {tab !== "all" && <input type="hidden" name="tab" value={tab} />}
+          {cat && <input type="hidden" name="cat" value={cat} />}
         </form>
 
         {!hub && (
@@ -107,6 +111,7 @@ export default async function Home(props: { searchParams: Promise<{ tab?: string
             const params = new URLSearchParams();
             if (v !== "all") params.set("tab", v);
             if (q) params.set("q", q);
+            if (cat) params.set("cat", cat);
             const qs = params.toString();
             return (
               <Link key={v} href={qs ? `/?${qs}` : "/"} aria-current={tab === v ? "page" : undefined}
@@ -126,12 +131,16 @@ export default async function Home(props: { searchParams: Promise<{ tab?: string
           travel={(hubTravel?.data ?? []) as unknown as FeedListing[]} />
       ) : (
       <div className="px-4 pb-6 pt-1 md:px-0 md:pb-16">
+        {/* 카테고리 칩 — 리스트 모드에서도 한 탭 거리 */}
+        <div className="mb-3">
+          <CategoryChips lang={lang} active={cat} q={q} />
+        </div>
 
         {/* 피드 섹션 헤딩 — 히어로 다음 스크롤 리듬 (데스크톱 전용) */}
         {!feedError && !localNeedsLogin && (listings ?? []).length > 0 && (
           <div className="mb-5 hidden items-baseline justify-between md:flex">
             <h2 className="text-lg font-bold text-ink">
-              {q ? t(lang, "feed.results", { q }) : tab === "local" ? t(lang, "feed.localTitle") : tab === "travel" ? t(lang, "feed.travelTitle") : t(lang, "feed.latest")}
+              {q ? t(lang, "feed.results", { q }) : tab === "local" ? t(lang, "feed.localTitle") : tab === "travel" ? t(lang, "feed.travelTitle") : cat ? t(lang, `cat.${cat}`) : t(lang, "feed.latest")}
             </h2>
             <p className="text-xs text-ink-soft">{t(lang, "feed.legend")}</p>
           </div>
