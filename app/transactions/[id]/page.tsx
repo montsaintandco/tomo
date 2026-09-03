@@ -15,6 +15,7 @@ type TxDetail = {
   buyer_id: string; seller_id: string;
   item_price: number; intl_shipping_fee: number; platform_fee: number; currency: Currency;
   domestic_tracking: string | null; intl_tracking: string | null;
+  dispute_reason: string | null; dispute_resolution: string | null;
   listings: {
     id: string; title: string; source_language: string; country: "KR" | "JP";
     images: string[]; listing_translations: { language: string; title: string }[];
@@ -41,7 +42,7 @@ export default async function TransactionPage(props: { params: Promise<{ id: str
 
   const { data } = await supabase.from("transactions")
     .select(`id, status, is_cross_border, center, buyer_id, seller_id,
-      item_price, intl_shipping_fee, platform_fee, currency, domestic_tracking, intl_tracking,
+      item_price, intl_shipping_fee, platform_fee, currency, domestic_tracking, intl_tracking, dispute_reason, dispute_resolution,
       listings(id, title, source_language, country, images, listing_translations(language, title)),
       buyer:profiles!transactions_buyer_id_fkey(id, nickname),
       seller:profiles!transactions_seller_id_fkey(id, nickname)`)
@@ -89,6 +90,14 @@ export default async function TransactionPage(props: { params: Promise<{ id: str
       <div className="card mb-4 p-4">
         <EscrowTimeline status={tx.status} isCrossBorder={tx.is_cross_border} lang={lang} />
       </div>
+
+      {(tx.dispute_reason || tx.dispute_resolution) && (
+        <div className="mb-4 rounded-card bg-tomo-navy/5 p-3.5 text-[13px] leading-relaxed text-ink">
+          {tx.dispute_reason && <p><span className="font-bold text-tomo-rose">{t(lang, "dispute.reasonLabel")}:</span> {tx.dispute_reason}</p>}
+          {tx.dispute_resolution && <p className="mt-1"><span className="font-bold text-tomo-navy">{t(lang, "dispute.resolution")}:</span> {tx.dispute_resolution}</p>}
+          {tx.status === "disputed" && !tx.dispute_resolution && <p className="mt-1 text-[12px] text-ink-soft">{t(lang, "dispute.opened")}</p>}
+        </div>
+      )}
 
       {/* 금액 — 결제 금액은 구매자 통화가 큰 숫자 */}
       <div className="card mb-4 p-4 text-[13px]">

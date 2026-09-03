@@ -6,9 +6,14 @@ import HeartGauge from "@/components/HeartGauge";
 import SectionHeader from "@/components/SectionHeader";
 import { CountryChip, TomoSymbol } from "@/components/Brand";
 import LogoutButton from "@/components/LogoutButton";
+import ListingOwnerActions from "@/components/ListingOwnerActions";
+import UnwishButton from "@/components/UnwishButton";
+import DeactivateButton from "@/components/DeactivateButton";
 import { type MarketSource } from "@/lib/market/types";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+
+export const metadata = { title: "마이페이지 · マイページ | TOMO" };
 
 const TX_STATUS: Record<string, I18nKey> = {
   pending_payment: "status.pending_payment", paid: "status.paid", shipped: "status.shipped",
@@ -22,28 +27,70 @@ const PROXY_STATUS: Record<string, I18nKey> = {
   shipped_international: "pstatus.shipped_international", delivered: "pstatus.delivered",
   completed: "pstatus.completed", cancelled: "pstatus.cancelled",
 };
+type MiniListing = {
+  id: string; title: string; price: number; currency: string; status: string; images: string[];
+  source_language: string; listing_translations: { language: string; title: string }[];
+};
+type OfferStatus = "pending" | "accepted" | "declined";
+const LISTING_SEL = "id, title, price, currency, status, images, source_language, listing_translations(language, title)";
 
 export default async function MyPage() {
   const supabase = await createServerSupabase();
   const viewer = await getViewer(supabase);
   if (!viewer) redirect("/login?next=/mypage");
   const lang: Lang = viewer.language;
+  const me = viewer.id;
 
-  const [{ data: profile }, { data: buying }, { data: selling }, { data: proxies }, { data: wishes }] = await Promise.all([
-    supabase.from("profiles").select("nickname, country, region, trust_temp").eq("id", viewer.id).single(),
+  const [
+    { data: profile }, { data: buying }, { data: selling }, { data: proxies }, { data: wishes },
+    { data: offersIn }, { data: offersOut }, shipRes, receiveRes,
+  ] = await Promise.all([
+    supabase.from("profiles").select("nickname, country, region, trust_temp").eq("id", me).single(),
     supabase.from("transactions")
       .select("id, status, item_price, currency, listings(title, source_language, images, listing_translations(language, title))")
-      .eq("buyer_id", viewer.id).order("created_at", { ascending: false }).limit(10),
+      .eq("buyer_id", me).order("created_at", { ascending: false }).limit(10),
     supabase.from("listings")
-      .select("id, title, price, currency, status, images")
-      .eq("seller_id", viewer.id).order("created_at", { ascending: false }).limit(10),
+      .select("id, title, price, currency, status, images, hidden, hidden_by_admin")
+      .eq("seller_id", me).order("created_at", { ascending: false }).limit(20),
     supabase.from("proxy_requests")
       .select("id, status, quote_total, external_items(source, title, title_translated, images)")
-      .eq("user_id", viewer.id).order("created_at", { ascending: false }).limit(10),
+      .eq("user_id", me).order("created_at", { ascending: false }).limit(10),
     supabase.from("wishlists")
-      .select("listing_id, price_at_wish, listings(id, title, price, currency, status, images, source_language, listing_translations(language, title))")
-      .eq("user_id", viewer.id).order("created_at", { ascending: false }).limit(10),
+      .select(`listing_id, price_at_wish, listings(${LISTING_SEL})`)
+      .eq("user_id", me).order("created_at", { ascending: false }).limit(20),
+    // 받은 제안 = 내 상품에 온 것 (RLS: seller reads offers on own listings)
+    supabase.from("offers")
+      .select(`id, price, status, created_at, listings!inner(${LISTING_SEL}, seller_id), profiles!offers_buyer_id_fkey(nickname)`)
+      .eq("listings.seller_id", me).order("created_at", { ascending: false }).limit(20),
+    supabase.from("offers")
+      .select(`id, price, status, created_at, listings(${LISTING_SEL})`)
+      .eq("buyer_id", me).order("created_at", { ascending: false }).limit(20),
+    supabase.from("transactions").select("id", { count: "exact", head: true }).eq("seller_id", me).eq("status", "paid"),
+    supabase.from("transactions").select("id", { count: "exact", head: true }).eq("buyer_id", me).in("status", ["shipped", "shipped_international", "delivered"]),
   ]);
+
+  type OfferIn = { id: string; price: number; status: OfferStatus; listings: MiniListing; profiles: { nickname: string } | null };
+  type OfferOut = { id: string; price: number; status: OfferStatus; listings: MiniListing | null };
+  const inRows = (offersIn ?? []) as unknown as OfferIn[];
+  const outRows = ((offersOut ?? []) as unknown as OfferOut[]).filter((o) => o.listings);
+  const wishRows = ((wishes ?? []) as unknown as { listing_id: string; price_at_wish: number | null; listings: MiniListing | null }[]).filter((w) => w.listings);
+
+  // 할 일 — 알림 인프라 없이 데이터에서 유도 (당근·메루카리의 알림 탭 역할)
+  const pendingIn = inRows.filter((o) => o.status === "pending").length;
+  const acceptedOut = outRows.filter((o) => o.status === "accepted" && o.listings!.status === "active").length;
+  const drops = wishRows.filter((w) => w.price_at_wish && w.listings!.price < w.price_at_wish).length;
+  const toShip = shipRes.count ?? 0;
+  const toReceive = receiveRes.count ?? 0;
+  const todos: { text: string; href: string }[] = [
+    ...(toShip ? [{ text: t(lang, "my.todoShip", { n: toShip }), href: "#selling" }] : []),
+    ...(toReceive ? [{ text: t(lang, "my.todoReceive", { n: toReceive }), href: "#buying" }] : []),
+    ...(pendingIn ? [{ text: t(lang, "my.todoOffersIn", { n: pendingIn }), href: "#offers-in" }] : []),
+    ...(acceptedOut ? [{ text: t(lang, "my.todoOfferAccepted", { n: acceptedOut }), href: "#offers-out" }] : []),
+    ...(drops ? [{ text: t(lang, "my.todoDrop", { n: drops }), href: "#wishlist" }] : []),
+  ];
+
+  const priceOf = (l: { price: number; currency: string }) => l.price === 0 ? t(lang, "price.free") : formatPrice(l.price, l.currency as Currency);
+  const statusOf = (s: string) => t(lang, s === "active" ? "status.selling" : s === "reserved" ? "badge.reserved" : "status.soldDone");
 
   return (
     <main className="mx-auto max-w-md p-4 pb-8 standalone:pb-24 md:max-w-2xl md:px-6 md:pb-16 md:pt-8">
@@ -61,24 +108,67 @@ export default async function MyPage() {
               </p>
             </div>
           </div>
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
             {viewer.isAdmin && (
               <Link href="/admin" className="btn bg-tomo-navy px-3 py-2 text-xs text-white">{t(lang, "my.admin")}</Link>
             )}
+            <Link href="/mypage/edit" className="btn border-[1.5px] border-tomo-navy bg-white px-3 py-2 text-xs text-tomo-navy">{t(lang, "my.editProfile")}</Link>
             <LogoutButton lang={lang} />
           </div>
         </div>
         <HeartGauge temp={Number(profile?.trust_temp ?? 36.5)} lang={lang} />
       </div>
 
-      <section aria-label={t(lang, "my.proxy")}>
+      {/* 할 일 — 지금 내가 움직여야 하는 것만 */}
+      <section aria-label={t(lang, "my.todo")} className="mb-8">
+        <SectionHeader lang={lang} title={t(lang, "my.todo")} />
+        {todos.length > 0 ? (
+          <ul className="flex flex-col gap-1.5">
+            {todos.map((td) => (
+              <li key={td.text}>
+                <a href={td.href} className="press flex items-center justify-between rounded-card bg-tomo-coral-deep/10 px-3.5 py-3 text-[13px] font-bold text-tomo-coral-deep">
+                  {td.text}
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden><path d="m9 5 7 7-7 7" /></svg>
+                </a>
+              </li>
+            ))}
+          </ul>
+        ) : <Empty text={t(lang, "my.todoNone")} />}
+      </section>
+
+      <section id="offers-in" aria-label={t(lang, "my.offersIn")}>
+        <SectionHeader lang={lang} title={t(lang, "my.offersIn")} />
+        <div className="flex flex-col gap-2">
+          {inRows.map((o) => (
+            <Row key={o.id} href={`/listings/${o.listings.id}`} image={o.listings.images?.[0]}
+              title={displayTitle(o.listings, lang)}
+              sub={`${o.profiles?.nickname ?? "—"} · ${t(lang, `offers.status.${o.status}`)}`}
+              right={formatPrice(o.price, o.listings.currency as Currency)} />
+          ))}
+          {inRows.length === 0 && <Empty text={t(lang, "my.noOffers")} />}
+        </div>
+      </section>
+
+      <section id="offers-out" className="mt-8" aria-label={t(lang, "my.offersOut")}>
+        <SectionHeader lang={lang} title={t(lang, "my.offersOut")} />
+        <div className="flex flex-col gap-2">
+          {outRows.map((o) => (
+            <Row key={o.id} href={`/listings/${o.listings!.id}`} image={o.listings!.images?.[0]}
+              title={displayTitle(o.listings!, lang)}
+              sub={t(lang, `offers.status.${o.status}`)}
+              right={formatPrice(o.price, o.listings!.currency as Currency)} />
+          ))}
+          {outRows.length === 0 && <Empty text={t(lang, "my.noOffers")} />}
+        </div>
+      </section>
+
+      <section className="mt-8" aria-label={t(lang, "my.proxy")}>
         <SectionHeader lang={lang} title={t(lang, "my.proxy")} href="/global" linkLabel={t(lang, "my.proxyMore")} />
         <div className="flex flex-col gap-2">
           {(proxies ?? []).map((p) => {
             const it = p.external_items as unknown as { source: string; title: string; title_translated: string | null; images: string[] } | null;
             return (
-              <Row key={p.id} href={`/proxy/${p.id}`}
-                image={it?.images?.[0]}
+              <Row key={p.id} href={`/proxy/${p.id}`} image={it?.images?.[0]}
                 title={it?.title_translated || it?.title || t(lang, "my.item")}
                 sub={`${it ? t(lang, `source.${it.source as MarketSource}`) : ""} · ${PROXY_STATUS[p.status] ? t(lang, PROXY_STATUS[p.status]) : p.status}`}
                 right={p.quote_total ? formatPrice(p.quote_total, "JPY") : t(lang, "proxy.quoteWait")} />
@@ -88,37 +178,28 @@ export default async function MyPage() {
         </div>
       </section>
 
-      <section className="mt-8" aria-label={t(lang, "my.wishlist")}>
+      <section id="wishlist" className="mt-8" aria-label={t(lang, "my.wishlist")}>
         <SectionHeader lang={lang} title={t(lang, "my.wishlist")} />
         <div className="flex flex-col gap-2">
-          {(wishes ?? []).map((w) => {
-            const l = w.listings as unknown as {
-              id: string; title: string; price: number; currency: string; status: string; images: string[];
-              source_language: string; listing_translations: { language: string; title: string }[];
-            } | null;
-            if (!l) return null;
-            // 찜한 뒤 값이 내렸으면 앞에 알림 (메루카리 값내림 알림의 무알림 버전)
-            const was = (w as { price_at_wish?: number | null }).price_at_wish;
-            const drop = was && l.price < was ? `${t(lang, "my.priceDrop", { diff: formatPrice(was - l.price, l.currency as Currency) })} · ` : "";
+          {wishRows.map((w) => {
+            const l = w.listings!;
+            const drop = w.price_at_wish && l.price < w.price_at_wish
+              ? `${t(lang, "my.priceDrop", { diff: formatPrice(w.price_at_wish - l.price, l.currency as Currency) })} · ` : "";
             return (
-              <Row key={l.id} href={`/listings/${l.id}`}
-                image={l.images?.[0]} title={displayTitle(l, lang)}
-                sub={drop + t(lang, l.status === "active" ? "status.selling" : l.status === "reserved" ? "badge.reserved" : "status.soldDone")}
-                right={l.price === 0 ? t(lang, "price.free") : formatPrice(l.price, l.currency as Currency)} />
+              <Row key={l.id} href={`/listings/${l.id}`} image={l.images?.[0]} title={displayTitle(l, lang)}
+                sub={drop + statusOf(l.status)} right={priceOf(l)}
+                extra={<UnwishButton listingId={l.id} lang={lang} />} />
             );
           })}
-          {(wishes ?? []).length === 0 && <Empty text={t(lang, "my.noWishlist")} />}
+          {wishRows.length === 0 && <Empty text={t(lang, "my.noWishlist")} />}
         </div>
       </section>
 
-      <section className="mt-8" aria-label={t(lang, "my.buying")}>
+      <section id="buying" className="mt-8" aria-label={t(lang, "my.buying")}>
         <SectionHeader lang={lang} title={t(lang, "my.buying")} />
         <div className="flex flex-col gap-2">
           {(buying ?? []).map((tx) => {
-            const l = tx.listings as unknown as {
-              title: string; source_language: string; images: string[];
-              listing_translations: { language: string; title: string }[];
-            } | null;
+            const l = tx.listings as unknown as MiniListing | null;
             return (
               <Row key={tx.id} href={`/transactions/${tx.id}`}
                 image={l?.images?.[0]} title={l ? displayTitle(l, lang) : t(lang, "my.item")}
@@ -130,51 +211,54 @@ export default async function MyPage() {
         </div>
       </section>
 
-      <section className="mt-8" aria-label={t(lang, "my.selling")}>
+      <section id="selling" className="mt-8" aria-label={t(lang, "my.selling")}>
         <SectionHeader lang={lang} title={t(lang, "my.selling")} href="/sell" linkLabel={t(lang, "my.sellNew")} />
         <div className="flex flex-col gap-2">
           {(selling ?? []).map((l) => (
-            <Row key={l.id} href={`/listings/${l.id}`}
-              image={(l.images as string[])?.[0]} title={l.title}
-              sub={t(lang, l.status === "active" ? "status.selling" : l.status === "reserved" ? "badge.reserved" : "status.soldDone")}
-              right={l.price === 0 ? t(lang, "price.free") : formatPrice(l.price, l.currency as Currency)} />
+            <div key={l.id} className="card p-3">
+              <Row href={`/listings/${l.id}`} image={(l.images as string[])?.[0]} title={l.title} bare
+                sub={`${statusOf(l.status)}${l.hidden ? ` · ${t(lang, "own.hidden")}` : ""}`}
+                right={priceOf(l)} />
+              <ListingOwnerActions listingId={l.id} status={l.status} hidden={!!l.hidden} hiddenByAdmin={!!l.hidden_by_admin} lang={lang} />
+            </div>
           ))}
           {(selling ?? []).length === 0 && <Empty text={t(lang, "profile.noListings")} />}
         </div>
       </section>
 
-      <Link href={`/profile/${viewer.id}`}
-        className="card mt-8 block p-3.5 text-center text-sm font-bold text-tomo-navy">
+      <Link href={`/profile/${me}`} className="card mt-8 block p-3.5 text-center text-sm font-bold text-tomo-navy">
         {t(lang, "my.profileLink")} →
       </Link>
+      <div className="mt-6"><DeactivateButton lang={lang} /></div>
     </main>
   );
 }
 
-function Row({ href, image, title, sub, right }: {
-  href: string; image?: string; title: string; sub: string; right: string;
+function Row({ href, image, title, sub, right, extra, bare }: {
+  href: string; image?: string; title: string; sub: string; right: string; extra?: React.ReactNode; bare?: boolean;
 }) {
   return (
-    <Link href={href} className="card flex items-center gap-3 p-3">
-      <div className="h-11 w-11 shrink-0 overflow-hidden rounded-thumb bg-tomo-navy/5">
-        {image ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={image} alt="" loading="lazy" className="h-full w-full object-cover" />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center"><TomoSymbol className="h-5 w-8 opacity-60" /></div>
-        )}
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-[13px] text-ink">{title}</p>
-        <p className="truncate text-[12px] text-ink-soft">{sub}</p>
-      </div>
-      <span className="tnum shrink-0 text-[13px] font-extrabold text-ink">{right}</span>
-    </Link>
+    <div className={`flex items-center gap-3 ${bare ? "" : "card p-3"}`}>
+      <Link href={href} className="flex min-w-0 flex-1 items-center gap-3">
+        <div className="h-11 w-11 shrink-0 overflow-hidden rounded-thumb bg-tomo-navy/5">
+          {image ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={image} alt="" loading="lazy" className="h-full w-full object-cover" />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center"><TomoSymbol className="h-5 w-8 opacity-60" /></div>
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[13px] text-ink">{title}</p>
+          <p className="truncate text-[12px] text-ink-soft">{sub}</p>
+        </div>
+        <span className="tnum shrink-0 text-[13px] font-extrabold text-ink">{right}</span>
+      </Link>
+      {extra}
+    </div>
   );
 }
 
 function Empty({ text }: { text: string }) {
   return <p className="rounded-card bg-tomo-navy/5 p-3 text-center text-xs text-ink-soft">{text}</p>;
 }
-
-export const metadata = { title: "마이페이지 · マイページ | TOMO" };

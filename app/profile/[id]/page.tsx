@@ -5,13 +5,14 @@ import { t, type Lang } from "@/lib/i18n";
 import HeartGauge from "@/components/HeartGauge";
 import SectionHeader from "@/components/SectionHeader";
 import { CountryChip, TomoSymbol } from "@/components/Brand";
+import AdminDeleteReview from "@/components/AdminDeleteReview";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 const HEART = "M12 21C7.2 17.2 2.5 13.6 2.5 8.9 2.5 5.6 5 3.5 7.8 3.5c1.7 0 3.3.9 4.2 2.3.9-1.4 2.5-2.3 4.2-2.3 2.8 0 5.3 2.1 5.3 5.4 0 4.7-4.7 8.3-9.5 12.1z";
 
 type Review = {
-  rating: number; comment: string; created_at: string;
+  id: string; rating: number; comment: string; created_at: string;
   reviewer: { nickname: string } | null;
 };
 
@@ -33,7 +34,7 @@ export default async function ProfilePage(props: { params: Promise<{ id: string 
 
   // 받은 후기 = 이 거래의 상대가 남긴 후기 (reviewer가 본인이 아닌 것)
   const { data: reviewsRaw } = await supabase.from("reviews")
-    .select(`rating, comment, created_at,
+    .select(`id, rating, comment, created_at,
       reviewer:profiles!reviews_reviewer_id_fkey(nickname),
       transactions!inner(buyer_id, seller_id)`)
     .neq("reviewer_id", targetId)
@@ -99,7 +100,7 @@ export default async function ProfilePage(props: { params: Promise<{ id: string 
         {reviews.length > 0 ? (
           <ul className="flex flex-col gap-2">
             {reviews.map((r, i) => (
-              <li key={i} className="card p-3.5">
+              <li key={r.id ?? i} className="card p-3.5">
                 <div className="flex items-center justify-between gap-2">
                   <span className="flex gap-0.5" aria-label={t(lang, "review.star", { n: r.rating })}>
                     {[1, 2, 3, 4, 5].map((n) => (
@@ -108,7 +109,7 @@ export default async function ProfilePage(props: { params: Promise<{ id: string 
                       </svg>
                     ))}
                   </span>
-                  <span className="truncate text-[11px] text-ink-soft">{r.reviewer?.nickname}</span>
+                  <span className="flex items-center gap-2 truncate text-[11px] text-ink-soft">{r.reviewer?.nickname}{viewer.isAdmin && <AdminDeleteReview reviewId={r.id} lang={lang} />}</span>
                 </div>
                 {r.comment && <p className="mt-1.5 text-[13px] leading-relaxed text-ink">{r.comment}</p>}
               </li>

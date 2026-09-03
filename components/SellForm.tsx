@@ -13,18 +13,27 @@ const SEG = "btn flex-1 py-3 text-sm";
 const segOn = (on: boolean) => `${SEG} ${on ? "bg-tomo-navy text-white shadow-soft" : "bg-white text-ink-soft shadow-soft"}`;
 const FIELD = "mt-1 w-full rounded-full bg-white px-4 py-3 text-base font-normal shadow-soft placeholder:text-ink-soft";
 
-export default function SellForm({ lang, hint }: { lang: Lang; hint: string }) {
-  const [title, setTitle] = useState(hint);
-  const [description, setDescription] = useState("");
-  const [price, setPrice] = useState("");
-  const [category, setCategory] = useState<(typeof CATEGORIES)[number]>("etc");
-  const [tradeMethod, setTradeMethod] = useState<(typeof METHODS)[number]>("both");
-  const [crossBorder, setCrossBorder] = useState(true);
-  const [condition, setCondition] = useState<(typeof CONDITIONS)[number]>("good");
-  const [shippingPayer, setShippingPayer] = useState<(typeof PAYERS)[number]>("seller");
-  const [shipDays, setShipDays] = useState<(typeof SHIP_DAYS)[number]>("2_3");
-  const [allowOffers, setAllowOffers] = useState(true);
-  const [free, setFree] = useState(false);
+export type SellInitial = {
+  id: string; title: string; description: string; price: number; category: string; trade_method: string;
+  cross_border_enabled: boolean; condition: string; shipping_payer: string; ship_days: string; allow_offers: boolean;
+};
+const pick = <T extends readonly string[]>(list: T, v: string | undefined, d: T[number]): T[number] =>
+  (list as readonly string[]).includes(v ?? "") ? (v as T[number]) : d;
+
+// initial이 있으면 수정 모드 (PATCH /api/listings/[id]) — 같은 폼, 같은 검증
+export default function SellForm({ lang, hint, initial }: { lang: Lang; hint: string; initial?: SellInitial }) {
+  const editing = !!initial;
+  const [title, setTitle] = useState(initial?.title ?? hint);
+  const [description, setDescription] = useState(initial?.description ?? "");
+  const [price, setPrice] = useState(initial && initial.price > 0 ? String(initial.price) : "");
+  const [category, setCategory] = useState<(typeof CATEGORIES)[number]>(pick(CATEGORIES, initial?.category, "etc"));
+  const [tradeMethod, setTradeMethod] = useState<(typeof METHODS)[number]>(pick(METHODS, initial?.trade_method, "both"));
+  const [crossBorder, setCrossBorder] = useState(initial?.cross_border_enabled ?? true);
+  const [condition, setCondition] = useState<(typeof CONDITIONS)[number]>(pick(CONDITIONS, initial?.condition, "good"));
+  const [shippingPayer, setShippingPayer] = useState<(typeof PAYERS)[number]>(pick(PAYERS, initial?.shipping_payer, "seller"));
+  const [shipDays, setShipDays] = useState<(typeof SHIP_DAYS)[number]>(pick(SHIP_DAYS, initial?.ship_days, "2_3"));
+  const [allowOffers, setAllowOffers] = useState(initial?.allow_offers ?? true);
+  const [free, setFree] = useState(initial ? initial.price === 0 : false);
   const [files, setFiles] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -45,8 +54,8 @@ export default function SellForm({ lang, hint }: { lang: Lang; hint: string }) {
         uploadedPaths.push(path);
         images.push(supabase.storage.from("listing-images").getPublicUrl(path).data.publicUrl);
       }
-      const res = await fetch("/api/listings", {
-        method: "POST",
+      const res = await fetch(editing ? `/api/listings/${initial!.id}` : "/api/listings", {
+        method: editing ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title, description, price: free ? 0 : parseInt(price, 10), category, tradeMethod, crossBorder, images,
@@ -56,6 +65,7 @@ export default function SellForm({ lang, hint }: { lang: Lang; hint: string }) {
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
       router.push(`/listings/${json.id}`);
+      if (editing) router.refresh();
     } catch (err) {
       // 리스팅이 만들어지지 못했으면 방금 올린 이미지는 고아 — 즉시 정리 (실패해도 무시)
       if (uploadedPaths.length > 0)
@@ -68,8 +78,8 @@ export default function SellForm({ lang, hint }: { lang: Lang; hint: string }) {
 
   return (
     <main className="mx-auto max-w-md p-4 pb-8 standalone:pb-24 md:max-w-2xl md:px-6 md:pb-16 md:pt-8">
-      <h1 className="text-[17px] font-extrabold leading-tight text-ink md:text-xl">{t(lang, "sell.title")}</h1>
-      <p className="mb-4 mt-0.5 text-[12px] text-ink-soft">{t(lang, "sell.sub")}</p>
+      <h1 className="text-[17px] font-extrabold leading-tight text-ink md:text-xl">{t(lang, editing ? "sell.editTitle" : "sell.title")}</h1>
+      <p className="mb-4 mt-0.5 text-[12px] text-ink-soft">{t(lang, editing ? "sell.imagesKeep" : "sell.sub")}</p>
       <form onSubmit={submit} className="flex flex-col gap-4">
         <label className="text-[13px] font-bold text-ink">{t(lang, "sell.photos")}
           <input type="file" accept="image/*" multiple className="mt-1 block w-full text-sm font-normal text-ink-soft file:mr-3 file:rounded-full file:border-0 file:bg-tomo-navy/5 file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-tomo-navy"
@@ -142,7 +152,7 @@ export default function SellForm({ lang, hint }: { lang: Lang; hint: string }) {
           </label>
         )}
         <button disabled={busy} className="btn bg-tomo-coral-deep py-3 text-sm text-white">
-          {busy ? t(lang, "sell.submitting") : t(lang, "sell.submit")}
+          {busy ? t(lang, "sell.submitting") : t(lang, editing ? "sell.update" : "sell.submit")}
         </button>
         {error && <p role="alert" className="text-sm text-tomo-rose">{error}</p>}
       </form>

@@ -10,24 +10,28 @@ export default async function AdminHome() {
   if (!viewer) redirect("/login?next=/admin");
   if (!viewer.isAdmin) redirect("/");
 
-  const [newProxy, quotedProxy, centerIn, centerOut] = await Promise.all([
+  const [newProxy, quotedProxy, centerIn, centerOut, disputes, suspended] = await Promise.all([
     supabase.from("proxy_requests").select("id", { count: "exact", head: true }).eq("status", "requested"),
     supabase.from("proxy_requests").select("id", { count: "exact", head: true }).eq("status", "approved"),
     supabase.from("transactions").select("id", { count: "exact", head: true }).eq("status", "shipped_to_center"),
     supabase.from("transactions").select("id", { count: "exact", head: true }).eq("status", "center_received"),
+    supabase.from("transactions").select("id", { count: "exact", head: true }).eq("status", "disputed"),
+    supabase.from("profiles").select("id", { count: "exact", head: true }).eq("suspended", true),
   ]);
 
   const cards = [
+    { href: "/admin/disputes", label: "분쟁", value: disputes.count ?? 0, sub: "처리 필요" },
     { href: "/admin/proxy", label: "대행 신청", value: newProxy.count ?? 0, sub: "견적 대기" },
     { href: "/admin/proxy", label: "결제 승인", value: quotedProxy.count ?? 0, sub: "구매 진행 필요" },
     { href: "/admin/center", label: "센터 입고", value: centerIn.count ?? 0, sub: "입고 확인 대기" },
     { href: "/admin/center", label: "국제 발송", value: centerOut.count ?? 0, sub: "발송 대기" },
+    { href: "/admin/users?q=", label: "정지 사용자", value: suspended.count ?? 0, sub: "현재 정지 중" },
   ];
 
   return (
     <main className="mx-auto max-w-md p-4 pb-24 md:max-w-3xl md:px-6 md:pb-16 md:pt-8">
       <h1 className="mb-4 text-[17px] font-extrabold leading-tight text-ink md:text-xl">운영</h1>
-      <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
+      <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-3">
         {cards.map((c, i) => (
           <Link key={i} href={c.href} className="card p-4">
             <p className="text-[12px] text-ink-soft">{c.label}</p>
@@ -37,7 +41,15 @@ export default async function AdminHome() {
         ))}
       </div>
       <div className="flex flex-col gap-2">
-        {[["/admin/proxy", "구매대행 관리"], ["/admin/center", "센터 관리"], ["/admin/external", "외부 상품 등록 (당근·중고나라)"]].map(([href, label]) => (
+        {[
+          ["/admin/disputes", "분쟁 처리"],
+          ["/admin/proxy", "구매대행 관리"],
+          ["/admin/center", "센터 관리"],
+          ["/admin/listings", "상품 관리 (숨김·복구)"],
+          ["/admin/users", "사용자 관리 (정지·운영자)"],
+          ["/admin/external", "외부 상품 (등록·숨김·삭제)"],
+          ["/admin/rates", "환율 보정"],
+        ].map(([href, label]) => (
           <Link key={href} href={href} className="card flex items-center justify-between p-3.5 text-sm font-bold text-ink">
             {label}
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}

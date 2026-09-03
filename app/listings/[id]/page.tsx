@@ -193,7 +193,8 @@ export default async function ListingDetail(props: { params: Promise<{ id: strin
         )}
         {isMine && (
           <SellerPanel listingId={l.id} currency={l.currency} bumpedAt={l.bumped_at ?? l.created_at}
-            active={canAct} offers={receivedOffers} lang={lang} />
+            active={canAct} offers={receivedOffers} lang={lang}
+            status={l.status} hidden={!!l.hidden} hiddenByAdmin={!!l.hidden_by_admin} />
         )}
 
         {/* 크로스보더 안내 웰 */}

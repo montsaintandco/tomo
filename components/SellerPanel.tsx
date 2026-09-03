@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 import { formatPrice, type Currency } from "@/lib/currency";
 import { t, type Lang } from "@/lib/i18n";
+import ListingOwnerActions from "@/components/ListingOwnerActions";
 
 export type ReceivedOffer = {
   id: string; price: number; status: "pending" | "accepted" | "declined"; created_at: string;
@@ -11,8 +12,9 @@ export type ReceivedOffer = {
 };
 
 // 판매자 도구 (본인 상품에서만): 끌어올리기(당근) + 받은 가격제안 수락/거절(메루카리)
-export default function SellerPanel({ listingId, currency, bumpedAt, active, offers, lang }: {
+export default function SellerPanel({ listingId, currency, bumpedAt, active, offers, lang, status, hidden, hiddenByAdmin }: {
   listingId: string; currency: Currency; bumpedAt: string; active: boolean; offers: ReceivedOffer[]; lang: Lang;
+  status: string; hidden: boolean; hiddenByAdmin: boolean;
 }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState("");
@@ -49,6 +51,7 @@ export default function SellerPanel({ listingId, currency, bumpedAt, active, off
         </button>
       </div>
       {!canBump && active && <p className="mt-1 text-right text-[12px] text-ink-soft">{t(lang, "bump.wait", { h: hoursLeft })}</p>}
+      <ListingOwnerActions listingId={listingId} status={status} hidden={hidden} hiddenByAdmin={hiddenByAdmin} lang={lang} />
 
       <h3 className="mt-4 text-[13px] font-bold text-ink">{t(lang, "offers.received")}</h3>
       {offers.length === 0 ? (

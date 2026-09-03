@@ -73,7 +73,14 @@ export default async function AdminProxyPage() {
                 <Link href={`/proxy/${r.id}`} className="press shrink-0 py-1 text-[13px] font-bold text-tomo-navy">상세 →</Link>
               </div>
 
-              {r.note && <p className="mb-3 rounded-card bg-tomo-navy/5 p-2.5 text-[12px] text-ink">요청: {r.note}</p>}
+              {r.note && (
+                <p className="mb-3 rounded-card bg-tomo-navy/5 p-2.5 text-[12px] text-ink">
+                  {/\[묶음배송 희망\]|\[まとめて発送希望\]/.test(r.note) && (
+                    <span className="mr-1.5 rounded-full bg-tomo-navy px-2 py-0.5 text-[11px] font-bold text-white">묶음</span>
+                  )}
+                  요청: {r.note}
+                </p>
+              )}
 
               {(r.status === "requested" || r.status === "quoted") ? (
                 <QuoteForm id={r.id}

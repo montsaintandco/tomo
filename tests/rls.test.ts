@@ -98,6 +98,18 @@ describe("RLS", () => {
     expect(l!.price).toBe(45000);
   });
 
+  it("hidden listing: invisible to others, visible to seller; seller can't set admin flag", async () => {
+    const { error: hide } = await alice.from("listings").update({ hidden: true }).eq("id", listingId);
+    expect(hide).toBeNull();
+    const { data: bobSees } = await bob.from("listings").select("id").eq("id", listingId);
+    expect(bobSees).toEqual([]);
+    const { data: aliceSees } = await alice.from("listings").select("id").eq("id", listingId);
+    expect(aliceSees).toHaveLength(1);
+    const { error: flag } = await alice.from("listings").update({ hidden_by_admin: true }).eq("id", listingId);
+    expect(flag).not.toBeNull();
+    await alice.from("listings").update({ hidden: false }).eq("id", listingId);
+  });
+
   it("bump: only the seller, and not within 48h of listing", async () => {
     const { error: bobBump } = await bob.rpc("bump_listing", { lid: listingId });
     expect(bobBump).not.toBeNull();
