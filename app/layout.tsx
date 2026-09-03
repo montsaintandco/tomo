@@ -18,18 +18,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="ko">
       <body className="bg-white pb-24 text-ink">
-        {/* impeccable direction contract · seed: brand-pinned redesign
-        THESIS: 두 말풍선이 만나면 하트가 된다. 나라·언어 신호는 전부 말풍선 칩(KR=블루, JP=핑크)이고,
-        두 나라가 만나는 순간(여행직거래·대행·번역채팅)에만 블루→핑크 그라데이션과 하트가 등장한다.
-        회색 마켓 크롬에 브랜드색을 뿌린 배치를 거부한다.
-        OWN-WORLD: 아이보리 종이 + 네이비 잉크 스케일, 토모 블루/핑크 파스텔 필드, 코랄 하트 액션(딥 코랄 CTA),
-        Cafe24 써라운드 디스플레이, 꼬리 달린 말풍선 칩, 20px 카드, 스쿼시 프레스, 네이비 틴트 섀도우.
-        STORY: 피드를 열면 색만으로 어느 나라 물건인지 읽히고, 크로스보더 기회는 그라데이션이 표시하며,
-        행동은 언제나 코랄이 받는다.
-        FIRST-VIEWPORT: 하트 O 워드마크 헤더 → 검색 필 → 말풍선 세그먼트 탭 → 그라데이션 대행 배너 → 밀집 리스팅 행.
-        FORM: 핀 고정 브랜드(카와이·말풍선·하트)의 전면 재실행. 유일 상시 모션은 워드마크 하트비트.
-        FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review,
-        the verdict, DESIGN.md, and every shipping raster carrying its provenance */}
+        {/* impeccable direction contract · v2: brand-pinned, applied like a mature marketplace
+        THESIS: 두 말풍선이 만나면 하트가 된다 — 브랜드(블루/핑크/코랄, 하트-O, 써라운드)는 그대로, 적용은 당근·메루카리급 프로덕트로.
+        OWN-WORLD: 흰 페이지 + 네이비 잉크 스케일. 아이보리는 신뢰 스트립·푸터·검색 입력의 틴트로만.
+        블루/핑크는 국가 칩·채팅 말풍선 전용, 브리지 그라데이션은 여행 직거래 뱃지 하나. 코랄딥은 단일 CTA·FAB.
+        카드 12px, 썸네일 10px, 풀라운드 필, press 0.98, 네이비 틴트 섀도우. Pretendard 램프 11–17px, 써라운드는 워드마크만.
+        STORY: 홈은 마켓 허브 — 신뢰 스트립 → 상대국 인기 캐러셀 → 국내 그리드 → 여행 직거래 → 회사 정보 푸터.
+        검색·탭 진입은 밀집 리스트. 유일 상시 모션은 워드마크 하트비트.
+        FINISH: DESIGN.md v2가 기록, 디텍터 클린, 크리틱으로 추적 */}
         <a href="#main"
           className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-full focus:bg-tomo-navy focus:px-4 focus:py-2 focus:text-sm focus:font-bold focus:text-white">
           본문 바로가기

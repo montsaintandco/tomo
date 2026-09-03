@@ -1,37 +1,43 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-08-26T00:00:00Z",
-  "title": "Design System: TOMO",
+  "generatedAt": "2026-09-03T00:00:00Z",
+  "title": "Design System: TOMO (v2)",
   "extensions": {
     "colorMeta": {
-      "tomo-coral-deep": { "role": "primary", "displayName": "Tomo Coral Deep", "canonical": "#C14E4C", "tonalRamp": ["oklch(25% 0.09 25)", "oklch(35% 0.11 25)", "oklch(45% 0.13 25)", "oklch(55% 0.13 25)", "oklch(65% 0.11 25)", "oklch(75% 0.08 25)", "oklch(85% 0.05 25)", "oklch(95% 0.02 25)"] },
-      "tomo-coral": { "role": "primary", "displayName": "Tomo Coral", "canonical": "#E2807F", "tonalRamp": ["oklch(25% 0.08 23)", "oklch(35% 0.10 23)", "oklch(45% 0.12 23)", "oklch(55% 0.12 23)", "oklch(68% 0.10 23)", "oklch(78% 0.08 23)", "oklch(88% 0.05 23)", "oklch(95% 0.02 23)"] },
-      "tomo-blue": { "role": "secondary", "displayName": "Tomo Blue (Korea's voice)", "canonical": "#9CC5EC", "tonalRamp": ["oklch(25% 0.07 250)", "oklch(35% 0.08 250)", "oklch(48% 0.09 250)", "oklch(60% 0.09 250)", "oklch(70% 0.08 250)", "oklch(80% 0.06 250)", "oklch(88% 0.04 250)", "oklch(95% 0.02 250)"] },
-      "tomo-pink": { "role": "secondary", "displayName": "Tomo Pink (Japan's voice)", "canonical": "#F2AFAF", "tonalRamp": ["oklch(25% 0.06 20)", "oklch(35% 0.08 20)", "oklch(48% 0.09 20)", "oklch(60% 0.09 20)", "oklch(72% 0.08 20)", "oklch(82% 0.06 20)", "oklch(90% 0.04 20)", "oklch(96% 0.02 20)"] },
-      "tomo-navy": { "role": "secondary", "displayName": "Tomo Navy", "canonical": "#0C447C", "tonalRamp": ["oklch(18% 0.07 255)", "oklch(28% 0.09 255)", "oklch(38% 0.10 255)", "oklch(48% 0.10 255)", "oklch(58% 0.09 255)", "oklch(70% 0.07 255)", "oklch(82% 0.05 255)", "oklch(94% 0.02 255)"] },
-      "tomo-rose": { "role": "secondary", "displayName": "Tomo Rose (JP deep text)", "canonical": "#A34543", "tonalRamp": ["oklch(22% 0.09 25)", "oklch(32% 0.11 25)", "oklch(42% 0.12 25)", "oklch(52% 0.12 25)", "oklch(64% 0.10 25)", "oklch(76% 0.07 25)", "oklch(86% 0.05 25)", "oklch(95% 0.02 25)"] },
-      "tomo-ivory": { "role": "neutral", "displayName": "Tomo Ivory (paper)", "canonical": "#FBF9F4", "tonalRamp": ["oklch(20% 0.01 90)", "oklch(35% 0.01 90)", "oklch(50% 0.01 90)", "oklch(65% 0.015 90)", "oklch(78% 0.015 90)", "oklch(88% 0.012 90)", "oklch(94% 0.01 90)", "oklch(98% 0.006 90)"] },
+      "white": { "role": "neutral", "displayName": "White (page, cards, chrome)", "canonical": "#FFFFFF", "tonalRamp": ["#26333F", "#5C6B77", "#93A0AB", "#B5BFC7", "#D9DFE4", "#EEF1F4", "#F7F8FA", "#FFFFFF"] },
+      "tomo-ivory": { "role": "neutral", "displayName": "Tomo Ivory (tint only: trust strip, footer, search)", "canonical": "#FBF9F4", "tonalRamp": ["oklch(20% 0.01 90)", "oklch(35% 0.01 90)", "oklch(50% 0.01 90)", "oklch(65% 0.015 90)", "oklch(78% 0.015 90)", "oklch(88% 0.012 90)", "oklch(94% 0.01 90)", "oklch(98% 0.006 90)"] },
+      "tomo-navy": { "role": "primary", "displayName": "Tomo Navy (titles, active, structure)", "canonical": "#0C447C", "tonalRamp": ["oklch(18% 0.07 255)", "oklch(28% 0.09 255)", "oklch(38% 0.10 255)", "oklch(48% 0.10 255)", "oklch(58% 0.09 255)", "oklch(70% 0.07 255)", "oklch(82% 0.05 255)", "oklch(94% 0.02 255)"] },
+      "tomo-coral-deep": { "role": "primary", "displayName": "Tomo Coral Deep (single CTA voice, sell FAB)", "canonical": "#C14E4C", "tonalRamp": ["oklch(25% 0.09 25)", "oklch(35% 0.11 25)", "oklch(45% 0.13 25)", "oklch(55% 0.13 25)", "oklch(65% 0.11 25)", "oklch(75% 0.08 25)", "oklch(85% 0.05 25)", "oklch(95% 0.02 25)"] },
+      "tomo-coral": { "role": "secondary", "displayName": "Tomo Coral (decorative hearts only)", "canonical": "#E2807F", "tonalRamp": ["oklch(25% 0.08 23)", "oklch(35% 0.10 23)", "oklch(45% 0.12 23)", "oklch(55% 0.12 23)", "oklch(68% 0.10 23)", "oklch(78% 0.08 23)", "oklch(88% 0.05 23)", "oklch(95% 0.02 23)"] },
+      "tomo-blue": { "role": "secondary", "displayName": "Tomo Blue (Korea: KR chip, KO chat bubble)", "canonical": "#9CC5EC", "tonalRamp": ["oklch(25% 0.07 250)", "oklch(35% 0.08 250)", "oklch(48% 0.09 250)", "oklch(60% 0.09 250)", "oklch(70% 0.08 250)", "oklch(80% 0.06 250)", "oklch(88% 0.04 250)", "oklch(95% 0.02 250)"] },
+      "tomo-pink": { "role": "secondary", "displayName": "Tomo Pink (Japan: JP chip, JA chat bubble)", "canonical": "#F2AFAF", "tonalRamp": ["oklch(25% 0.06 20)", "oklch(35% 0.08 20)", "oklch(48% 0.09 20)", "oklch(60% 0.09 20)", "oklch(72% 0.08 20)", "oklch(82% 0.06 20)", "oklch(90% 0.04 20)", "oklch(96% 0.02 20)"] },
+      "tomo-rose": { "role": "secondary", "displayName": "Tomo Rose (deep text on pink)", "canonical": "#A34543", "tonalRamp": ["oklch(22% 0.09 25)", "oklch(32% 0.11 25)", "oklch(42% 0.12 25)", "oklch(52% 0.12 25)", "oklch(64% 0.10 25)", "oklch(76% 0.07 25)", "oklch(86% 0.05 25)", "oklch(95% 0.02 25)"] },
       "ink": { "role": "neutral", "displayName": "Ink (navy-tinted text)", "canonical": "#26333F", "tonalRamp": ["#26333F", "#33414D", "#41505C", "#5C6B77", "#77858F", "#93A0AB", "#B5BFC7", "#D9DFE4"] },
-      "ink-soft": { "role": "neutral", "displayName": "Ink Soft", "canonical": "#5C6B77", "tonalRamp": ["#26333F", "#33414D", "#41505C", "#5C6B77", "#77858F", "#93A0AB", "#B5BFC7", "#D9DFE4"] },
-      "ink-faint": { "role": "neutral", "displayName": "Ink Faint (sold/disabled only)", "canonical": "#93A0AB", "tonalRamp": ["#26333F", "#33414D", "#41505C", "#5C6B77", "#77858F", "#93A0AB", "#B5BFC7", "#D9DFE4"] }
+      "ink-soft": { "role": "neutral", "displayName": "Ink Soft (meta, sub copy, inactive nav)", "canonical": "#5C6B77", "tonalRamp": ["#26333F", "#33414D", "#41505C", "#5C6B77", "#77858F", "#93A0AB", "#B5BFC7", "#D9DFE4"] },
+      "ink-faint": { "role": "neutral", "displayName": "Ink Faint (sold/disabled, legal line, icon strokes)", "canonical": "#93A0AB", "tonalRamp": ["#26333F", "#33414D", "#41505C", "#5C6B77", "#77858F", "#93A0AB", "#B5BFC7", "#D9DFE4"] }
     },
     "typographyMeta": {
-      "display": { "displayName": "Brand Display (Cafe24 Ssurround)", "purpose": "Wordmark and brand-voice numerals (trust temperature) only." },
-      "title": { "displayName": "Listing Title", "purpose": "15px regular, 2-line clamp in feed rows." },
-      "price": { "displayName": "Price", "purpose": "Extrabold 800 tabular-nums; the loudest text on any card." },
-      "body": { "displayName": "Body", "purpose": "Descriptions, chat, empty states." },
-      "label": { "displayName": "Label", "purpose": "Bold 700 metadata, tabs, nav." },
-      "micro": { "displayName": "Micro", "purpose": "10px bold chips, badges, nav captions." }
+      "display": { "displayName": "Brand Display (Cafe24 Ssurround)", "purpose": "Wordmark only. Never section titles, prices, or body." },
+      "section-title": { "displayName": "Section Title", "purpose": "17px/800 SectionHeader h2; the largest Pretendard step." },
+      "card-title": { "displayName": "Card Title", "purpose": "13px/400, 2-line clamp on ListingCard and ExternalItemCard." },
+      "row-title": { "displayName": "Row Title", "purpose": "15px/400, 2-line clamp on feed ListingRow." },
+      "price": { "displayName": "Price (card)", "purpose": "15px/800 tabular-nums; loudest text on a card." },
+      "price-row": { "displayName": "Price (feed row)", "purpose": "16px/800 tabular-nums; buyer-currency number is the big one." },
+      "body": { "displayName": "Body", "purpose": "14px empty states, hints, button labels." },
+      "label": { "displayName": "Label", "purpose": "13px/700 segment tabs and section 'more' links." },
+      "meta": { "displayName": "Meta", "purpose": "12px region/time, section sub copy, footer body." },
+      "micro": { "displayName": "Micro", "purpose": "11px/700 chips, pills, badges, nav captions. 11px is the floor." }
     },
     "shadows": [
-      { "name": "shadow-soft", "value": "0 1px 2px rgba(12, 68, 124, 0.05), 0 4px 16px rgba(12, 68, 124, 0.07)", "purpose": "Resting cards, search pill, active tab. Navy-tinted." },
-      { "name": "shadow-lift", "value": "0 2px 6px rgba(12, 68, 124, 0.09), 0 12px 28px rgba(12, 68, 124, 0.11)", "purpose": "Card hover, with translateY(-1px)." },
-      { "name": "shadow-float", "value": "0 4px 10px rgba(193, 78, 76, 0.25), 0 10px 30px rgba(12, 68, 124, 0.14)", "purpose": "Coral sell FAB only — coral halo over navy ambient." }
+      { "name": "shadow-soft", "value": "0 1px 2px rgba(12, 68, 124, 0.05), 0 4px 16px rgba(12, 68, 124, 0.07)", "purpose": ".card at rest, active segment tab. Navy-tinted, single step." },
+      { "name": "shadow-lift", "value": "0 2px 6px rgba(12, 68, 124, 0.09), 0 12px 28px rgba(12, 68, 124, 0.11)", "purpose": "a.card / button.card hover with translateY(-1px)." },
+      { "name": "shadow-float", "value": "0 3px 8px rgba(193, 78, 76, 0.16), 0 8px 20px rgba(12, 68, 124, 0.10)", "purpose": "Sell FAB only. Half-strength coral halo over navy ambient (v2)." }
     ],
     "motion": [
-      { "name": "squish", "value": "cubic-bezier(0.34, 1.56, 0.64, 1)", "purpose": "Press feedback spring on all tappables (~180ms; .press 0.96, .btn 0.95, .card 0.98)." },
-      { "name": "heartbeat", "value": "heartbeat 2.6s ease-in-out infinite", "purpose": "Wordmark heart — the only perpetual motion per page." },
-      { "name": "shimmer", "value": "shimmer 1.4s linear infinite", "purpose": "Ivory skeleton loading fields." }
+      { "name": "squish", "value": "cubic-bezier(0.34, 1.56, 0.64, 1)", "purpose": "Press spring: .press 0.98, .card 0.98, .btn 0.95, 180-200ms." },
+      { "name": "heartbeat", "value": "heartbeat 2.6s ease-in-out infinite", "purpose": "Wordmark heart; the only perpetual motion." },
+      { "name": "shimmer", "value": "shimmer 1.4s linear infinite", "purpose": "Ivory skeleton while loading only." },
+      { "name": "scroll-snap", "value": "snap-x snap-mandatory (native)", "purpose": "MarketCarousel and travel carousel; no JS motion." }
     ],
     "breakpoints": [
       { "name": "shell", "value": "448px", "purpose": "max-w-md single mobile column; the app never widens." }
@@ -42,7 +48,7 @@
       "name": "Primary Button (Coral CTA)",
       "kind": "button",
       "refersTo": "button-primary",
-      "description": "The single action voice — deep coral pill with white text.",
+      "description": "The single action voice: coral-deep pill, white text, one per screen.",
       "html": "<button class=\"ds-btn-primary\">상품 등록하기</button>",
       "css": ".ds-btn-primary { background: #C14E4C; color: #fff; font-family: Pretendard, sans-serif; font-size: 14px; font-weight: 700; padding: 10px 24px; border: none; border-radius: 9999px; cursor: pointer; transition: transform 180ms cubic-bezier(0.34,1.56,0.64,1), opacity 160ms ease; } .ds-btn-primary:hover:not(:disabled) { opacity: 0.94; } .ds-btn-primary:active:not(:disabled) { transform: scale(0.95); } .ds-btn-primary:focus-visible { outline: 2px solid #C14E4C; outline-offset: 2px; } .ds-btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }"
     },
@@ -50,98 +56,138 @@
       "name": "Navy Button",
       "kind": "button",
       "refersTo": "button-navy",
-      "description": "Structural/account actions (login, region setup).",
-      "html": "<button class=\"ds-btn-navy\">로그인</button>",
-      "css": ".ds-btn-navy { background: #0C447C; color: #fff; font-family: Pretendard, sans-serif; font-size: 14px; font-weight: 700; padding: 8px 16px; border: none; border-radius: 9999px; cursor: pointer; transition: transform 180ms cubic-bezier(0.34,1.56,0.64,1), opacity 160ms ease; } .ds-btn-navy:hover { opacity: 0.94; } .ds-btn-navy:active { transform: scale(0.95); } .ds-btn-navy:focus-visible { outline: 2px solid #C14E4C; outline-offset: 2px; }"
+      "description": "Structural/account actions (login, retry).",
+      "html": "<button class=\"ds-btn-navy\">로그인하고 동네 설정</button>",
+      "css": ".ds-btn-navy { background: #0C447C; color: #fff; font-family: Pretendard, sans-serif; font-size: 14px; font-weight: 700; padding: 10px 24px; border: none; border-radius: 9999px; cursor: pointer; transition: transform 180ms cubic-bezier(0.34,1.56,0.64,1), opacity 160ms ease; } .ds-btn-navy:hover { opacity: 0.94; } .ds-btn-navy:active { transform: scale(0.95); } .ds-btn-navy:focus-visible { outline: 2px solid #C14E4C; outline-offset: 2px; }"
+    },
+    {
+      "name": "Trust Strip",
+      "kind": "custom",
+      "refersTo": "trust-strip",
+      "description": "Three factual pillars on an ivory tint; navy icons and labels. No numbers, no reviews.",
+      "html": "<ul class=\"ds-trust\"><li><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#0C447C\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 3.5l6.5 2.7v4.6c0 4.3-2.8 7.6-6.5 9.7-3.7-2.1-6.5-5.4-6.5-9.7V6.2z\"/><path d=\"m9.3 11.6 1.9 1.9 3.5-3.5\"/></svg><strong>에스크로 안전결제</strong><span>받고 확인한 뒤 정산</span></li><li><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#0C447C\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M4 8.5 12 4l8 4.5v7L12 20l-8-4.5z\"/><path d=\"M4 8.5l8 4.5 8-4.5M12 13v7\"/></svg><strong>센터 검수 배송</strong><span>서울·나리타 센터 경유</span></li><li><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#0C447C\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M4 6h9a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H8l-3 3v-3H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z\"/><path d=\"M17 9.5h2a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-1v2.5l-3-2.5h-3\"/></svg><strong>채팅 자동번역</strong><span>한국어·일본어 그대로</span></li></ul>",
+      "css": ".ds-trust { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; list-style: none; margin: 0; padding: 12px 8px; background: #FBF9F4; border-radius: 12px; font-family: Pretendard, sans-serif; } .ds-trust li { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; } .ds-trust svg { width: 24px; height: 24px; } .ds-trust strong { font-size: 12px; font-weight: 700; line-height: 1.25; color: #0C447C; } .ds-trust span { font-size: 11px; line-height: 1.25; color: #5C6B77; }"
+    },
+    {
+      "name": "Section Header",
+      "kind": "custom",
+      "refersTo": "card",
+      "description": "17px/800 title, optional 12px sub, optional navy 'more' link aligned to the baseline.",
+      "html": "<div class=\"ds-section\"><div><h2>토모에서 바로 거래</h2><p>에스크로로 안전하게, 센터 검수 후 배송</p></div><a href=\"#\">내 동네 상품 →</a></div>",
+      "css": ".ds-section { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 12px; font-family: Pretendard, sans-serif; } .ds-section h2 { margin: 0; font-size: 17px; font-weight: 800; line-height: 1.25; letter-spacing: -0.02em; color: #26333F; } .ds-section p { margin: 2px 0 0; font-size: 12px; color: #5C6B77; } .ds-section a { flex-shrink: 0; font-size: 13px; font-weight: 700; color: #0C447C; text-decoration: none; transition: transform 180ms cubic-bezier(0.34,1.56,0.64,1); } .ds-section a:active { transform: scale(0.98); }"
+    },
+    {
+      "name": "Listing Card (grid / carousel)",
+      "kind": "card",
+      "refersTo": "thumb",
+      "description": "Image-first card: 10px thumb on navy/5 well, 13px title, 15px/800 price, country chip meta. No shadow, no border.",
+      "html": "<a href=\"#\" class=\"ds-listing\"><div class=\"ds-listing-thumb\"></div><p class=\"ds-listing-title\">Contax T2 필름카메라 완동품</p><p class=\"ds-listing-price\">약 1,240,000원</p><p class=\"ds-listing-meta\"><span class=\"ds-bubble-jp\">JP</span><span>도쿄 시부야</span></p></a>",
+      "css": ".ds-listing { display: flex; flex-direction: column; width: 140px; text-decoration: none; color: #26333F; font-family: Pretendard, sans-serif; transition: transform 180ms cubic-bezier(0.34,1.56,0.64,1); } .ds-listing:active { transform: scale(0.98); } .ds-listing-thumb { aspect-ratio: 1; border-radius: 10px; background: rgba(12,68,124,0.05); } .ds-listing-title { margin: 6px 0 0; font-size: 13px; line-height: 1.375; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; } .ds-listing-price { margin: 2px 0 0; font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; } .ds-listing-meta { margin: 2px 0 0; display: flex; align-items: center; gap: 4px; font-size: 11px; color: #5C6B77; } .ds-bubble-jp { display: inline-block; padding: 2px 6px; font-size: 11px; font-weight: 700; line-height: 1; background: rgba(242,175,175,0.38); color: #A34543; border-radius: 9px 9px 2px 9px; }"
+    },
+    {
+      "name": "Market Carousel",
+      "kind": "custom",
+      "refersTo": "thumb",
+      "description": "Native scroll-snap row of 140px cards bleeding through the 16px gutter; scrollbar hidden; no JS.",
+      "html": "<ul class=\"ds-carousel\"><li><div class=\"ds-listing-thumb\"></div></li><li><div class=\"ds-listing-thumb\"></div></li><li><div class=\"ds-listing-thumb\"></div></li><li><div class=\"ds-listing-thumb\"></div></li></ul>",
+      "css": ".ds-carousel { display: flex; gap: 12px; margin: 0 -16px; padding: 0 16px 4px; list-style: none; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; } .ds-carousel::-webkit-scrollbar { display: none; } .ds-carousel li { width: 140px; flex-shrink: 0; scroll-snap-align: start; } .ds-listing-thumb { aspect-ratio: 1; border-radius: 10px; background: rgba(12,68,124,0.05); }"
     },
     {
       "name": "Country Bubble Chips",
       "kind": "chip",
       "refersTo": "chip-bubble-kr",
-      "description": "The country signal: pastel speech bubbles with one squared tail corner. KR tail-left, JP tail-right.",
+      "description": "The only country signal: pastel speech bubbles, deep ink text, one squared tail corner. 11px/700.",
       "html": "<span class=\"ds-bubble-kr\">KR</span> <span class=\"ds-bubble-jp\">JP</span>",
-      "css": ".ds-bubble-kr, .ds-bubble-jp { display: inline-block; padding: 2px 6px; font-family: Pretendard, sans-serif; font-size: 10px; font-weight: 700; line-height: 1; } .ds-bubble-kr { background: rgba(156, 197, 236, 0.35); color: #0C447C; border-radius: 9px 9px 9px 2px; } .ds-bubble-jp { background: rgba(242, 175, 175, 0.38); color: #A34543; border-radius: 9px 9px 2px 9px; }"
+      "css": ".ds-bubble-kr, .ds-bubble-jp { display: inline-block; padding: 2px 6px; font-family: Pretendard, sans-serif; font-size: 11px; font-weight: 700; line-height: 1; } .ds-bubble-kr { background: rgba(156, 197, 236, 0.35); color: #0C447C; border-radius: 9px 9px 9px 2px; } .ds-bubble-jp { background: rgba(242, 175, 175, 0.38); color: #A34543; border-radius: 9px 9px 2px 9px; }"
     },
     {
-      "name": "Card",
-      "kind": "card",
-      "refersTo": "card",
-      "description": "White 20px card on ivory; navy-tinted shadow instead of border, squish on press.",
-      "html": "<a href=\"#\" class=\"ds-card\"><strong>일본 마켓 구매대행</strong><span>메루카리·야후 상품을 대신 사서 보내드려요</span></a>",
-      "css": ".ds-card { display: flex; flex-direction: column; gap: 4px; background: #fff; border-radius: 20px; padding: 14px; text-decoration: none; color: #26333F; font-family: Pretendard, sans-serif; box-shadow: 0 1px 2px rgba(12,68,124,0.05), 0 4px 16px rgba(12,68,124,0.07); transition: box-shadow 220ms ease, transform 200ms cubic-bezier(0.34,1.56,0.64,1); } .ds-card strong { font-size: 14px; font-weight: 700; } .ds-card span { font-size: 12px; color: #5C6B77; } .ds-card:hover { box-shadow: 0 2px 6px rgba(12,68,124,0.09), 0 12px 28px rgba(12,68,124,0.11); transform: translateY(-1px); } .ds-card:active { transform: scale(0.98); }"
+      "name": "Trust Pills (safe-pay + travel deal)",
+      "kind": "chip",
+      "refersTo": "pill-safe-pay",
+      "description": "Micro pills on active feed rows. Safe-pay: navy/5 + navy shield, on every active row. Travel deal: the bridge gradient's only surface.",
+      "html": "<span class=\"ds-pill-travel\"><svg viewBox=\"0 0 24 24\"><path d=\"M12 21C7.2 17.2 2.5 13.6 2.5 8.9 2.5 5.6 5 3.5 7.8 3.5c1.7 0 3.3.9 4.2 2.3.9-1.4 2.5-2.3 4.2-2.3 2.8 0 5.3 2.1 5.3 5.4 0 4.7-4.7 8.3-9.5 12.1z\" fill=\"#C14E4C\"/></svg>여행 중 직거래 가능</span> <span class=\"ds-pill-safe\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#0C447C\" stroke-width=\"2.2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 3.5l6.5 2.7v4.6c0 4.3-2.8 7.6-6.5 9.7-3.7-2.1-6.5-5.4-6.5-9.7V6.2z\"/><path d=\"m9.3 11.6 1.9 1.9 3.5-3.5\"/></svg>안전결제</span>",
+      "css": ".ds-pill-safe, .ds-pill-travel { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 9999px; font-family: Pretendard, sans-serif; font-size: 11px; font-weight: 700; color: #0C447C; } .ds-pill-safe { background: rgba(12,68,124,0.05); } .ds-pill-travel { background: linear-gradient(115deg, rgba(156,197,236,0.28) 0%, rgba(242,175,175,0.28) 100%); } .ds-pill-safe svg, .ds-pill-travel svg { width: 10px; height: 10px; }"
     },
     {
-      "name": "Search Pill",
+      "name": "Search Field",
       "kind": "input",
       "refersTo": "input-search",
-      "description": "Borderless full-round white input with inline stroke icon; coral caret and focus ring.",
+      "description": "Ivory-tinted full-round input on the white sticky header; 16px text so iOS does not zoom; coral caret and focus ring.",
       "html": "<div class=\"ds-search\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#93A0AB\" stroke-width=\"2\" stroke-linecap=\"round\"><circle cx=\"11\" cy=\"11\" r=\"6.5\"/><path d=\"m16 16 4.5 4.5\"/></svg><input type=\"search\" placeholder=\"어떤 물건을 찾으세요?\" /></div>",
-      "css": ".ds-search { position: relative; } .ds-search svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; pointer-events: none; } .ds-search input { width: 100%; background: #fff; border: none; border-radius: 9999px; padding: 10px 16px 10px 40px; font-family: Pretendard, sans-serif; font-size: 14px; color: #26333F; caret-color: #C14E4C; box-shadow: 0 1px 2px rgba(12,68,124,0.05), 0 4px 16px rgba(12,68,124,0.07); } .ds-search input::placeholder { color: #5C6B77; } .ds-search input:focus-visible { outline: 2px solid #C14E4C; outline-offset: 2px; }"
+      "css": ".ds-search { position: relative; } .ds-search svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; pointer-events: none; } .ds-search input { width: 100%; background: #FBF9F4; border: none; border-radius: 9999px; padding: 10px 16px 10px 40px; font-family: Pretendard, sans-serif; font-size: 16px; color: #26333F; caret-color: #C14E4C; } .ds-search input::placeholder { color: #5C6B77; } .ds-search input:focus-visible { outline: 2px solid #C14E4C; outline-offset: 2px; }"
     },
     {
       "name": "Segment Tabs",
       "kind": "nav",
       "refersTo": "tab-active",
-      "description": "Pill route tabs: active navy + white, inactive white + ink-soft.",
+      "description": "Pill route tabs (search/tab mode only): active navy + white + soft shadow, inactive white + ink-soft.",
       "html": "<nav class=\"ds-tabs\"><a class=\"ds-tab ds-tab-active\" href=\"#\">전체</a><a class=\"ds-tab\" href=\"#\">내 동네</a><a class=\"ds-tab\" href=\"#\">여행 직거래</a></nav>",
-      "css": ".ds-tabs { display: flex; gap: 6px; } .ds-tab { font-family: Pretendard, sans-serif; font-size: 13px; font-weight: 700; padding: 6px 14px; border-radius: 9999px; background: #fff; color: #5C6B77; text-decoration: none; transition: color 160ms ease, transform 180ms cubic-bezier(0.34,1.56,0.64,1); } .ds-tab:hover { color: #26333F; } .ds-tab:active { transform: scale(0.96); } .ds-tab-active { background: #0C447C; color: #fff; box-shadow: 0 1px 2px rgba(12,68,124,0.05), 0 4px 16px rgba(12,68,124,0.07); }"
+      "css": ".ds-tabs { display: flex; gap: 6px; } .ds-tab { font-family: Pretendard, sans-serif; font-size: 13px; font-weight: 700; padding: 10px 14px; border-radius: 9999px; background: #fff; color: #5C6B77; text-decoration: none; transition: color 160ms ease, transform 180ms cubic-bezier(0.34,1.56,0.64,1); } .ds-tab:hover { color: #26333F; } .ds-tab:active { transform: scale(0.98); } .ds-tab-active { background: #0C447C; color: #fff; box-shadow: 0 1px 2px rgba(12,68,124,0.05), 0 4px 16px rgba(12,68,124,0.07); }"
     },
     {
-      "name": "Chat Bubbles",
+      "name": "Site Footer",
       "kind": "custom",
-      "refersTo": "chip-bubble-kr",
-      "description": "Language decides color (blue=Korean, pink=Japanese); sender decides which bottom corner is cut.",
-      "html": "<div class=\"ds-chat\"><div class=\"ds-chat-row\"><div class=\"ds-chat-bubble ds-chat-ko ds-chat-theirs\">안녕하세요! 아직 판매 중인가요?</div></div><div class=\"ds-chat-row ds-chat-row-mine\"><div class=\"ds-chat-bubble ds-chat-ja ds-chat-mine\">はい、まだあります!</div></div></div>",
-      "css": ".ds-chat { display: flex; flex-direction: column; gap: 8px; font-family: Pretendard, sans-serif; } .ds-chat-row { display: flex; } .ds-chat-row-mine { justify-content: flex-end; } .ds-chat-bubble { max-width: 75%; padding: 10px 14px; font-size: 14px; color: #26333F; border-radius: 18px; } .ds-chat-ko { background: rgba(156, 197, 236, 0.4); } .ds-chat-ja { background: rgba(242, 175, 175, 0.45); } .ds-chat-mine { border-bottom-right-radius: 4px; } .ds-chat-theirs { border-bottom-left-radius: 4px; }"
-    },
-    {
-      "name": "Bridge Banner",
-      "kind": "custom",
-      "refersTo": "card",
-      "description": "Cross-border-only blue→pink gradient field (proxy purchase, travel deals).",
-      "html": "<a href=\"#\" class=\"ds-bridge\"><span class=\"ds-bridge-title\">일본 마켓 구매대행</span><span class=\"ds-bridge-sub\">메루카리·야후 상품을 대신 사서 보내드려요</span></a>",
-      "css": ".ds-bridge { display: flex; flex-direction: column; gap: 2px; background: linear-gradient(115deg, #9cc5ec 0%, #c9bcd9 52%, #f2afaf 100%); border-radius: 20px; padding: 14px; text-decoration: none; font-family: Pretendard, sans-serif; box-shadow: 0 1px 2px rgba(12,68,124,0.05), 0 4px 16px rgba(12,68,124,0.07); transition: transform 180ms cubic-bezier(0.34,1.56,0.64,1); } .ds-bridge:active { transform: scale(0.96); } .ds-bridge-title { font-size: 14px; font-weight: 700; color: #0C447C; } .ds-bridge-sub { font-size: 12px; color: rgba(12, 68, 124, 0.9); }"
+      "refersTo": "footer",
+      "description": "Ivory-tinted footer: wordmark, bilingual tagline, company/legal placeholders that stay '준비 중' until real values exist.",
+      "html": "<footer class=\"ds-footer\"><p class=\"ds-footer-mark\">TOM<span>♥</span></p><p>한국과 일본을 잇는 중고거래 · 韓国と日本をつなぐフリマ</p><dl><dt>사업자 정보</dt><dd>준비 중</dd><dt>고객센터</dt><dd><a href=\"#\">채팅으로 문의</a></dd></dl><p class=\"ds-footer-legal\">이용약관 · 개인정보처리방침 — 준비 중</p></footer>",
+      "css": ".ds-footer { margin-top: 40px; padding: 20px 16px; border-radius: 12px; background: #FBF9F4; font-family: Pretendard, sans-serif; font-size: 12px; line-height: 1.625; color: #5C6B77; } .ds-footer p { margin: 8px 0 0; } .ds-footer-mark { margin: 0; font-family: Cafe24Ssurround, Pretendard, sans-serif; font-size: 18px; font-weight: 700; color: #0C447C; } .ds-footer-mark span { color: #E2807F; } .ds-footer dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 12px 0 0; } .ds-footer dt { font-weight: 700; color: #26333F; } .ds-footer dd { margin: 0; } .ds-footer a { color: inherit; text-decoration: underline; } .ds-footer-legal { margin-top: 12px; font-size: 11px; color: #93A0AB; }"
     },
     {
       "name": "Sell FAB",
       "kind": "button",
       "refersTo": "button-primary",
-      "description": "Raised coral circle in the bottom-nav center; the only shadow-float surface.",
+      "description": "Raised coral circle in the bottom-nav center; the only shadow-float surface (half-strength in v2).",
       "html": "<button class=\"ds-fab\" aria-label=\"판매\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#fff\" stroke-width=\"2.2\" stroke-linecap=\"round\"><path d=\"M12 5.5v13M5.5 12h13\"/></svg></button>",
-      "css": ".ds-fab { display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; background: #C14E4C; border: none; border-radius: 9999px; cursor: pointer; box-shadow: 0 4px 10px rgba(193,78,76,0.25), 0 10px 30px rgba(12,68,124,0.14); transition: transform 180ms cubic-bezier(0.34,1.56,0.64,1); } .ds-fab svg { width: 24px; height: 24px; } .ds-fab:active { transform: scale(0.95); } .ds-fab:focus-visible { outline: 2px solid #C14E4C; outline-offset: 2px; }"
+      "css": ".ds-fab { display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; background: #C14E4C; border: none; border-radius: 9999px; cursor: pointer; box-shadow: 0 3px 8px rgba(193,78,76,0.16), 0 8px 20px rgba(12,68,124,0.10); transition: transform 180ms cubic-bezier(0.34,1.56,0.64,1); } .ds-fab svg { width: 24px; height: 24px; } .ds-fab:active { transform: scale(0.98); } .ds-fab:focus-visible { outline: 2px solid #C14E4C; outline-offset: 2px; }"
+    },
+    {
+      "name": "Chat Bubbles",
+      "kind": "custom",
+      "refersTo": "chip-bubble-kr",
+      "description": "Language decides color (blue=Korean, pink=Japanese); sender decides which bottom corner is cut. One of the two places blue/pink may appear.",
+      "html": "<div class=\"ds-chat\"><div class=\"ds-chat-row\"><div class=\"ds-chat-bubble ds-chat-ko ds-chat-theirs\">안녕하세요! 아직 판매 중인가요?</div></div><div class=\"ds-chat-row ds-chat-row-mine\"><div class=\"ds-chat-bubble ds-chat-ja ds-chat-mine\">はい、まだあります!</div></div></div>",
+      "css": ".ds-chat { display: flex; flex-direction: column; gap: 8px; font-family: Pretendard, sans-serif; } .ds-chat-row { display: flex; } .ds-chat-row-mine { justify-content: flex-end; } .ds-chat-bubble { max-width: 75%; padding: 10px 14px; font-size: 14px; color: #26333F; border-radius: 18px; } .ds-chat-ko { background: rgba(156, 197, 236, 0.4); } .ds-chat-ja { background: rgba(242, 175, 175, 0.45); } .ds-chat-mine { border-bottom-right-radius: 4px; } .ds-chat-theirs { border-bottom-left-radius: 4px; }"
     }
   ],
   "narrative": {
-    "northStar": "두 말풍선이 만나면 하트가 된다 (When two speech bubbles meet, they become a heart)",
-    "overview": "TOMO is a kawaii, tactile, mobile-first world built on ivory paper and navy ink. Country and language are never signalled by flags or gray badges: they are pastel speech-bubble chips — Korea speaks in blue with a left tail, Japan in pink with a right tail. The blue→pink bridge gradient and the coral heart appear only at cross-border moments (travel direct-deals, proxy purchase, translated chat); everywhere else the feed reads as calm, dense marketplace paper. Gray marketplace chrome is refused — every neutral is navy-tinted, down to the shadows, scrollbar, and text selection. The build is dense in the Daangn/Mercari idiom (horizontal listing rows, image-first grid cards, price boldest) but every touchable surface answers with a springy squish press. Action is always coral: the deep coral CTA carries white text; the pastel coral is reserved for decorative hearts.",
+    "northStar": "브랜드는 그대로, 마켓은 어른스럽게 — the pinned two-bubbles-make-a-heart brand applied with Daangn/Mercari-grade marketplace restraint",
+    "overview": "v1 painted pastel everywhere; v2 pins the brand (heart-O wordmark, bubble chips, blue/pink/coral/navy/ivory) and binds every color to one role. The page is white paper. Navy holds titles, active states, and structure; coral-deep is the single action voice. Blue and pink appear only where a nation speaks (country chips, chat bubbles), and the blue-to-pink bridge gradient survives on exactly one surface, the travel-direct-deal badge. Ivory is no longer paper but a tint marking the trust strip, footer, and search field. Trust is a system concern: the TrustStrip states three facts, every active row carries a safe-pay micro pill, and the footer leaves company/legal slots honestly at '준비 중'. Cards drop to 12px with 10px thumbs and one navy-tinted shadow step; press feedback is a 0.98 squish; the wordmark heartbeat is the only perpetual motion and carousels are native scroll-snap.",
     "keyCharacteristics": [
-      "Ivory paper + navy-tinted ink scale; no achromatic gray anywhere",
-      "Country = speech-bubble chip color, never a flag or label",
-      "Cross-border moments get the blue→pink gradient and heart; nothing else does",
-      "One perpetual motion per page: the wordmark's heartbeat",
-      "Squish-press feedback on everything tappable"
+      "White page + navy-tinted ink scale; ivory is a tint (trust strip, footer, search), never paper",
+      "One role per color: navy = structure, coral-deep = action, blue/pink = nation",
+      "Card 12px, thumb 10px, pills full-round; cards carry one shadow step and no border",
+      "Wordmark heartbeat is the only perpetual motion; carousels are native scroll-snap",
+      "Price is loudest (800 tabular), titles stay 400; Pretendard tops out at 17px"
     ],
     "rules": [
-      { "name": "The Bridge Rule", "body": "The blue→pink gradient (.grad-bridge, .grad-bridge-soft) appears only where the two countries actually meet: the proxy-purchase banner, travel direct-deal badges, translated-chat moments. It is never generic decoration — even the trust gauge uses its own pink→coral warm gradient instead.", "section": "colors" },
-      { "name": "The No-Gray Rule", "body": "There is no achromatic gray. Every neutral, border, shadow, scrim, and scrollbar is tinted with navy (rgba(12,68,124,…)); loading skeletons shimmer in warm ivory tones.", "section": "colors" },
-      { "name": "The Deep-Ink-On-Tint Rule", "body": "Pastel fields never carry pastel text: blue fields take navy (#0C447C), pink fields take rose (#A34543), and white-text surfaces use coral-deep or navy fills only.", "section": "colors" },
-      { "name": "The Price-Loudest Rule", "body": "On any commerce surface, price is the heaviest text (extrabold 800, tabular-nums); the title stays regular weight.", "section": "typography" },
-      { "name": "The Two-Tongue Rule", "body": "User-facing hints and empty states speak both languages in one breath (\"번역 보기 · 翻訳を見る\"), Korean first, joined by a middle dot.", "section": "typography" },
-      { "name": "The Tinted-Shadow Rule", "body": "Every shadow is navy-tinted (the float adds coral); pure-black rgba shadows do not exist in this world.", "section": "elevation" }
+      { "name": "The One-Role Rule", "body": "Each color has one job. Navy = titles, active states, structure. Coral-deep = the single CTA voice and sell FAB. Blue/pink = country chips and chat bubbles. Ivory = tint. A color doing two jobs on one screen breaks the hierarchy.", "section": "colors" },
+      { "name": "The Bridge Rule (v2)", "body": "The blue-to-pink gradient (.grad-bridge-soft) appears on exactly one surface: the travel-direct-deal badge. It never becomes a banner, card, or header field.", "section": "colors" },
+      { "name": "The Ivory-Is-Tint Rule", "body": "Ivory (#FBF9F4) marks a differently-natured region on the white page: TrustStrip, SiteFooter, and the search input. It is not the page or card background.", "section": "colors" },
+      { "name": "The No-Gray Rule", "body": "There is no achromatic gray. Every neutral, border, shadow, scrim, and scrollbar is navy-tinted (rgba(12,68,124,…)); skeletons shimmer in warm ivory.", "section": "colors" },
+      { "name": "The Deep-Ink-On-Tint Rule", "body": "Pastel fields never carry pastel text: blue takes navy, pink takes rose, and white text sits only on coral-deep or navy fills.", "section": "colors" },
+      { "name": "The Price-Loudest Rule", "body": "On any commerce surface price is the heaviest text (800, tabular-nums); titles stay 400. For foreign items the buyer-currency conversion is the big number and the seller's original is 12px/700 ink-soft.", "section": "typography" },
+      { "name": "The 17-Ceiling Rule", "body": "The largest Pretendard step is the 17px/800 section title. Anything bigger belongs to the Cafe24 wordmark, not the body face.", "section": "typography" },
+      { "name": "The Two-Tongue Rule", "body": "Hints, empty states, and the footer tagline speak both languages in one breath, Korean first, joined by a middle dot.", "section": "typography" },
+      { "name": "The Tinted-Shadow Rule", "body": "Every shadow is navy-tinted (the FAB float adds a half-strength coral halo). Pure-black rgba shadows do not exist.", "section": "elevation" },
+      { "name": "The One-Step Rule", "body": "Cards carry --shadow-soft alone. No border-plus-shadow, no stacked shadow steps. Grid and carousel cards carry no shadow at all; the thumbnail is the surface.", "section": "elevation" }
     ],
     "dos": [
-      "Do signal country/language with bubble chips and bubble tints only — blue/navy for Korea, pink/rose for Japan.",
-      "Do put .press (or .btn/.card states) on every tappable element; the squish spring is the house feel.",
-      "Do set prices in extrabold 800 with .tnum, heavier than their titles.",
-      "Do draw icons as inline rounded-geometry SVGs (1.7–2.2 stroke, round caps); reuse the canonical heart path.",
-      "Do use ink-faint only for sold/disabled de-emphasis and decorative icon strokes."
+      "Do keep the page white and use ivory only as the TrustStrip, SiteFooter, and search-input tint.",
+      "Do let navy carry titles/active/structure and coral-deep carry action; one coral-deep CTA per screen.",
+      "Do signal country/language only with .bubble-kr/.bubble-jp chips and chat-bubble tints.",
+      "Do set prices in 800 + .tnum with titles at 400; the buyer-currency number is the big one.",
+      "Do use 12px cards, 10px thumbs, full-round pills/chips/badges, and .press/.btn/.card states on everything tappable.",
+      "Do keep trust UI factual (TrustStrip, safe-pay pill, footer) and leave missing values as '준비 중'.",
+      "Do build horizontal lists as native snap-x snap-mandatory rows of 140px cards, never a JS carousel."
     ],
     "donts": [
-      "Don't use the bridge gradient outside cross-border moments (proxy banner, travel deals, translated chat).",
-      "Don't introduce achromatic grays, black shadows, borders on cards, flags, or sharp corners.",
-      "Don't put white text on pastel blue/pink/coral — deep steps (navy, rose, coral-deep) carry text.",
-      "Don't add a second perpetual animation; the wordmark heartbeat is the only one.",
-      "Don't use Cafe24 Ssurround for section headings or body copy — logo and brand-voice numerals only."
+      "Don't use blue/pink as backgrounds, banners, or section fills; they exist only in country chips and chat bubbles.",
+      "Don't use the bridge gradient anywhere but the travel-direct-deal badge.",
+      "Don't introduce achromatic grays, black shadows, card borders, flags, or sharp corners.",
+      "Don't use Cafe24 Ssurround for section titles, prices, or body; wordmark only.",
+      "Don't set Pretendard headings above 17px or any text below 11px.",
+      "Don't add a perpetual animation beyond the wordmark heartbeat.",
+      "Don't invent trust numbers, reviews, transaction stats, or company/legal details."
     ]
   }
 }
