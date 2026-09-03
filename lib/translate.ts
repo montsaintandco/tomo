@@ -83,3 +83,9 @@ export async function translateQueryTo(q: string, to: Lang): Promise<string> {
 
 // 하위 호환 별칭 (일본 마켓 검색)
 export const translateQueryToJa = (q: string) => translateQueryTo(q, "ja");
+
+// 외부 마켓 상품 제목 일괄 번역 (홈 인기 섹션). 실패 시 null — 호출부는 원문 유지
+export async function translateTexts(texts: string[], from: Lang, to: Lang): Promise<string[] | null> {
+  if (texts.length === 0) return [];
+  return googleTranslate(texts, from, to);
+}

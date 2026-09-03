@@ -1,19 +1,21 @@
 import Link from "next/link";
-import { formatWithConversion, type Currency } from "@/lib/currency";
+import { convertPrice, formatPrice, type Currency } from "@/lib/currency";
 import { SOURCE_LABEL, type MarketSource } from "@/lib/market/types";
+import { TomoSymbol } from "@/components/Brand";
 
 export type ExternalCardItem = {
-  source: MarketSource; sourceId: string; title: string;
+  source: MarketSource; sourceId: string; title: string; titleTranslated?: string;
   price: number; currency: Currency; thumb: string;
   soldOut?: boolean; auction?: boolean;
 };
 
-// 메루카리식 밀집 카드 — 이미지 우선, 가격이 가장 굵게
+// 메루카리식 밀집 카드 — 이미지 우선, 구매자 통화 가격이 가장 굵게 (Price-Loudest는 구매자의 숫자다)
 // rate는 "외화 → 뷰어 통화" 환율. 같은 통화면 환산 없이 원값 표시
 export default function ExternalItemCard({ item, rate, viewerCurrency }: {
   item: ExternalCardItem; rate: number; viewerCurrency: Currency;
 }) {
-  const effectiveRate = item.currency === viewerCurrency ? 1 : rate;
+  const foreign = item.currency !== viewerCurrency;
+  const originalLang = item.currency === "JPY" ? "ja" : "ko";
   return (
     <Link href={`/global/${item.source}/${item.sourceId}`}
       className="press group flex flex-col">
@@ -23,28 +25,37 @@ export default function ExternalItemCard({ item, rate, viewerCurrency }: {
           <img src={item.thumb} alt="" loading="lazy"
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]" />
         ) : (
-          <div className="skeleton h-full w-full" />
+          <div className="flex h-full w-full items-center justify-center">
+            <TomoSymbol className="h-10 w-[3.75rem] opacity-60" />
+          </div>
         )}
         <span className="absolute left-1.5 top-1.5 rounded-full bg-tomo-navy/60 px-2 py-0.5 text-[11px] font-bold text-white backdrop-blur-sm">
           {SOURCE_LABEL[item.source]}
         </span>
         {item.auction && (
-          <span className="absolute right-1.5 top-1.5 rounded-full bg-tomo-coral-deep px-2 py-0.5 text-[11px] font-bold text-white">
+          <span className="absolute bottom-1.5 left-1.5 rounded-full bg-tomo-coral-deep px-2 py-0.5 text-[11px] font-bold text-white">
             입찰중
           </span>
         )}
         {item.soldOut && (
-          <span className="absolute inset-0 flex items-center justify-center bg-tomo-navy/70 text-sm font-bold text-white">
+          <span className="absolute inset-0 flex items-center justify-center bg-tomo-navy/75 text-sm font-bold text-white">
             품절
           </span>
         )}
       </div>
       <div className="mt-1.5 flex flex-col gap-0.5">
-        <p className="line-clamp-2 text-[13px] leading-snug text-ink">{item.title}</p>
-        <p className="tnum text-[15px] font-extrabold text-ink">
-          {formatWithConversion(item.price, item.currency, effectiveRate, viewerCurrency)}
+        {/* 번역 제목이 있으면 그걸로, 원문은 title 속성에 — 원칙 2: 번역은 원문을 대체하지 않는다 */}
+        <p className="line-clamp-2 min-h-9 text-[13px] leading-snug text-ink"
+          lang={item.titleTranslated ? undefined : originalLang} title={item.titleTranslated ? item.title : undefined}>
+          {item.titleTranslated ?? item.title}
         </p>
-        {item.auction && <p className="text-[11px] text-ink-faint">현재가 · 낙찰가 변동</p>}
+        <p className="tnum text-[15px] font-extrabold text-ink">
+          {foreign ? `약 ${formatPrice(convertPrice(item.price, item.currency, rate), viewerCurrency)}` : formatPrice(item.price, item.currency)}
+        </p>
+        <p className="tnum text-[11px] font-bold text-ink-soft">
+          {foreign ? formatPrice(item.price, item.currency) : " "}
+          {item.auction && <span className="ml-1 font-normal">· 현재가</span>}
+        </p>
       </div>
     </Link>
   );

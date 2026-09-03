@@ -3,8 +3,9 @@ import { mercariSearch } from "./mercari";
 import { yahooAuctionSearch } from "./yahoo-auction";
 import { daangnSearch } from "./daangn";
 import { joongnaSearch } from "./joongna";
+import { translateTexts } from "@/lib/translate";
 import { TRENDING, pickTrendingItems, type TrendingTheme } from "./trending-data";
-import type { MarketItem, MarketSource } from "./types";
+import { SOURCE_CURRENCY, type MarketItem, type MarketSource } from "./types";
 
 export type TrendingSection = { theme: TrendingTheme; items: MarketItem[] };
 
@@ -28,12 +29,17 @@ async function fetchTheme(theme: TrendingTheme): Promise<MarketItem[]> {
   const picked = pickTrendingItems(results);
   // 빈 결과를 1시간 캐시하면 안 되므로 throw → 캐시 저장 안 됨, 호출부가 []로 받는다
   if (picked.length === 0) throw new Error(`trending:${theme.key}: empty`);
-  return picked;
+
+  // 원칙 2 "번역은 투명하게": 제목을 뷰어 언어로 한 번에 번역해 캐시에 같이 담는다. 실패하면 원문 그대로
+  const from = SOURCE_CURRENCY[theme.sources[0]] === "JPY" ? "ja" : "ko";
+  const to = from === "ja" ? "ko" : "ja";
+  const translated = await withTimeout(translateTexts(picked.map((i) => i.title), from, to), SOURCE_TIMEOUT_MS, null);
+  return picked.map((i, idx) => (translated?.[idx] ? { ...i, titleTranslated: translated[idx] } : i));
 }
 
 // ponytail: Next 데이터 캐시(1h, stale-while-revalidate). service role 키가 생기면 external_items 쓰기-스루로 승격
 const cachedTheme = (theme: TrendingTheme) =>
-  unstable_cache(() => fetchTheme(theme), ["trending", theme.key], { revalidate: 3600 })()
+  unstable_cache(() => fetchTheme(theme), ["trending", "v2", theme.key], { revalidate: 3600 })()
     .catch(() => [] as MarketItem[]);
 
 export async function getTrendingSections(country: "KR" | "JP", limitThemes = 4): Promise<TrendingSection[]> {

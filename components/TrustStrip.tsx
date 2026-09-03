@@ -16,7 +16,8 @@ const PILLARS = [
 
 export default function TrustStrip() {
   return (
-    <ul className="grid grid-cols-3 gap-1 rounded-card bg-tomo-ivory px-2 py-3" aria-label="토모 안전장치">
+    <section aria-label="토모 안전장치">
+    <ul className="grid grid-cols-3 gap-1 rounded-card bg-tomo-ivory px-2 py-3">
       {PILLARS.map((p) => (
         <li key={p.label} className="flex flex-col items-center gap-1.5 text-center">
           <svg viewBox="0 0 24 24" fill="none" stroke="#0C447C" strokeWidth={1.8}
@@ -28,5 +29,6 @@ export default function TrustStrip() {
         </li>
       ))}
     </ul>
+    </section>
   );
 }

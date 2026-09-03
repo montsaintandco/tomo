@@ -11,7 +11,7 @@ export default function SiteFooter() {
         <dt className="font-bold text-ink">사업자 정보</dt><dd>준비 중</dd>
         <dt className="font-bold text-ink">고객센터</dt><dd><Link href="/chat" className="underline">채팅으로 문의</Link></dd>
       </dl>
-      <p className="mt-3 text-[11px] text-ink-faint">이용약관 · 개인정보처리방침 — 준비 중</p>
+      <p className="mt-3 text-[11px] text-ink-soft">이용약관 · 개인정보처리방침 — 준비 중</p>
     </footer>
   );
 }

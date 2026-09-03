@@ -80,7 +80,7 @@ export default async function Home(props: { searchParams: Promise<{ tab?: string
               <circle cx="11" cy="11" r="6.5" /><path d="m16 16 4.5 4.5" />
             </svg>
             {/* 16px 고정 — 14px 이하 입력은 iOS 사파리가 포커스 시 뷰포트를 확대한다 */}
-            <input id="feed-q" name="q" defaultValue={q ?? ""} placeholder="어떤 물건을 찾으세요?"
+            <input id="feed-q" name="q" type="search" enterKeyHint="search" autoComplete="off" defaultValue={q ?? ""} placeholder="어떤 물건을 찾으세요?"
               className={`w-full rounded-full bg-tomo-ivory py-2.5 pl-10 text-base placeholder:text-ink-soft ${q ? "pr-11" : "pr-4"}`} />
             {q && (
               <Link href={tab !== "all" ? `/?tab=${tab}` : "/"} aria-label="검색어 지우기"
@@ -104,7 +104,7 @@ export default async function Home(props: { searchParams: Promise<{ tab?: string
             const qs = params.toString();
             return (
               <Link key={v} href={qs ? `/?${qs}` : "/"} aria-current={tab === v ? "page" : undefined}
-                className={`press rounded-full px-3.5 py-2.5 text-[13px] font-bold transition-colors ${
+                className={`press rounded-full px-3.5 py-3 text-[13px] font-bold transition-colors ${
                   tab === v ? "bg-tomo-navy text-white shadow-[var(--shadow-soft)]" : "bg-white text-ink-soft hover:text-ink"}`}>
                 {l}
               </Link>

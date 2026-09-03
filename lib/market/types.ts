@@ -6,6 +6,7 @@ export type MarketItem = {
   sourceId: string;
   url: string;          // 원 사이트 상품 URL
   title: string;        // 원문 제목 (일본 소스는 ja)
+  titleTranslated?: string; // 뷰어 언어 번역 제목 (홈 인기 섹션에서 채움, 실패 시 없음)
   price: number;        // 원 통화 정수. 즉시구매가 있으면 그 값, 없으면 경매 현재가
   currency: "KRW" | "JPY";
   thumb: string;
