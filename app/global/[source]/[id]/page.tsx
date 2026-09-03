@@ -130,6 +130,11 @@ export default async function ExternalItemPage(props: {
             <Row label={t(lang, "ext.fee")} value={formatPrice(est.fee, "JPY")} />
             <Row label={t(lang, "ext.remit")} value={formatPrice(est.remit, "JPY")} />
             <Row label={t(lang, "ext.shipping")} value={formatPrice(est.shipping, "JPY")} />
+            {/* SAZO식 총액 투명성 — 관세는 금액을 지어내지 않고 면세 기준만 말한다 */}
+            <div className="mt-1 flex justify-between gap-3">
+              <span className="text-ink-soft">{t(lang, "ext.customs")}</span>
+              <span className="text-right text-[11px] leading-snug text-ink-soft">{t(lang, "ext.customsNote")}</span>
+            </div>
             <div className="mt-2 flex items-baseline justify-between gap-3 border-t border-tomo-navy/10 pt-2">
               <span className="font-bold text-ink">{t(lang, "ext.total")}</span>
               <span className="text-right">

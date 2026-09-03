@@ -6,6 +6,8 @@ import { searchMarkets } from "@/lib/market/search";
 import { LIVE_SOURCES, type MarketSource } from "@/lib/market/types";
 import { t, type Lang } from "@/lib/i18n";
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { parseMarketUrl } from "@/lib/market/url";
 
 export const dynamic = "force-dynamic"; // 외부 검색은 요청 시점 조회
 
@@ -19,19 +21,23 @@ export default async function GlobalPage(props: {
   const viewer = await getViewerOrGuest(supabase);
   const lang: Lang = viewer.language;
   const q = searchParams.q?.trim() ?? "";
+  // SAZO식: 상품 URL을 붙여넣으면 검색 대신 바로 외부상품 상세로
+  const target = parseMarketUrl(q);
+  if (target) redirect(`/global/${target.source}/${target.id}`);
+  const looksLikeUrl = /^https?:\/\//i.test(q);
   const source = (TABS.includes(searchParams.source as MarketSource) ? searchParams.source : "all") as MarketSource | "all";
   const liveSource = source === "all" || LIVE_SOURCES.includes(source as MarketSource);
 
   let items: ExternalCardItem[] = [];
   let usedQueries: string[] = [];
 
-  if (q && liveSource) {
+  if (q && liveSource && !looksLikeUrl) {
     // 실시간 검색 — 소스별 언어로 번역해 조회
     const { items: found, queries } = await searchMarkets(q, source);
     items = found as ExternalCardItem[];
     usedQueries = Array.from(new Set(Object.values(queries).filter((s): s is string => !!s && s !== q)));
-  } else {
-    // 검색어 없거나 한국 소스: 캐시된 상품 (어드민 수동 등록 포함)
+  } else if (!looksLikeUrl) {
+    // 검색어 없거나 한국 소스: 캐시된 상품 (어드민 수동 등록 포함). 미지원 URL은 빈 상태로 안내
     let cache = supabase.from("external_items")
       .select("source, source_id, title, title_translated, price, currency, images, status")
       .eq("status", "active").order("fetched_at", { ascending: false }).limit(60);
@@ -83,6 +89,7 @@ export default async function GlobalPage(props: {
             )}
           </div>
           {source !== "all" && <input type="hidden" name="source" value={source} />}
+          <p className="mt-1.5 px-1 text-[11px] text-ink-soft">{t(lang, "global.urlHint")}</p>
         </form>
 
         <nav className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:mx-0 md:px-0" aria-label={t(lang, "global.searchLabel")}>
@@ -120,10 +127,10 @@ export default async function GlobalPage(props: {
           <div className="mt-12 flex flex-col items-center px-6 text-center">
             <TomoSymbol />
             <p className="mt-3 text-sm text-ink-soft">
-              {q ? t(lang, "empty.search", { q }) : t(lang, "global.emptyIdle")}
+              {looksLikeUrl ? t(lang, "global.urlFail") : q ? t(lang, "empty.search", { q }) : t(lang, "global.emptyIdle")}
             </p>
             <p className="mt-1 text-xs text-ink-soft">
-              {q ? t(lang, "global.emptySearchSub") : t(lang, "global.emptyIdleSub")}
+              {looksLikeUrl ? t(lang, "global.urlHint") : q ? t(lang, "global.emptySearchSub") : t(lang, "global.emptyIdleSub")}
             </p>
           </div>
         )}

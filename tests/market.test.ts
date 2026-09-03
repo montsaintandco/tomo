@@ -32,3 +32,18 @@ describe("market sources", () => {
     for (const s of LIVE_SOURCES) expect(SOURCE_LABEL[s]).toBeTruthy();
   });
 });
+
+import { parseMarketUrl } from "../lib/market/url";
+
+describe("market url paste (SAZO식)", () => {
+  it("resolves supported product urls to source + id", () => {
+    expect(parseMarketUrl("https://jp.mercari.com/item/m12345678901")).toEqual({ source: "mercari", id: "m12345678901" });
+    expect(parseMarketUrl("https://auctions.yahoo.co.jp/jp/auction/x1234567890")).toEqual({ source: "yahoo_auction", id: "x1234567890" });
+    expect(parseMarketUrl("https://www.daangn.com/kr/buy-sell/필름카메라-123456789/")).toEqual({ source: "daangn", id: "123456789" });
+    expect(parseMarketUrl("https://web.joongna.com/product/987654321")).toEqual({ source: "joongna", id: "987654321" });
+  });
+  it("ignores keywords and unsupported urls", () => {
+    expect(parseMarketUrl("필름카메라")).toBeNull();
+    expect(parseMarketUrl("https://www.amazon.co.jp/dp/B000000")).toBeNull();
+  });
+});
