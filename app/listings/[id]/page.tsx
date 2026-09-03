@@ -8,7 +8,8 @@ import { CountryChip, TomoSymbol } from "@/components/Brand";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-export default async function ListingDetail({ params }: { params: { id: string } }) {
+export default async function ListingDetail(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const supabase = await createServerSupabase();
   const viewer = await getViewerOrGuest(supabase);
 

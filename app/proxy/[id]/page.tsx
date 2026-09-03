@@ -23,7 +23,8 @@ type Row = {
   } | null;
 };
 
-export default async function ProxyDetailPage({ params }: { params: { id: string } }) {
+export default async function ProxyDetailPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const supabase = await createServerSupabase();
   const viewer = await getViewer(supabase);
   if (!viewer) redirect(`/login?next=/proxy/${params.id}`);

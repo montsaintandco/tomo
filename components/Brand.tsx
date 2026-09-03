@@ -3,7 +3,7 @@
 /* TOMO — 마지막 O를 하트로 치환한 워드마크 */
 export function Wordmark({ className = "text-2xl" }: { className?: string }) {
   return (
-    <span className={`font-brand inline-flex items-baseline text-tomo-navy ${className}`} aria-label="TOMO">
+    <span className={`font-brand inline-flex items-baseline text-tomo-navy ${className}`} role="img" aria-label="TOMO">
       <span aria-hidden>TOM</span>
       <svg viewBox="0 0 24 24" className="heartbeat ml-[2px] h-[0.8em] w-[0.8em] self-center" aria-hidden>
         <path

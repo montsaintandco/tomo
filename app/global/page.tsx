@@ -10,9 +10,10 @@ export const dynamic = "force-dynamic"; // 외부 검색은 요청 시점 조회
 
 const TABS: (MarketSource | "all")[] = ["all", "mercari", "yahoo_auction", "daangn", "joongna"];
 
-export default async function GlobalPage({ searchParams }: {
-  searchParams: { q?: string; source?: string };
+export default async function GlobalPage(props: {
+  searchParams: Promise<{ q?: string; source?: string }>;
 }) {
+  const searchParams = await props.searchParams;
   const supabase = await createServerSupabase();
   const viewer = await getViewerOrGuest(supabase);
   const q = searchParams.q?.trim() ?? "";

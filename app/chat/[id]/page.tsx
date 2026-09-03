@@ -16,7 +16,8 @@ type ConvoDetail = {
   seller: { id: string; nickname: string };
 };
 
-export default async function ChatDetailPage({ params }: { params: { id: string } }) {
+export default async function ChatDetailPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const supabase = await createServerSupabase();
   const viewer = await getViewer(supabase);
   if (!viewer) redirect("/onboarding");

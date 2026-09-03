@@ -25,9 +25,10 @@ async function loadItem(source: MarketSource, id: string): Promise<MarketItemDet
   return null;
 }
 
-export default async function ExternalItemPage({ params }: {
-  params: { source: string; id: string };
+export default async function ExternalItemPage(props: {
+  params: Promise<{ source: string; id: string }>;
 }) {
+  const params = await props.params;
   const source = params.source as MarketSource;
   if (!SOURCE_LABEL[source]) notFound();
 

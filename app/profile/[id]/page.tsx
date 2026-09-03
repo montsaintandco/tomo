@@ -10,7 +10,8 @@ type Review = {
   reviewer: { nickname: string } | null;
 };
 
-export default async function ProfilePage({ params }: { params: { id: string } }) {
+export default async function ProfilePage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const supabase = await createServerSupabase();
   const viewer = await getViewerOrGuest(supabase);
   if (params.id === "me" && (viewer.guest || !viewer.id)) redirect("/login?next=/profile/me");

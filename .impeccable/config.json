@@ -44,7 +44,20 @@
         "value": "26px",
         "createdAt": "2026-08-26T14:56:56.075Z",
         "reason": "build decision: detail price display size in brand face, Price-Loudest Rule"
+      },
+      {
+        "rule": "undersized-ui-text",
+        "value": "10px",
+        "createdAt": "2026-08-27T02:18:08.471Z",
+        "reason": "user decision (critique 2026-08-27): DESIGN.md pinned micro step is 10px bold - chips, badges, nav captions stay 10px"
+      },
+      {
+        "rule": "cream-palette",
+        "value": "rgb(251, 249, 244)",
+        "createdAt": "2026-09-03T01:17:52.910Z",
+        "reason": "design token: tomo-ivory #FBF9F4 is the page paper per DESIGN.md Colors/Neutral; runtime detector only"
       }
     ]
-  }
+  },
+  "buildPath": "code"
 }

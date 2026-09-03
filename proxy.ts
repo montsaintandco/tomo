@@ -4,7 +4,7 @@ import { NextResponse, type NextRequest } from "next/server";
 // 공개 브라우징: 홈·상세·검색·프로필은 누구나. 행동(판매·채팅·거래·대행·어드민)만 로그인.
 const PROTECTED = ["/sell", "/chat", "/transactions", "/admin", "/proxy", "/onboarding"];
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const res = NextResponse.next();
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
