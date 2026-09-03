@@ -25,7 +25,7 @@ export default function ListingCard({ listing, viewer }: {
       </div>
       <p className="mt-1.5 line-clamp-2 text-[13px] leading-snug text-ink">{displayTitle(listing, viewer.language)}</p>
       <p className="tnum mt-0.5 text-[15px] font-extrabold text-ink">
-        {foreign
+        {listing.price === 0 ? t(viewer.language, "price.free") : foreign
           ? `${t(viewer.language, "price.approx")} ${formatPrice(convertPrice(listing.price, listing.currency, viewer.rate), viewer.currency)}`
           : formatPrice(listing.price, listing.currency)}
       </p>

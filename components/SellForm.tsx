@@ -6,6 +6,11 @@ import { t, type Lang } from "@/lib/i18n";
 
 const CATEGORIES = ["figure", "camera", "fashion", "kpop", "game", "vintage", "etc"] as const;
 const METHODS = ["direct", "shipping", "both"] as const;
+const CONDITIONS = ["new", "like_new", "good", "fair", "poor"] as const;
+const PAYERS = ["seller", "buyer"] as const;
+const SHIP_DAYS = ["1_2", "2_3", "4_7"] as const;
+const SEG = "btn flex-1 py-3 text-sm";
+const segOn = (on: boolean) => `${SEG} ${on ? "bg-tomo-navy text-white shadow-soft" : "bg-white text-ink-soft shadow-soft"}`;
 const FIELD = "mt-1 w-full rounded-full bg-white px-4 py-3 text-base font-normal shadow-soft placeholder:text-ink-soft";
 
 export default function SellForm({ lang, hint }: { lang: Lang; hint: string }) {
@@ -15,6 +20,11 @@ export default function SellForm({ lang, hint }: { lang: Lang; hint: string }) {
   const [category, setCategory] = useState<(typeof CATEGORIES)[number]>("etc");
   const [tradeMethod, setTradeMethod] = useState<(typeof METHODS)[number]>("both");
   const [crossBorder, setCrossBorder] = useState(true);
+  const [condition, setCondition] = useState<(typeof CONDITIONS)[number]>("good");
+  const [shippingPayer, setShippingPayer] = useState<(typeof PAYERS)[number]>("seller");
+  const [shipDays, setShipDays] = useState<(typeof SHIP_DAYS)[number]>("2_3");
+  const [allowOffers, setAllowOffers] = useState(true);
+  const [free, setFree] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -38,7 +48,10 @@ export default function SellForm({ lang, hint }: { lang: Lang; hint: string }) {
       const res = await fetch("/api/listings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, description, price: parseInt(price, 10), category, tradeMethod, crossBorder, images }),
+        body: JSON.stringify({
+          title, description, price: free ? 0 : parseInt(price, 10), category, tradeMethod, crossBorder, images,
+          condition, shippingPayer, shipDays, allowOffers: !free && allowOffers,
+        }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
@@ -69,7 +82,17 @@ export default function SellForm({ lang, hint }: { lang: Lang; hint: string }) {
           <textarea className="mt-1 w-full rounded-card bg-white px-4 py-3 text-base font-normal shadow-soft" rows={5} value={description} onChange={(e) => setDescription(e.target.value)} required maxLength={2000} />
         </label>
         <label className="text-[13px] font-bold text-ink">{t(lang, "sell.price")}
-          <input className={`tnum ${FIELD}`} type="number" inputMode="numeric" min={1} value={price} onChange={(e) => setPrice(e.target.value)} required />
+          <input className={`tnum ${FIELD} disabled:opacity-45`} type="number" inputMode="numeric" min={1}
+            value={free ? "" : price} onChange={(e) => setPrice(e.target.value)} required={!free} disabled={free} />
+        </label>
+        <label className="-mt-2 flex items-center gap-2 text-[13px] font-bold text-ink">
+          <input type="checkbox" className="h-4 w-4 accent-[#C14E4C]" checked={free} onChange={(e) => setFree(e.target.checked)} />
+          {t(lang, "sell.free")}
+        </label>
+        <label className="text-[13px] font-bold text-ink">{t(lang, "sell.condition")}
+          <select className={FIELD} value={condition} onChange={(e) => setCondition(e.target.value as (typeof CONDITIONS)[number])}>
+            {CONDITIONS.map((c) => <option key={c} value={c}>{t(lang, `cond.${c}`)}</option>)}
+          </select>
         </label>
         <label className="text-[13px] font-bold text-ink">{t(lang, "sell.category")}
           <select className={FIELD} value={category} onChange={(e) => setCategory(e.target.value as (typeof CATEGORIES)[number])}>
@@ -86,10 +109,38 @@ export default function SellForm({ lang, hint }: { lang: Lang; hint: string }) {
             ))}
           </div>
         </fieldset>
+        {tradeMethod !== "direct" && (
+          <>
+            <fieldset>
+              <legend className="mb-1 text-[13px] font-bold text-ink">{t(lang, "sell.payer")}</legend>
+              <div className="flex gap-2">
+                {PAYERS.map((p) => (
+                  <button type="button" key={p} aria-pressed={shippingPayer === p} className={segOn(shippingPayer === p)}
+                    onClick={() => setShippingPayer(p)}>{t(lang, `payer.${p}`)}</button>
+                ))}
+              </div>
+            </fieldset>
+            <fieldset>
+              <legend className="mb-1 text-[13px] font-bold text-ink">{t(lang, "sell.days")}</legend>
+              <div className="flex gap-2">
+                {SHIP_DAYS.map((d) => (
+                  <button type="button" key={d} aria-pressed={shipDays === d} className={segOn(shipDays === d)}
+                    onClick={() => setShipDays(d)}>{t(lang, `days.${d}`)}</button>
+                ))}
+              </div>
+            </fieldset>
+          </>
+        )}
         <label className="flex items-center gap-2 text-[13px] font-bold text-ink">
           <input type="checkbox" className="h-4 w-4 accent-[#C14E4C]" checked={crossBorder} onChange={(e) => setCrossBorder(e.target.checked)} />
           {t(lang, "sell.crossBorder")}
         </label>
+        {!free && (
+          <label className="flex items-center gap-2 text-[13px] font-bold text-ink">
+            <input type="checkbox" className="h-4 w-4 accent-[#C14E4C]" checked={allowOffers} onChange={(e) => setAllowOffers(e.target.checked)} />
+            {t(lang, "sell.allowOffers")}
+          </label>
+        )}
         <button disabled={busy} className="btn bg-tomo-coral-deep py-3 text-sm text-white">
           {busy ? t(lang, "sell.submitting") : t(lang, "sell.submit")}
         </button>

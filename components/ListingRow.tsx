@@ -67,7 +67,7 @@ export default function ListingRow({ listing, viewer }: {
           </p>
           {/* 구매자 결정 숫자(내 통화)가 가장 크게, 판매자 원가는 작게 — Price-Loudest는 구매자의 숫자다 */}
           <p className={`tnum text-base font-extrabold ${sold ? "text-ink-faint" : "text-ink"}`}>
-            {foreign ? (
+            {listing.price === 0 ? t(lang, "price.free") : foreign ? (
               <>
                 {t(lang, "price.approx")} {formatPrice(convertPrice(listing.price, listing.currency, viewer.rate), viewer.currency)}
                 <span className="ml-1.5 text-xs font-bold text-ink-soft">{formatPrice(listing.price, listing.currency)}</span>

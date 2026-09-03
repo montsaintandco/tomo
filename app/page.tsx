@@ -27,7 +27,7 @@ export default async function Home(props: { searchParams: Promise<{ tab?: string
   let query = supabase.from("listings")
     .select(FEED_SELECT)
     .order("status", { ascending: true })   // active < reserved < sold (enum 정의 순)
-    .order("created_at", { ascending: false })
+    .order("bumped_at", { ascending: false })
     .limit(FEED_LIMIT);
 
   if (tab === "local" && !viewer.guest) {
@@ -58,10 +58,10 @@ export default async function Home(props: { searchParams: Promise<{ tab?: string
   const [hubOwn, hubTravel] = hub
     ? await Promise.all([
         supabase.from("listings").select(FEED_SELECT).eq("status", "active")
-          .eq("country", viewer.country).order("created_at", { ascending: false }).limit(12),
+          .eq("country", viewer.country).order("bumped_at", { ascending: false }).limit(12),
         supabase.from("listings").select(FEED_SELECT).eq("status", "active")
           .neq("country", viewer.country).in("trade_method", ["direct", "both"])
-          .order("created_at", { ascending: false }).limit(8),
+          .order("bumped_at", { ascending: false }).limit(8),
       ])
     : [null, null];
 

@@ -82,6 +82,29 @@ describe("RLS", () => {
     expect(n).toBe(1);
   });
 
+  it("offers: buyer offers below price, seller can't self-offer, only seller accepts and price drops", async () => {
+    const { error: self } = await alice.from("offers").insert({ listing_id: listingId, buyer_id: aliceId, price: 40000 });
+    expect(self).not.toBeNull();
+    const { data: o, error } = await bob.from("offers")
+      .insert({ listing_id: listingId, buyer_id: bobId, price: 45000 }).select().single();
+    expect(error).toBeNull();
+    const { data: seen } = await alice.from("offers").select("id").eq("listing_id", listingId);
+    expect(seen).toHaveLength(1);
+    const { error: bobAccept } = await bob.rpc("respond_offer", { oid: o!.id, accept: true });
+    expect(bobAccept).not.toBeNull();
+    const { error: ok } = await alice.rpc("respond_offer", { oid: o!.id, accept: true });
+    expect(ok).toBeNull();
+    const { data: l } = await alice.from("listings").select("price").eq("id", listingId).single();
+    expect(l!.price).toBe(45000);
+  });
+
+  it("bump: only the seller, and not within 48h of listing", async () => {
+    const { error: bobBump } = await bob.rpc("bump_listing", { lid: listingId });
+    expect(bobBump).not.toBeNull();
+    const { error: tooSoon } = await alice.rpc("bump_listing", { lid: listingId });
+    expect(tooSoon).not.toBeNull();
+  });
+
   it("allows participants to read their conversation", async () => {
     const { data } = await alice.from("conversations").select().eq("id", convId);
     expect(data).toHaveLength(1);

@@ -101,7 +101,7 @@ export default async function MyPage() {
               <Row key={l.id} href={`/listings/${l.id}`}
                 image={l.images?.[0]} title={displayTitle(l, lang)}
                 sub={t(lang, l.status === "active" ? "status.selling" : l.status === "reserved" ? "badge.reserved" : "status.soldDone")}
-                right={formatPrice(l.price, l.currency as Currency)} />
+                right={l.price === 0 ? t(lang, "price.free") : formatPrice(l.price, l.currency as Currency)} />
             );
           })}
           {(wishes ?? []).length === 0 && <Empty text={t(lang, "my.noWishlist")} />}
@@ -134,7 +134,7 @@ export default async function MyPage() {
             <Row key={l.id} href={`/listings/${l.id}`}
               image={(l.images as string[])?.[0]} title={l.title}
               sub={t(lang, l.status === "active" ? "status.selling" : l.status === "reserved" ? "badge.reserved" : "status.soldDone")}
-              right={formatPrice(l.price, l.currency as Currency)} />
+              right={l.price === 0 ? t(lang, "price.free") : formatPrice(l.price, l.currency as Currency)} />
           ))}
           {(selling ?? []).length === 0 && <Empty text={t(lang, "profile.noListings")} />}
         </div>

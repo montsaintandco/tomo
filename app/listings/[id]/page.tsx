@@ -7,6 +7,8 @@ import ChatButton from "@/components/ChatButton";
 import CheckoutButton from "@/components/CheckoutButton";
 import ShareButton from "@/components/ShareButton";
 import WishButton from "@/components/WishButton";
+import OfferButton, { type MyOffer } from "@/components/OfferButton";
+import SellerPanel, { type ReceivedOffer } from "@/components/SellerPanel";
 import TrustStrip from "@/components/TrustStrip";
 import { CountryChip, TomoSymbol } from "@/components/Brand";
 import HeartGauge from "@/components/HeartGauge";
@@ -29,31 +31,47 @@ export default async function ListingDetail(props: { params: Promise<{ id: strin
     .eq("id", params.id).maybeSingle();
   if (!l) notFound();
 
-  // 찜 — 개수는 공개 함수, 내 찜 여부는 본인 행 RLS
-  const [wishRes, mineRes] = await Promise.all([
+  const seller = l.profiles;
+  const isMine = !viewer.guest && viewer.id === seller.id;
+
+  // 카운터(당근 "관심·조회·채팅")는 공개 함수, 내 찜/제안은 본인 행 RLS, 셀러는 받은 제안. 조회수는 렌더마다 +1
+  const [wishRes, chatRes, mineRes, myOfferRes, receivedRes] = await Promise.all([
     supabase.rpc("wishlist_count", { lid: l.id }),
+    supabase.rpc("conversation_count", { lid: l.id }),
     viewer.guest ? Promise.resolve({ data: null })
       : supabase.from("wishlists").select("listing_id").eq("user_id", viewer.id).eq("listing_id", l.id).maybeSingle(),
+    viewer.guest || isMine ? Promise.resolve({ data: null })
+      : supabase.from("offers").select("id, price, status").eq("buyer_id", viewer.id).eq("listing_id", l.id).maybeSingle(),
+    isMine
+      ? supabase.from("offers").select("id, price, status, created_at, profiles!offers_buyer_id_fkey(nickname)")
+          .eq("listing_id", l.id).order("created_at", { ascending: false })
+      : Promise.resolve({ data: null }),
+    isMine ? Promise.resolve(null) : supabase.rpc("increment_view", { lid: l.id }),
   ]);
   const wishCount = typeof wishRes.data === "number" ? wishRes.data : 0;
+  const chatCount = typeof chatRes.data === "number" ? chatRes.data : 0;
   const wished = !!mineRes.data;
+  const myOffer = (myOfferRes.data ?? null) as MyOffer;
+  const receivedOffers = (receivedRes.data ?? []) as unknown as ReceivedOffer[];
 
   const needsTranslation = l.source_language !== lang;
   const tr = l.listing_translations.find((x: { language: string }) => x.language === lang);
   const foreign = l.country !== viewer.country;
-  const seller = l.profiles;
   const images = (l.images as string[]) ?? [];
   const canAct = l.status === "active";
-  const isMine = !viewer.guest && viewer.id === seller.id;
+  const free = l.price === 0;
   const travelDeal = foreign && (l.trade_method === "direct" || l.trade_method === "both");
   const center = l.country === "JP" ? "NARITA" : "SEOUL";
   const country = l.country as "KR" | "JP";
   const category = (CATEGORIES as readonly string[]).includes(l.category) ? l.category as (typeof CATEGORIES)[number] : "etc";
   const method = (METHODS as readonly string[]).includes(l.trade_method) ? l.trade_method as (typeof METHODS)[number] : "both";
 
-  const buyerPrice = foreign
+  const buyerPrice = free ? t(lang, "price.free") : foreign
     ? `${t(lang, "price.approx")} ${formatPrice(convertPrice(l.price, l.currency, viewer.rate), viewer.currency)}`
     : formatPrice(l.price, l.currency);
+  const condition = (["new", "like_new", "good", "fair", "poor"] as const).find((c) => c === l.condition) ?? "good";
+  const payer = l.shipping_payer === "buyer" ? "buyer" : "seller";
+  const shipDays = (["1_2", "2_3", "4_7"] as const).find((d) => d === l.ship_days) ?? "2_3";
   // 배송 주석 — 메루카리의 「送料込み」 자리. 해외 배송이면 국제배송비 안내, 아니면 거래 방법
   const methodLabel = method === "both" ? t(lang, "method.bothLong") : t(lang, `method.${method}`);
   const shipNote = foreign && method !== "direct" ? t(lang, "ship.intl") : methodLabel;
@@ -61,7 +79,12 @@ export default async function ListingDetail(props: { params: Promise<{ id: strin
 
   const info: [string, React.ReactNode][] = [
     [t(lang, "info.category"), t(lang, `cat.${category}`)],
+    [t(lang, "info.condition"), t(lang, `cond.${condition}`)],
     [t(lang, "info.method"), methodLabel],
+    ...(method !== "direct" ? [
+      [t(lang, "info.payer"), t(lang, `payer.${payer}`)] as [string, React.ReactNode],
+      [t(lang, "info.days"), t(lang, `days.${shipDays}`)] as [string, React.ReactNode],
+    ] : []),
     [t(lang, "info.origin"), <span key="o" className="inline-flex items-center gap-1.5"><CountryChip country={country} />{l.region}</span>],
     [t(lang, "info.crossBorder"), l.cross_border_enabled ? t(lang, "info.crossBorderYes", { center: t(lang, `center.${center}`) }) : t(lang, "info.crossBorderNo")],
     [t(lang, "info.listed"), <span key="d" className="tnum">{listedAt}</span>],
@@ -73,7 +96,11 @@ export default async function ListingDetail(props: { params: Promise<{ id: strin
         <span className="tnum text-[17px] font-extrabold leading-tight text-ink">{buyerPrice}</span>
         <span className="text-xs text-ink-soft">{shipNote}</span>
       </p>
-      {foreign && <p className="tnum mt-0.5 text-xs font-bold text-ink-soft">{formatPrice(l.price, l.currency)}</p>}
+      {foreign && !free && <p className="tnum mt-0.5 text-xs font-bold text-ink-soft">{formatPrice(l.price, l.currency)}</p>}
+      {/* 당근식 카운터 — 관심 · 조회 · 채팅 */}
+      <p className="tnum mt-1.5 text-[12px] text-ink-soft">
+        {t(lang, "stat.wish", { n: wishCount })} · {t(lang, "stat.view", { n: l.view_count ?? 0 })} · {t(lang, "stat.chat", { n: chatCount })}
+      </p>
     </div>
   );
 
@@ -137,7 +164,7 @@ export default async function ListingDetail(props: { params: Promise<{ id: strin
           />
           {/* 액션 행 — 메루카리 「いいね · 共有」 */}
           <div className="mt-3 flex items-center justify-between gap-2">
-            <span className="flex items-center gap-2">
+            <span className="flex flex-wrap items-center gap-2">
               <WishButton listingId={l.id} initialLiked={wished} initialCount={wishCount} guest={!!viewer.guest} lang={lang} />
               <ShareButton title={tr?.title ?? l.title} lang={lang} />
             </span>
@@ -149,6 +176,15 @@ export default async function ListingDetail(props: { params: Promise<{ id: strin
             )}
           </div>
         </div>
+
+        {/* 가격제안 — 판매자가 허용한 판매중 상품, 구매자만 */}
+        {canAct && !isMine && !free && l.allow_offers && (
+          <OfferButton listingId={l.id} price={l.price} currency={l.currency} initial={myOffer} guest={!!viewer.guest} lang={lang} />
+        )}
+        {isMine && (
+          <SellerPanel listingId={l.id} currency={l.currency} bumpedAt={l.bumped_at ?? l.created_at}
+            active={canAct} offers={receivedOffers} lang={lang} />
+        )}
 
         {/* 크로스보더 안내 웰 */}
         {travelDeal && (
@@ -244,9 +280,11 @@ export default async function ListingDetail(props: { params: Promise<{ id: strin
                   <span className="tnum block truncate text-[17px] font-extrabold leading-tight text-ink">{buyerPrice}</span>
                   <span className="block truncate text-[11px] text-ink-soft">{shipNote}</span>
                 </span>
-                <div className="w-[46%] shrink-0">
-                  <CheckoutButton listingId={l.id} lang={lang} />
-                </div>
+                {!free && (
+                  <div className="w-[46%] shrink-0">
+                    <CheckoutButton listingId={l.id} lang={lang} />
+                  </div>
+                )}
               </div>
             )}
           </div>
