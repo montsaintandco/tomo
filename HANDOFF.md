@@ -45,7 +45,9 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzd
 
 - Supabase: 프로젝트 `tomo` (id `zftztnkczlblnkgaijzc`, 서울 리전, seoulbuy 조직 — 이든에이치 계정)
   - 마이그레이션 13개 적용 완료 (`supabase/migrations/` = DB 실제 상태와 일치. 0011 external_items, 0012 proxy_requests, 0013 storage own-folder delete, 0013 conversation participant delete)
-  - 0014 wishlists 적용 완료(2026-09-03, 대시보드 SQL) — 찜 기능(상세 ♡ 토글·마이페이지 찜 목록·`wishlist_count` 공개 함수). vitest 48
+  - 0014 wishlists 적용 완료(2026-09-03, 대시보드 SQL) — 찜 기능(상세 ♡ 토글·마이페이지 찜 목록·`wishlist_count` 공개 함수)
+  - 0015 trade_pack 적용 완료(2026-09-03, 대시보드 SQL) — 당근·메루카리·SAZO 흡수 3팩. listings에 condition/shipping_payer/ship_days/allow_offers/view_count/bumped_at, price 0 허용(나눔), wishlists.price_at_wish, `offers` 테이블(3단계 가격제안, `respond_offer` 수락 시 가격 인하), `bump_listing`(48h), `increment_view`, `conversation_count`. 피드는 `bumped_at` 정렬. vitest 52
+  - 상세 페이지는 메루카리 골격(제목→가격+배송주석→설명→상품정보 표→판매자→안심거래→하단 가격+구매 바), 공유·찜·가격제안·판매자 도구(끌올/제안 응답), 하단 "판매자의 다른 상품·비슷한 상품". 홈·리스트 카테고리 칩(`?cat=`). /global 검색창에 상품 URL 붙여넣기(`lib/market/url.ts`), 대행 요청란+묶음배송 희망은 note 필드로 전달. Supabase MCP 커넥터는 다른 계정에 붙어 있을 때가 많으니 마이그레이션은 대시보드 SQL이 가장 확실
   - Auth: 이메일 확인 꺼짐(개발용). **Google 로그인 설정 완료(2026-09-03)** — GCP 프로젝트 `My First Project`(id `disco-parsec-261005`, mellowdazzle@gmail.com 계정), OAuth 클라이언트 `TOMO web`(승인된 원본: 배포 URL·localhost:3000, 리디렉션 URI: `https://zftztnkczlblnkgaijzc.supabase.co/auth/v1/callback`). Supabase Site URL = 배포 URL, Redirect URLs = 배포·로컬 `/auth/callback`. 배포본에서 구글 버튼 → 온보딩 도달 확인. 동의 화면은 "외부·테스트" 상태라 테스트 사용자 외 계정으로 로그인하려면 GCP 인증 플랫폼 → 대상에서 "앱 게시" 필요
 - 테스트 계정: `tomo.test.alice@gmail.com`(한국/서울 마포구), `tomo.test.bob@gmail.com`(일본/신주쿠), `tomo.test.center@gmail.com`(센터 admin, is_admin=true) — 비밀번호 모두 `test-pass-1234`
 - 데모 상품 4건 시드됨. 재시드: `npx tsx scripts/seed-demo.ts` (멱등)
