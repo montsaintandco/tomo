@@ -2,11 +2,13 @@ import { createServerSupabase } from "@/lib/supabase/server";
 import { getViewerOrGuest } from "@/lib/listings";
 import ListingRow, { type FeedListing } from "@/components/ListingRow";
 import { Wordmark, TomoSymbol } from "@/components/Brand";
+import HomeHub from "@/components/HomeHub";
 import Link from "next/link";
 
 // 구매 루트: 전체 / 내 동네 직거래 / 상대국 여행 중 직거래 (해외 대행구매는 /global)
 const TABS = [["all", "전체"], ["local", "내 동네"], ["travel", "여행 직거래"]] as const;
 const FEED_LIMIT = 40;
+const FEED_SELECT = "id, title, price, currency, source_language, country, region, status, images, created_at, trade_method, cross_border_enabled, listing_translations(language, title)";
 
 export default async function Home(props: { searchParams: Promise<{ tab?: string; q?: string }> }) {
   const searchParams = await props.searchParams;
@@ -15,10 +17,12 @@ export default async function Home(props: { searchParams: Promise<{ tab?: string
   const tab = searchParams.tab ?? "all";
   const q = searchParams.q?.trim();
   const localNeedsLogin = tab === "local" && viewer.guest;
+  // 파라미터 없는 첫 진입 = 허브. 검색·탭은 기존 리스트 모드
+  const hub = !q && !searchParams.tab;
 
   // 판매중 → 예약중 → 거래완료 순으로 노출 (당근·메루카리 관행: 끝난 거래는 뒤로)
   let query = supabase.from("listings")
-    .select("id, title, price, currency, source_language, country, region, status, images, created_at, trade_method, cross_border_enabled, listing_translations(language, title)")
+    .select(FEED_SELECT)
     .order("status", { ascending: true })   // active < reserved < sold (enum 정의 순)
     .order("created_at", { ascending: false })
     .limit(FEED_LIMIT);
@@ -43,9 +47,20 @@ export default async function Home(props: { searchParams: Promise<{ tab?: string
     query = query.in("id", ids.length > 0 ? ids : ["00000000-0000-0000-0000-000000000000"]);
   }
 
-  const { data: listings, error: feedError } = localNeedsLogin
+  const { data: listings, error: feedError } = localNeedsLogin || hub
     ? { data: [], error: null }
     : await query;
+
+  // 허브용 데이터 — 국내 판매중 최신 12 + 상대국 직거래 가능 최신 8 (병렬)
+  const [hubOwn, hubTravel] = hub
+    ? await Promise.all([
+        supabase.from("listings").select(FEED_SELECT).eq("status", "active")
+          .eq("country", viewer.country).order("created_at", { ascending: false }).limit(12),
+        supabase.from("listings").select(FEED_SELECT).eq("status", "active")
+          .neq("country", viewer.country).in("trade_method", ["direct", "both"])
+          .order("created_at", { ascending: false }).limit(8),
+      ])
+    : [null, null];
 
   return (
     <main className="mx-auto max-w-md">
@@ -56,7 +71,7 @@ export default async function Home(props: { searchParams: Promise<{ tab?: string
           <Link href="/login" className="btn bg-tomo-navy px-4 py-1.5 text-sm text-white">로그인</Link>
         )}
       </div>
-      <header className="sticky top-0 z-20 bg-tomo-ivory/95 px-4 pb-3 pt-2 backdrop-blur">
+      <header className="sticky top-0 z-20 bg-white/95 px-4 pb-3 pt-2 backdrop-blur">
         <form className="mb-3" role="search">
           <label htmlFor="feed-q" className="sr-only">상품 검색</label>
           <div className="relative">
@@ -66,7 +81,7 @@ export default async function Home(props: { searchParams: Promise<{ tab?: string
             </svg>
             {/* 16px 고정 — 14px 이하 입력은 iOS 사파리가 포커스 시 뷰포트를 확대한다 */}
             <input id="feed-q" name="q" defaultValue={q ?? ""} placeholder="어떤 물건을 찾으세요?"
-              className={`w-full rounded-full bg-white py-2.5 pl-10 text-base shadow-[var(--shadow-soft)] placeholder:text-ink-soft ${q ? "pr-11" : "pr-4"}`} />
+              className={`w-full rounded-full bg-tomo-ivory py-2.5 pl-10 text-base placeholder:text-ink-soft ${q ? "pr-11" : "pr-4"}`} />
             {q && (
               <Link href={tab !== "all" ? `/?tab=${tab}` : "/"} aria-label="검색어 지우기"
                 className="press absolute right-1 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full text-ink-soft hover:text-ink">
@@ -80,6 +95,7 @@ export default async function Home(props: { searchParams: Promise<{ tab?: string
           {tab !== "all" && <input type="hidden" name="tab" value={tab} />}
         </form>
 
+        {!hub && (
         <nav className="flex gap-1.5" aria-label="구매 루트">
           {TABS.map(([v, l]) => {
             const params = new URLSearchParams();
@@ -95,27 +111,15 @@ export default async function Home(props: { searchParams: Promise<{ tab?: string
             );
           })}
         </nav>
+        )}
       </header>
 
+      {hub ? (
+        <HomeHub viewer={viewer}
+          listings={(hubOwn?.data ?? []) as unknown as FeedListing[]}
+          travel={(hubTravel?.data ?? []) as unknown as FeedListing[]} />
+      ) : (
       <div className="px-4 pb-6 pt-1">
-        {/* 구매 루트 안내 — 두 나라를 잇는 순간이므로 그라데이션 필드 */}
-        <Link href="/global"
-          className="grad-bridge press mb-4 flex items-center gap-3 rounded-card p-3.5 shadow-[var(--shadow-soft)]">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/85">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#0C447C" strokeWidth={1.8}
-              strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden>
-              <path d="M10.5 13.5 3.5 11l1.8-1.8 5.5.9 4.8-4.8a1.6 1.6 0 0 1 2.3 2.3l-4.8 4.8.9 5.5-1.8 1.8z" />
-            </svg>
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-sm font-bold text-tomo-navy">일본 마켓 구매대행</span>
-            <span className="block text-xs text-tomo-navy/90">메루카리·야후 상품을 대신 사서 보내드려요</span>
-          </span>
-          <svg viewBox="0 0 24 24" fill="none" stroke="#0C447C" strokeWidth={2}
-            strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 shrink-0 opacity-60" aria-hidden>
-            <path d="m9 5 7 7-7 7" />
-          </svg>
-        </Link>
 
         {feedError ? (
           <div role="alert" className="mt-12 flex flex-col items-center px-6 text-center">
@@ -177,6 +181,7 @@ export default async function Home(props: { searchParams: Promise<{ tab?: string
           </div>
         )}
       </div>
+      )}
     </main>
   );
 }
