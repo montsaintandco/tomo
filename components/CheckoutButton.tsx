@@ -36,7 +36,7 @@ export default function CheckoutButton({ listingId, lang = "ko" }: { listingId: 
               strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden>
               <path d="M12 3.5l6.5 2.7v4.6c0 4.3-2.8 7.6-6.5 9.7-3.7-2.1-6.5-5.4-6.5-9.7V6.2z" /><path d="m9.3 11.6 1.9 1.9 3.5-3.5" />
             </svg>
-            {t(lang, "detail.checkout")}
+            {t(lang, "detail.buy")}
           </>
         )}
       </button>

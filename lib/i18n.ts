@@ -121,6 +121,23 @@ const D = {
   "detail.checkout": ["안전결제", "安心決済"],
   "detail.checkoutPending": ["결제 준비 중이에요", "決済準備中です"],
   "detail.checkoutFail": ["결제 시작 실패", "決済を開始できませんでした"],
+  // 메루카리식 상세 골격
+  "detail.buy": ["구매하기", "購入手続きへ"],
+  "detail.chatAria": ["판매자와 채팅", "出品者とチャット"],
+  "detail.share": ["공유", "共有"],
+  "detail.shareCopied": ["링크를 복사했어요", "リンクをコピーしました"],
+  "detail.info": ["상품 정보", "商品の情報"],
+  "info.category": ["카테고리", "カテゴリー"],
+  "info.method": ["거래 방법", "取引方法"],
+  "info.origin": ["발송지", "発送元"],
+  "info.crossBorder": ["해외 배송", "海外配送"],
+  "info.crossBorderYes": ["가능 · {center} 센터 경유", "可能・{center}センター経由"],
+  "info.crossBorderNo": ["국내만", "国内のみ"],
+  "info.listed": ["등록일", "出品日"],
+  "detail.sellerTitle": ["판매자", "出品者"],
+  "detail.safeTitle": ["안심 거래", "あんしん・あんぜんへの取り組み"],
+  "ship.intl": ["국제배송비 별도 · 결제 시 계산", "国際送料別・決済時に計算"],
+  "method.bothLong": ["직거래 · 배송", "直接取引・配送"],
 
   // ── SP2: 해외직구 ──
   "global.title": ["해외직구", "海外購入"],
