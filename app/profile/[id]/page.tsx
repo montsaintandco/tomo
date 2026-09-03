@@ -1,10 +1,14 @@
 import { createServerSupabase } from "@/lib/supabase/server";
 import { getViewerOrGuest } from "@/lib/listings";
 import { formatPrice, type Currency } from "@/lib/currency";
+import { t, type Lang } from "@/lib/i18n";
 import HeartGauge from "@/components/HeartGauge";
-import { CountryChip } from "@/components/Brand";
+import SectionHeader from "@/components/SectionHeader";
+import { CountryChip, TomoSymbol } from "@/components/Brand";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+
+const HEART = "M12 21C7.2 17.2 2.5 13.6 2.5 8.9 2.5 5.6 5 3.5 7.8 3.5c1.7 0 3.3.9 4.2 2.3.9-1.4 2.5-2.3 4.2-2.3 2.8 0 5.3 2.1 5.3 5.4 0 4.7-4.7 8.3-9.5 12.1z";
 
 type Review = {
   rating: number; comment: string; created_at: string;
@@ -17,6 +21,7 @@ export default async function ProfilePage(props: { params: Promise<{ id: string 
   const viewer = await getViewerOrGuest(supabase);
   if (params.id === "me" && (viewer.guest || !viewer.id)) redirect("/login?next=/profile/me");
   const targetId = params.id === "me" ? viewer.id! : params.id;
+  const lang: Lang = viewer.language;
 
   const { data: p } = await supabase.from("profiles")
     .select("id, nickname, country, region, trust_temp").eq("id", targetId).maybeSingle();
@@ -38,62 +43,81 @@ export default async function ProfilePage(props: { params: Promise<{ id: string 
 
   return (
     <main className="mx-auto max-w-md p-4 pb-24 md:max-w-2xl md:px-6 md:pb-16 md:pt-8">
-      <div className="card mb-4 p-4 md:p-6">
-        <div className="mb-3 flex items-center justify-between">
-          <div>
-            <p className="text-lg font-bold">{p.nickname}</p>
-            <p className="flex items-center gap-1.5 text-xs text-ink-soft">
+      <div className="card mb-6 p-4 md:p-6">
+        <div className="mb-4 flex items-center gap-3">
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-tomo-navy/5 text-[17px] font-extrabold text-tomo-navy">
+            {p.nickname.slice(0, 1)}
+          </span>
+          <div className="min-w-0">
+            <h1 className="truncate text-[17px] font-extrabold leading-tight text-ink">{p.nickname}</h1>
+            <p className="mt-0.5 flex items-center gap-1.5 text-xs text-ink-soft">
               <CountryChip country={p.country as "KR" | "JP"} />{p.region}
             </p>
           </div>
         </div>
-        <HeartGauge temp={Number(p.trust_temp)} lang={viewer.language} />
+        <HeartGauge temp={Number(p.trust_temp)} lang={lang} />
       </div>
 
-      <h2 className="mb-2 text-sm font-bold text-ink-soft">판매 상품 · 出品</h2>
-      <div className="mb-5 grid grid-cols-3 gap-2 md:grid-cols-4 md:gap-3">
-        {(listings ?? []).map((l) => (
-          <Link key={l.id} href={`/listings/${l.id}`} className="block">
-            <div className="relative aspect-square overflow-hidden rounded-card bg-tomo-navy/5">
-              {(l.images as string[])[0] && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={(l.images as string[])[0]} alt="" className="h-full w-full object-cover" />
-              )}
-              {l.status !== "active" && (
-                <span className="absolute inset-0 flex items-center justify-center bg-tomo-navy/60 text-xs font-bold text-white">
-                  {l.status === "sold" ? "판매완료" : "예약중"}
-                </span>
-              )}
-            </div>
-            <p className="mt-1 truncate text-[11px] font-bold text-tomo-navy">
-              {formatPrice(l.price, l.currency as Currency)}
-            </p>
-          </Link>
-        ))}
-        {(listings ?? []).length === 0 && (
-          <p className="col-span-3 rounded-card bg-tomo-navy/5 p-3 text-center text-xs text-ink-soft md:col-span-4">
-            등록한 상품이 없어요
-          </p>
+      <section aria-label={t(lang, "profile.listings")}>
+        <SectionHeader lang={lang} title={t(lang, "profile.listings")} />
+        {(listings ?? []).length > 0 ? (
+          <ul className="grid grid-cols-3 gap-2 md:grid-cols-4 md:gap-3">
+            {(listings ?? []).map((l) => {
+              const img = (l.images as string[])[0];
+              const inactive = l.status !== "active";
+              return (
+                <li key={l.id}>
+                  <Link href={`/listings/${l.id}`} className="press block">
+                    <div className="relative aspect-square overflow-hidden rounded-thumb bg-tomo-navy/5">
+                      {img ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={img} alt="" loading="lazy" className="h-full w-full object-cover" />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center"><TomoSymbol className="h-8 w-12 opacity-60" /></div>
+                      )}
+                      {inactive && (
+                        <span className="absolute inset-0 flex items-center justify-center bg-tomo-navy/75 text-[12px] font-bold text-white">
+                          {t(lang, l.status === "sold" ? "badge.sold" : "badge.reserved")}
+                        </span>
+                      )}
+                    </div>
+                    <p className={`tnum mt-1 truncate text-[13px] font-extrabold ${inactive ? "text-ink-faint" : "text-ink"}`}>
+                      {formatPrice(l.price, l.currency as Currency)}
+                    </p>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <p className="rounded-card bg-tomo-navy/5 p-3 text-center text-xs text-ink-soft">{t(lang, "profile.noListings")}</p>
         )}
-      </div>
+      </section>
 
-      <h2 className="mb-2 text-sm font-bold text-ink-soft">받은 후기 · レビュー ({reviews.length})</h2>
-      <div className="flex flex-col gap-2">
-        {reviews.map((r, i) => (
-          <div key={i} className="card p-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-tomo-coral">{"♥".repeat(r.rating)}</span>
-              <span className="text-[11px] text-ink-faint">{r.reviewer?.nickname}</span>
-            </div>
-            {r.comment && <p className="mt-1 text-xs text-ink-soft">{r.comment}</p>}
-          </div>
-        ))}
-        {reviews.length === 0 && (
-          <p className="rounded-card bg-tomo-navy/5 p-3 text-center text-xs text-ink-soft">
-            아직 후기가 없어요
-          </p>
+      <section className="mt-8" aria-label={t(lang, "profile.reviews")}>
+        <SectionHeader lang={lang} title={`${t(lang, "profile.reviews")} (${reviews.length})`} />
+        {reviews.length > 0 ? (
+          <ul className="flex flex-col gap-2">
+            {reviews.map((r, i) => (
+              <li key={i} className="card p-3.5">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="flex gap-0.5" aria-label={t(lang, "review.star", { n: r.rating })}>
+                    {[1, 2, 3, 4, 5].map((n) => (
+                      <svg key={n} viewBox="0 0 24 24" className="h-4 w-4" aria-hidden>
+                        <path d={HEART} fill={n <= r.rating ? "#E2807F" : "none"} stroke={n <= r.rating ? "#E2807F" : "#93A0AB"} strokeWidth={1.8} />
+                      </svg>
+                    ))}
+                  </span>
+                  <span className="truncate text-[11px] text-ink-soft">{r.reviewer?.nickname}</span>
+                </div>
+                {r.comment && <p className="mt-1.5 text-[13px] leading-relaxed text-ink">{r.comment}</p>}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="rounded-card bg-tomo-navy/5 p-3 text-center text-xs text-ink-soft">{t(lang, "profile.noReviews")}</p>
         )}
-      </div>
+      </section>
     </main>
   );
 }

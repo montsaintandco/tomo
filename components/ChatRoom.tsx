@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { createBrowserSupabase } from "@/lib/supabase/client";
+import { t, type Lang } from "@/lib/i18n";
 
 export type ChatMessage = {
   id: string; conversation_id: string; sender_id: string;
@@ -9,27 +10,29 @@ export type ChatMessage = {
 };
 
 function Bubble({ m, mine, viewerLanguage }: {
-  m: ChatMessage; mine: boolean; viewerLanguage: "ko" | "ja";
+  m: ChatMessage; mine: boolean; viewerLanguage: Lang;
 }) {
   const [showOriginal, setShowOriginal] = useState(false);
   const foreign = m.source_language !== viewerLanguage;
-  const text = foreign && m.body_translated && !showOriginal ? m.body_translated : m.body;
-  // 발화 언어가 색을 정한다 — 블루=한국어, 핑크=일본어 (브랜드 심볼 그대로)
-  const tone = m.source_language === "ko"
-    ? "bg-tomo-blue/40 text-tomo-navy"
-    : "bg-tomo-pink/45 text-tomo-rose";
+  const showingTranslation = foreign && !!m.body_translated && !showOriginal;
+  const text = showingTranslation ? m.body_translated! : m.body;
+  // 발화 언어가 색을 정한다 — 블루=한국어, 핑크=일본어 (나라 색의 유일한 채팅 표면)
+  const tone = m.source_language === "ko" ? "bg-tomo-blue/40" : "bg-tomo-pink/45";
+  const accent = m.source_language === "ko" ? "text-tomo-navy" : "text-tomo-rose";
   return (
     <div className={`flex ${mine ? "justify-end" : "justify-start"}`}>
-      <div className={`chat-bubble ${mine ? "chat-bubble-mine" : "chat-bubble-theirs"} max-w-[75%] px-3.5 py-2.5 text-sm ${tone}`}>
-        <p className="whitespace-pre-wrap break-words text-ink">{text}</p>
+      <div className={`chat-bubble ${mine ? "chat-bubble-mine" : "chat-bubble-theirs"} max-w-[78%] px-3.5 py-2.5 text-sm ${tone}`}>
+        <p lang={showingTranslation ? viewerLanguage : m.source_language}
+          className="whitespace-pre-wrap break-words leading-relaxed text-ink">{text}</p>
         {foreign && m.body_translated && (
-          <button className="mt-1 text-[11px] font-bold opacity-80 underline underline-offset-2"
+          <button type="button" aria-pressed={showOriginal}
+            className={`press mt-1 text-[11px] font-bold underline underline-offset-2 ${accent}`}
             onClick={() => setShowOriginal(!showOriginal)}>
-            {showOriginal ? "번역 보기 · 翻訳を見る" : "원문 보기 · 原文を見る"}
+            {showOriginal ? t(viewerLanguage, "detail.viewTranslation") : t(viewerLanguage, "detail.viewOriginal")}
           </button>
         )}
         {foreign && !m.body_translated && (
-          <p className="mt-1 text-[11px] opacity-75">번역 준비 중 · 翻訳準備中</p>
+          <p className={`mt-1 text-[11px] ${accent} opacity-80`}>{t(viewerLanguage, "detail.translationPending")}</p>
         )}
       </div>
     </div>
@@ -37,9 +40,10 @@ function Bubble({ m, mine, viewerLanguage }: {
 }
 
 export default function ChatRoom(props: {
-  conversationId: string; viewerId: string; viewerLanguage: "ko" | "ja";
+  conversationId: string; viewerId: string; viewerLanguage: Lang;
   initialMessages: ChatMessage[];
 }) {
+  const lang = props.viewerLanguage;
   const [messages, setMessages] = useState<ChatMessage[]>(props.initialMessages);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
@@ -82,7 +86,7 @@ export default function ChatRoom(props: {
         prev.some((x) => x.id === json.message.id) ? prev : [...prev, json.message]);
       setDraft("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "전송 실패");
+      setError(err instanceof Error ? err.message : t(lang, "chat.sendFail"));
     } finally {
       setBusy(false);
     }
@@ -92,18 +96,19 @@ export default function ChatRoom(props: {
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex-1 space-y-2 overflow-y-auto p-4">
         {messages.map((m) => (
-          <Bubble key={m.id} m={m} mine={m.sender_id === props.viewerId}
-            viewerLanguage={props.viewerLanguage} />
+          <Bubble key={m.id} m={m} mine={m.sender_id === props.viewerId} viewerLanguage={lang} />
         ))}
         <div ref={bottomRef} />
       </div>
-      {error && <p className="px-4 pb-1 text-xs text-tomo-rose">{error}</p>}
+      {error && <p role="alert" className="px-4 pb-1 text-xs text-tomo-rose">{error}</p>}
       <form onSubmit={send} className="flex items-center gap-2 border-t border-tomo-navy/5 bg-white p-3 pb-20 md:pb-3">
-        <input value={draft} onChange={(e) => setDraft(e.target.value)}
-          placeholder="메시지 입력 · メッセージを入力" maxLength={1000}
-          className="flex-1 rounded-full bg-tomo-ivory px-4 py-2.5 text-sm placeholder:text-ink-soft" />
-        <button disabled={busy || !draft.trim()} aria-label="전송"
-          className="btn flex h-10 w-10 shrink-0 items-center justify-center bg-tomo-coral-deep text-white">
+        <label htmlFor="chat-draft" className="sr-only">{t(lang, "chat.placeholder")}</label>
+        {/* 16px 입력 — iOS 포커스 확대 방지 */}
+        <input id="chat-draft" value={draft} onChange={(e) => setDraft(e.target.value)}
+          placeholder={t(lang, "chat.placeholder")} maxLength={1000} autoComplete="off" enterKeyHint="send"
+          className="flex-1 rounded-full bg-tomo-ivory px-4 py-2.5 text-base placeholder:text-ink-soft" />
+        <button disabled={busy || !draft.trim()} aria-label={t(lang, "chat.send")}
+          className="btn flex h-11 w-11 shrink-0 items-center justify-center bg-tomo-coral-deep text-white">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.1}
             strokeLinecap="round" strokeLinejoin="round" className="h-[18px] w-[18px]" aria-hidden>
             <path d="M12 19V6M6 11.5 12 5.5l6 6" />

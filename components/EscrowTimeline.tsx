@@ -1,52 +1,49 @@
-const LABEL: Record<string, { ko: string; ja: string }> = {
-  pending_payment: { ko: "결제 대기", ja: "支払い待ち" },
-  paid: { ko: "결제 완료", ja: "支払い完了" },
-  shipped: { ko: "발송 완료", ja: "発送完了" },
-  shipped_to_center: { ko: "센터로 발송", ja: "センターへ発送" },
-  center_received: { ko: "센터 입고", ja: "センター入荷" },
-  shipped_international: { ko: "국제 발송", ja: "国際発送" },
-  delivered: { ko: "배송 도착", ja: "配達完了" },
-  completed: { ko: "거래 완료", ja: "取引完了" },
-};
+import { t, type Lang } from "@/lib/i18n";
 
-const DOMESTIC = ["pending_payment", "paid", "shipped", "delivered", "completed"];
+const DOMESTIC = ["pending_payment", "paid", "shipped", "delivered", "completed"] as const;
 const CROSS = ["pending_payment", "paid", "shipped_to_center", "center_received",
-  "shipped_international", "delivered", "completed"];
+  "shipped_international", "delivered", "completed"] as const;
 
-export default function EscrowTimeline({
-  status, isCrossBorder, lang = "ko",
-}: { status: string; isCrossBorder: boolean; lang?: "ko" | "ja" }) {
-  if (status === "cancelled" || status === "disputed") {
-    return (
-      <div className="rounded-card bg-tomo-navy/5 p-3 text-center text-sm font-bold text-ink-soft">
-        {status === "cancelled"
-          ? (lang === "ja" ? "キャンセルされた取引" : "취소된 거래")
-          : (lang === "ja" ? "紛争処理中" : "분쟁 처리 중")}
-      </div>
-    );
-  }
-  const steps = isCrossBorder ? CROSS : DOMESTIC;
-  const cur = steps.indexOf(status);
+// 단계 리스트 — 완료=네이비 체크, 현재=코랄딥(행동이 걸린 자리), 대기=틴트. 파스텔은 나라 색이라 쓰지 않는다
+export function StepList({ steps, current, lang }: { steps: readonly string[]; current: number; lang: Lang }) {
   return (
     <ol className="flex flex-col gap-2">
       {steps.map((s, i) => {
-        const done = i < cur;
-        const active = i === cur;
+        const done = i < current;
+        const active = i === current;
         return (
-          <li key={s} className="flex items-center gap-3">
-            <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-              done ? "bg-tomo-blue text-white"
+          <li key={s} className="flex items-center gap-3" aria-current={active ? "step" : undefined}>
+            <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
+              done ? "bg-tomo-navy text-white"
                 : active ? "bg-tomo-coral-deep text-white"
-                : "bg-tomo-navy/10 text-ink-faint"}`}>
-              {done ? "✓" : i + 1}
+                : "bg-tomo-navy/10 text-ink-soft"}`}>
+              {done ? (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.6}
+                  strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5" aria-hidden>
+                  <path d="m6 12.5 4 4 8-9" />
+                </svg>
+              ) : i + 1}
             </span>
-            <span className={`text-sm ${
-              active ? "font-bold text-tomo-navy" : done ? "text-ink-soft" : "text-ink-faint"}`}>
-              {LABEL[s][lang]}
+            <span className={`text-sm ${active ? "font-bold text-ink" : done ? "text-ink-soft" : "text-ink-faint"}`}>
+              {t(lang, `status.${s}` as "status.paid")}
             </span>
           </li>
         );
       })}
     </ol>
   );
+}
+
+export default function EscrowTimeline({
+  status, isCrossBorder, lang = "ko",
+}: { status: string; isCrossBorder: boolean; lang?: Lang }) {
+  if (status === "cancelled" || status === "disputed") {
+    return (
+      <div className="rounded-card bg-tomo-navy/5 p-3 text-center text-sm font-bold text-ink-soft">
+        {t(lang, status === "cancelled" ? "tx.cancelled" : "tx.disputed")}
+      </div>
+    );
+  }
+  const steps: readonly string[] = isCrossBorder ? CROSS : DOMESTIC;
+  return <StepList steps={steps} current={steps.indexOf(status)} lang={lang} />;
 }

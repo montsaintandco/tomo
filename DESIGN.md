@@ -273,6 +273,12 @@ ListingCard와 같은 뼈대. 오버레이 뱃지: 좌상단 소스 라벨 `bg-t
 ### Global market page (SP2 — /global)
 헤더 `sticky bg-white/95 backdrop-blur`: h1 17px/800(데스크톱 20px) + 12px ink-soft 서브 + 게스트 로그인 네이비 필. 검색은 홈과 같은 아이보리 틴트 16px 필 + 지우기 ×. 소스 탭은 세그먼트 탭 규격(모바일 `py-3` 44px, 데스크톱 `py-2`), 라벨은 `source.*` 사전. "번역해서 찾았어요: …" 12px ink-soft 한 줄. 그리드는 2/3/4/5열 ExternalItemCard, 빈 상태는 TomoSymbol + 사전 카피.
 
+### Operate surfaces (SP3 — 채팅 · 거래 · 대행 · 프로필 · 마이페이지)
+페이지 제목은 17px/800 ink(데스크톱 20px), 섹션은 `SectionHeader`. 리스트 행은 56px `rounded-thumb` 썸 + 13px 제목 + 12px ink-soft 메타 + 13px/800 tnum 금액(`.card` 또는 `border-tomo-navy/5` 헤어라인). **단계 타임라인(`StepList`)**: 24px 원 — 완료 `bg-tomo-navy` 흰 체크, 현재 `bg-tomo-coral-deep` 번호, 대기 `bg-tomo-navy/10` ink-soft; 라벨은 현재 700 ink, 완료 ink-soft, 대기 ink-faint. 금액 카드는 13px 행 + 헤어라인 위 구매자 통화 15px/800 네이비(원가 11px/700 ink-soft). 채팅방: 흰 헤더 + 44px 뒤로가기 + `navy/5` 상품 스트립, 말풍선은 발화 언어 색(블루=한국어 / 핑크=일본어 — 나라 색이 허용되는 두 표면 중 하나), 원문/번역 토글은 말풍선 딥 잉크 11px/700 언더라인, 컴포저는 아이보리 16px 입력 + 44px 코랄딥 전송. 후기: 44px 하트 라디오(코랄 채움 / ink-faint 스트로크), 표시는 16px 하트 5개. 아바타는 `bg-tomo-navy/5` 네이비 이니셜 — 파스텔 아바타 없음.
+
+### Forms (SP4 — 로그인 · 온보딩 · 판매)
+`max-w-sm`(인증) / `max-w-md·2xl`(판매) 흰 페이지. 입력은 흰 필 + `shadow-soft` + **16px 텍스트**(`text-base`, iOS 포커스 확대 방지), 라벨 13px/700 ink, 세그먼트 버튼 44px(`py-3`) 네이비 활성. 온보딩 나라 버튼만 파스텔 필드 + 딥 잉크(블루/네이비, 핑크/로즈) — 나라 색이 허용되는 표면. 인증 화면은 워드마크 `text-3xl` + 태그라인 12px ink-soft로 연다. 오류는 `role="alert"` 14px 로즈, 대기 상태는 ink-soft. 어드민(`/admin/*`)은 같은 토큰에 한국어 고정 — 사용자 표면이 아니다.
+
 ### Brand Primitives (signature, unchanged)
 `Wordmark`(TOM + 코랄 하트 SVG, `.heartbeat` 2.6s — 페이지의 유일한 상시 모션), `TomoSymbol`(블루+핑크 말풍선 겹침에 코랄 하트 — 빈 상태·이미지 없는 썸·피드 엔드캡), `CountryChip`. 모든 하트는 동일 SVG 패스.
 

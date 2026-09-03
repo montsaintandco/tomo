@@ -2,12 +2,13 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserSupabase } from "@/lib/supabase/client";
+import { t, type Lang } from "@/lib/i18n";
 
 type Role = "buyer" | "seller" | "admin" | "other";
 
 export default function TxActions({
-  txId, status, isCrossBorder, role,
-}: { txId: string; status: string; isCrossBorder: boolean; role: Role }) {
+  txId, status, isCrossBorder, role, lang = "ko",
+}: { txId: string; status: string; isCrossBorder: boolean; role: Role; lang?: Lang }) {
   const [busy, setBusy] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState("");
@@ -19,18 +20,18 @@ export default function TxActions({
   let action: { label: string; to: string; tracking?: boolean; outline?: boolean } | null = null;
   if (role === "seller" && status === "paid") {
     action = isCrossBorder
-      ? { label: "센터로 발송", to: "shipped_to_center", tracking: true }
-      : { label: "발송 완료", to: "shipped", tracking: true };
+      ? { label: t(lang, "act.shipToCenter"), to: "shipped_to_center", tracking: true }
+      : { label: t(lang, "act.shipped"), to: "shipped", tracking: true };
   } else if (role === "buyer" && ((!isCrossBorder && status === "shipped") || (isCrossBorder && status === "shipped_international"))) {
-    action = { label: "수령 확인", to: "delivered" };
+    action = { label: t(lang, "act.received"), to: "delivered" };
   } else if (role === "buyer" && status === "delivered") {
-    action = { label: "구매 확정", to: "completed" };
+    action = { label: t(lang, "act.confirm"), to: "completed" };
   } else if (role === "admin" && status === "shipped_to_center") {
-    action = { label: "입고 확인", to: "center_received" };
+    action = { label: t(lang, "act.centerIn"), to: "center_received" };
   } else if (role === "admin" && status === "center_received") {
-    action = { label: "국제 발송", to: "shipped_international", tracking: true };
+    action = { label: t(lang, "act.intlShip"), to: "shipped_international", tracking: true };
   } else if ((role === "buyer" || role === "seller") && status === "pending_payment") {
-    action = { label: "결제 취소", to: "cancelled", outline: true };
+    action = { label: t(lang, "act.cancelPay"), to: "cancelled", outline: true };
   }
   if (!action) return null;
   const a = action;
@@ -50,16 +51,19 @@ export default function TxActions({
   return (
     <div className="flex flex-col gap-2">
       {a.tracking && (
-        <input value={tracking} onChange={(e) => setTracking(e.target.value)}
-          placeholder="운송장 번호 (선택) · 追跡番号（任意）" maxLength={100}
-          className="rounded-full bg-white px-4 py-2.5 text-sm shadow-soft placeholder:text-ink-soft" />
+        <>
+          <label htmlFor="tx-tracking" className="sr-only">{t(lang, "act.tracking")}</label>
+          <input id="tx-tracking" value={tracking} onChange={(e) => setTracking(e.target.value)}
+            placeholder={t(lang, "act.tracking")} maxLength={100} autoComplete="off"
+            className="rounded-full bg-white px-4 py-2.5 text-base shadow-soft placeholder:text-ink-soft" />
+        </>
       )}
       <button onClick={run} disabled={working}
-        className={`btn w-full py-3 ${
+        className={`btn w-full py-3 text-sm ${
           a.outline ? "border-[1.5px] border-tomo-navy bg-white text-tomo-navy" : "bg-tomo-coral-deep text-white"}`}>
-        {working ? "처리 중…" : a.label}
+        {working ? t(lang, "act.working") : a.label}
       </button>
-      {error && <p className="text-xs text-tomo-rose">{error}</p>}
+      {error && <p role="alert" className="text-xs text-tomo-rose">{error}</p>}
     </div>
   );
 }

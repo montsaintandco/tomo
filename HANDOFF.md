@@ -26,7 +26,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzd
 
 **새 세션 시작 프롬프트 (그대로 붙여넣기)**
 
-> TOMO 프로젝트 이어서. HANDOFF.md 읽고 진행. 최근 상태: Next 16, 홈 허브(SP1)·커머스 표면(SP2) v2 완료, DESIGN.md v2. 다음은 SP3(채팅·거래 타임라인·프로필·마이페이지를 v2 토큰과 i18n 사전으로 재디자인) — docs/superpowers/specs/2026-09-03-home-hub-design-system-v2-design.md의 분해 기준. 스펙→계획→구현 순서로, 결정은 지금까지처럼 한국 구매자 우선·브랜드 유지·10px은 11px로.
+> TOMO 프로젝트 이어서. HANDOFF.md 읽고 진행. 최근 상태: Next 16, 앱 전체 v2 재디자인(SP1~SP4) 완료, DESIGN.md v2. 남은 로드맵(Stripe 키 라이브 테스트·커스텀 도메인·폰트 셀프호스팅·채팅 이미지/알림·프로필 편집) 중 하나를 스펙→계획→구현 순서로. 결정은 지금까지처럼 한국 구매자 우선·브랜드 유지·10px은 11px로.
 
 ## 2026-09-03 세션 반영
 
@@ -36,7 +36,8 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzd
 - **DESIGN.md v2**: 브랜드 유지, 흰 페이지, 아이보리는 틴트만, 라운드 12/10, Pretendard 11–17px 램프. Pretendard CDN 경로가 404였던 걸 npm 미러로 교체(런칭 전 셀프호스팅 권장).
 - impeccable: PRODUCT.md schema 1, 크리틱 스냅샷 `.impeccable/critique/`, 라이브 모드 설정됨. 설계 문서 `docs/superpowers/specs/`, 계획 `docs/superpowers/plans/`.
 - **SP2 완료(2026-09-03)**: 상품 상세·/global·외부상품 상세를 v2 토큰 + `t(lang, key)`로 재디자인 (스펙 `docs/superpowers/specs/2026-09-03-sp2-commerce-v2-design.md`, 계획 `docs/superpowers/plans/2026-09-03-sp2-commerce-v2.md`). 가격은 구매자 통화 17px/800, 안내는 navy/5 웰, 브리지는 여행 뱃지만, 써라운드는 워드마크만(HeartGauge 숫자도 Pretendard). 공유 버튼(`ChatButton`·`CheckoutButton`·`ProxyRequestButton`·`OriginalToggle`·`HeartGauge`)은 `lang` 프롭. i18n 키 `detail.*`/`global.*`/`source.*`/`ext.*`/`center.*` 추가(vitest 47).
-- **남은 재디자인**: SP3 채팅·거래·프로필·마이페이지, SP4 로그인/온보딩/판매 폼·어드민 — 각각 스펙→계획 사이클로, v2 토큰 상속. (마이페이지·프로필의 나머지 하드코딩 한국어·`rounded-card` 썸 등은 SP3 범위)
+- **SP3·SP4 완료(2026-09-03)**: 채팅·거래·대행·프로필·마이페이지(SP3), 로그인·온보딩·판매 폼·어드민(SP4)까지 v2 토큰 + 사전 적용 완료 — **앱 전체 재디자인 4개 스프린트 종료**. 스펙 `docs/superpowers/specs/2026-09-03-sp3-sp4-v2-design.md`. 운영자 화면은 한국어 고정(결정). 폼은 `LoginForm`/`OnboardingForm`/`SellForm` 클라이언트 + 서버 래퍼(`lang`, `/sell?hint=` 프리필). 온보딩 기본 나라·언어는 뷰어 언어, 완료 시 `tomo_lang` 쿠키 동기화. 타임라인 `StepList` 공유(네이비 완료/코랄딥 현재).
+- 다음 후보: 커스텀 도메인, Stripe 키 투입 라이브 테스트, 폰트 셀프호스팅, 채팅 이미지 전송/알림, 프로필 편집.
 - 주의: 저장소 안에 `tomo/`(중복 clone)가 생기면 `tsc`가 같이 컴파일해 실패한다. 2026-09-03에 `C:/dev/tomo-clone-duplicate`로 옮겨 둠 — 필요 없으면 삭제.
 - 시드 상품에 `[test]` 접두 2건 남아 있음(의도적 유지). vitest 43개.
 

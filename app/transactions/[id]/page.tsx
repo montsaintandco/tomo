@@ -1,10 +1,12 @@
 import { createServerSupabase } from "@/lib/supabase/server";
 import { getViewer, displayTitle } from "@/lib/listings";
-import { formatPrice, formatWithConversion, type Currency } from "@/lib/currency";
+import { formatPrice, convertPrice, type Currency } from "@/lib/currency";
 import { platformFee, buyerTotal, sellerPayout } from "@/lib/fees";
+import { t, type Lang } from "@/lib/i18n";
 import EscrowTimeline from "@/components/EscrowTimeline";
 import TxActions from "@/components/TxActions";
 import ReviewForm from "@/components/ReviewForm";
+import { TomoSymbol } from "@/components/Brand";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
@@ -21,11 +23,21 @@ type TxDetail = {
   seller: { id: string; nickname: string };
 };
 
+function Row({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="mt-1 flex justify-between gap-3 first:mt-0">
+      <span className="text-ink-soft">{label}</span>
+      <span className="tnum text-ink">{value}</span>
+    </div>
+  );
+}
+
 export default async function TransactionPage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   const supabase = await createServerSupabase();
   const viewer = await getViewer(supabase);
   if (!viewer) redirect("/onboarding");
+  const lang: Lang = viewer.language;
 
   const { data } = await supabase.from("transactions")
     .select(`id, status, is_cross_border, center, buyer_id, seller_id,
@@ -43,6 +55,7 @@ export default async function TransactionPage(props: { params: Promise<{ id: str
   const l = tx.listings;
   const foreign = tx.currency !== viewer.currency;
   const isParty = role === "buyer" || role === "seller";
+  const total = buyerTotal(tx.item_price, tx.is_cross_border ? tx.intl_shipping_fee : 0);
 
   let alreadyReviewed = false;
   if (tx.status === "completed" && isParty) {
@@ -53,71 +66,70 @@ export default async function TransactionPage(props: { params: Promise<{ id: str
 
   return (
     <main className="mx-auto max-w-md p-4 pb-24 md:max-w-2xl md:px-6 md:pb-16 md:pt-8">
-      <h1 className="font-brand mb-4 text-xl text-tomo-navy">거래 진행 · 取引</h1>
+      <h1 className="mb-3 text-[17px] font-extrabold leading-tight text-ink md:text-xl">{t(lang, "tx.title")}</h1>
 
-      <Link href={`/listings/${l.id}`}
-        className="card mb-4 flex items-center gap-3 p-3">
-        <div className="h-14 w-14 shrink-0 overflow-hidden rounded-card bg-tomo-navy/5">
-          {l.images[0] && (
+      <Link href={`/listings/${l.id}`} className="card mb-4 flex items-center gap-3 p-3">
+        <div className="h-14 w-14 shrink-0 overflow-hidden rounded-thumb bg-tomo-navy/5">
+          {l.images[0] ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={l.images[0]} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center"><TomoSymbol className="h-6 w-9 opacity-60" /></div>
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-bold">{displayTitle(l, viewer.language)}</p>
-          <p className="text-xs text-ink-soft">
-            {role === "buyer" ? "판매자" : "구매자"} · {other.nickname}
-            {tx.is_cross_border && tx.center && ` · ${tx.center === "NARITA" ? "나리타" : "서울"} 센터`}
+          <p className="truncate text-sm font-bold text-ink">{displayTitle(l, lang)}</p>
+          <p className="truncate text-xs text-ink-soft">
+            {t(lang, role === "buyer" ? "tx.seller" : "tx.buyer")} · {other.nickname}
+            {tx.is_cross_border && tx.center && ` · ${t(lang, "tx.centerVia", { center: t(lang, `center.${tx.center === "NARITA" ? "NARITA" : "SEOUL"}`) })}`}
           </p>
         </div>
       </Link>
 
       <div className="card mb-4 p-4">
-        <EscrowTimeline status={tx.status} isCrossBorder={tx.is_cross_border} lang={viewer.language} />
+        <EscrowTimeline status={tx.status} isCrossBorder={tx.is_cross_border} lang={lang} />
       </div>
 
-      <div className="card mb-4 p-4 text-sm">
-        <div className="flex justify-between">
-          <span className="text-ink-soft">상품가</span>
-          <span>{formatPrice(tx.item_price, tx.currency)}</span>
-        </div>
-        {tx.is_cross_border && (
-          <div className="mt-1 flex justify-between">
-            <span className="text-ink-soft">국제배송비</span>
-            <span>{formatPrice(tx.intl_shipping_fee, tx.currency)}</span>
-          </div>
-        )}
-        <div className="mt-2 flex justify-between border-t border-tomo-navy/10 pt-2 font-bold">
-          <span>{role === "seller" ? "정산 예정액" : "결제 금액"}</span>
-          <span className="text-tomo-navy">
-            {role === "seller"
-              ? formatPrice(sellerPayout(tx.item_price), tx.currency)
-              : formatWithConversion(
-                  buyerTotal(tx.item_price, tx.is_cross_border ? tx.intl_shipping_fee : 0),
-                  tx.currency, foreign ? viewer.rate : 1, viewer.currency)}
+      {/* 금액 — 결제 금액은 구매자 통화가 큰 숫자 */}
+      <div className="card mb-4 p-4 text-[13px]">
+        <Row label={t(lang, "ext.item")} value={formatPrice(tx.item_price, tx.currency)} />
+        {tx.is_cross_border && <Row label={t(lang, "tx.intlShipping")} value={formatPrice(tx.intl_shipping_fee, tx.currency)} />}
+        <div className="mt-2 flex items-baseline justify-between gap-3 border-t border-tomo-navy/10 pt-2">
+          <span className="font-bold text-ink">{t(lang, role === "seller" ? "tx.payout" : "tx.total")}</span>
+          <span className="text-right">
+            <span className="tnum block text-[15px] font-extrabold text-tomo-navy">
+              {role === "seller"
+                ? formatPrice(sellerPayout(tx.item_price), tx.currency)
+                : foreign
+                  ? `${t(lang, "price.approx")} ${formatPrice(convertPrice(total, tx.currency, viewer.rate), viewer.currency)}`
+                  : formatPrice(total, tx.currency)}
+            </span>
+            {role !== "seller" && foreign && (
+              <span className="tnum block text-[11px] font-bold text-ink-soft">{formatPrice(total, tx.currency)}</span>
+            )}
           </span>
         </div>
         {role === "seller" && (
           <p className="mt-1 text-right text-[11px] text-ink-faint">
-            플랫폼 수수료 10% ({formatPrice(platformFee(tx.item_price), tx.currency)}) 차감
+            {t(lang, "tx.feeNote", { fee: formatPrice(platformFee(tx.item_price), tx.currency) })}
           </p>
         )}
       </div>
 
       {(tx.domestic_tracking || tx.intl_tracking) && (
-        <div className="card mb-4 p-4 text-xs text-ink-soft">
-          {tx.domestic_tracking && <p>국내 운송장: {tx.domestic_tracking}</p>}
-          {tx.intl_tracking && <p className="mt-1">국제 운송장: {tx.intl_tracking}</p>}
-        </div>
+        <dl className="card mb-4 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 p-4 text-xs text-ink-soft">
+          {tx.domestic_tracking && <><dt className="font-bold text-ink">{t(lang, "tx.domesticTracking")}</dt><dd className="tnum">{tx.domestic_tracking}</dd></>}
+          {tx.intl_tracking && <><dt className="font-bold text-ink">{t(lang, "tx.intlTracking")}</dt><dd className="tnum">{tx.intl_tracking}</dd></>}
+        </dl>
       )}
 
-      <TxActions txId={tx.id} status={tx.status} isCrossBorder={tx.is_cross_border} role={role} />
+      <TxActions txId={tx.id} status={tx.status} isCrossBorder={tx.is_cross_border} role={role} lang={lang} />
 
       {tx.status === "completed" && isParty && (
         <div className="mt-4">
           {alreadyReviewed
-            ? <p className="rounded-card bg-tomo-navy/5 p-3 text-center text-sm text-ink-soft">후기를 남겼어요 · 감사합니다</p>
-            : <ReviewForm txId={tx.id} />}
+            ? <p className="rounded-card bg-tomo-navy/5 p-3 text-center text-sm text-ink-soft">{t(lang, "tx.reviewed")}</p>
+            : <ReviewForm txId={tx.id} lang={lang} />}
         </div>
       )}
     </main>

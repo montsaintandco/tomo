@@ -2,9 +2,10 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserSupabase } from "@/lib/supabase/client";
+import { t, type I18nKey, type Lang } from "@/lib/i18n";
 
-export default function ProxyActions({ id, status, isOwner, isAdmin }: {
-  id: string; status: string; isOwner: boolean; isAdmin: boolean;
+export default function ProxyActions({ id, status, isOwner, isAdmin, lang = "ko" }: {
+  id: string; status: string; isOwner: boolean; isAdmin: boolean; lang?: Lang;
 }) {
   const [busy, setBusy] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -15,20 +16,20 @@ export default function ProxyActions({ id, status, isOwner, isAdmin }: {
 
   // 현재 상태·주체에서 가능한 액션 (DB advance_proxy 매트릭스와 정합)
   const actions: { label: string; to: string; tracking?: boolean; outline?: boolean }[] = [];
-  if (isOwner && status === "quoted") actions.push({ label: "견적 승인하기", to: "approved" });
-  if (isOwner && status === "delivered") actions.push({ label: "수령 확인", to: "completed" });
+  if (isOwner && status === "quoted") actions.push({ label: t(lang, "pact.approve"), to: "approved" });
+  if (isOwner && status === "delivered") actions.push({ label: t(lang, "pact.received"), to: "completed" });
   if (isOwner && ["requested", "quoted", "approved"].includes(status))
-    actions.push({ label: "신청 취소", to: "cancelled", outline: true });
+    actions.push({ label: t(lang, "pact.cancel"), to: "cancelled", outline: true });
   if (isAdmin) {
-    const next: Record<string, [string, string, boolean?]> = {
-      approved: ["결제 확인", "paid"],
-      paid: ["현지 구매 시작", "purchasing"],
-      purchasing: ["센터 입고", "center_received"],
-      center_received: ["국제 발송", "shipped_international", true],
-      shipped_international: ["배송 완료", "delivered"],
+    const next: Record<string, [I18nKey, string, boolean?]> = {
+      approved: ["pact.paid", "paid"],
+      paid: ["pact.purchasing", "purchasing"],
+      purchasing: ["pact.centerIn", "center_received"],
+      center_received: ["pact.intlShip", "shipped_international", true],
+      shipped_international: ["pact.delivered", "delivered"],
     };
     const n = next[status];
-    if (n) actions.push({ label: `[운영] ${n[0]}`, to: n[1], tracking: n[2] });
+    if (n) actions.push({ label: `${t(lang, "pact.admin")} ${t(lang, n[0])}`, to: n[1], tracking: n[2] });
   }
   if (actions.length === 0) return null;
 
@@ -47,18 +48,21 @@ export default function ProxyActions({ id, status, isOwner, isAdmin }: {
   return (
     <div className="flex flex-col gap-2">
       {actions.some((a) => a.tracking) && (
-        <input value={tracking} onChange={(e) => setTracking(e.target.value)}
-          placeholder="국제 운송장 번호" maxLength={100}
-          className="rounded-full bg-white px-4 py-2.5 text-sm shadow-soft placeholder:text-ink-soft" />
+        <>
+          <label htmlFor={`proxy-tracking-${id}`} className="sr-only">{t(lang, "pact.tracking")}</label>
+          <input id={`proxy-tracking-${id}`} value={tracking} onChange={(e) => setTracking(e.target.value)}
+            placeholder={t(lang, "pact.tracking")} maxLength={100} autoComplete="off"
+            className="rounded-full bg-white px-4 py-2.5 text-base shadow-soft placeholder:text-ink-soft" />
+        </>
       )}
       {actions.map((a) => (
         <button key={a.to} onClick={() => run(a.to, a.tracking)} disabled={working}
-          className={`btn w-full py-3 ${
+          className={`btn w-full py-3 text-sm ${
             a.outline ? "border-[1.5px] border-tomo-navy/15 bg-white text-ink-soft" : "bg-tomo-coral-deep text-white"}`}>
-          {working ? "처리 중…" : a.label}
+          {working ? t(lang, "act.working") : a.label}
         </button>
       ))}
-      {error && <p className="text-xs text-tomo-rose">{error}</p>}
+      {error && <p role="alert" className="text-xs text-tomo-rose">{error}</p>}
     </div>
   );
 }

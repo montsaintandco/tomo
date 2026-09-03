@@ -1,16 +1,15 @@
 import { createServerSupabase } from "@/lib/supabase/server";
 import { getViewer } from "@/lib/listings";
 import { formatPrice, convertPrice, type Currency } from "@/lib/currency";
-import { SOURCE_LABEL, type MarketSource } from "@/lib/market/types";
+import { type MarketSource } from "@/lib/market/types";
+import { t, type Lang } from "@/lib/i18n";
 import ProxyActions from "@/components/ProxyActions";
+import { TomoSymbol } from "@/components/Brand";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
-const STEPS = [
-  ["requested", "신청 접수"], ["quoted", "견적 도착"], ["approved", "견적 승인"],
-  ["paid", "결제 완료"], ["purchasing", "현지 구매중"], ["center_received", "센터 입고"],
-  ["shipped_international", "국제 발송"], ["delivered", "배송 도착"], ["completed", "거래 완료"],
-] as const;
+const STEPS = ["requested", "quoted", "approved", "paid", "purchasing", "center_received",
+  "shipped_international", "delivered", "completed"] as const;
 
 type Row = {
   id: string; status: string; note: string; center: string | null; intl_tracking: string | null;
@@ -23,11 +22,21 @@ type Row = {
   } | null;
 };
 
+function Line({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="mt-1 flex justify-between gap-3 first:mt-0">
+      <span className="text-ink-soft">{label}</span>
+      <span className="tnum text-ink">{value}</span>
+    </div>
+  );
+}
+
 export default async function ProxyDetailPage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   const supabase = await createServerSupabase();
   const viewer = await getViewer(supabase);
   if (!viewer) redirect(`/login?next=/proxy/${params.id}`);
+  const lang: Lang = viewer.language;
 
   const { data } = await supabase.from("proxy_requests")
     .select(`id, status, note, center, intl_tracking, user_id,
@@ -39,26 +48,30 @@ export default async function ProxyDetailPage(props: { params: Promise<{ id: str
   const r = data as unknown as Row;
   const item = r.external_items;
   const isOwner = r.user_id === viewer.id;
-  const cur = Math.max(0, STEPS.findIndex(([s]) => s === r.status));
+  const cur = Math.max(0, STEPS.findIndex((s) => s === r.status));
   const cancelled = r.status === "cancelled";
+  const totalBuyer = r.quote_total != null && viewer.currency === "KRW"
+    ? `${t(lang, "price.approx")} ${formatPrice(convertPrice(r.quote_total, "JPY", viewer.rate), "KRW")}`
+    : r.quote_total != null ? formatPrice(r.quote_total, "JPY") : "";
 
   return (
     <main className="mx-auto max-w-md p-4 pb-24 md:max-w-2xl md:px-6 md:pb-16 md:pt-8">
-      <h1 className="font-brand mb-4 text-xl text-tomo-navy">구매대행 · 代行</h1>
+      <h1 className="mb-3 text-[17px] font-extrabold leading-tight text-ink md:text-xl">{t(lang, "proxy.title")}</h1>
 
       {item && (
-        <Link href={`/global/${item.source}/${item.source_id}`}
-          className="card mb-4 flex items-center gap-3 p-3">
-          <div className="h-14 w-14 shrink-0 overflow-hidden rounded-card bg-tomo-navy/5">
-            {item.images[0] && (
+        <Link href={`/global/${item.source}/${item.source_id}`} className="card mb-4 flex items-center gap-3 p-3">
+          <div className="h-14 w-14 shrink-0 overflow-hidden rounded-thumb bg-tomo-navy/5">
+            {item.images[0] ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={item.images[0]} alt="" className="h-full w-full object-cover" />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center"><TomoSymbol className="h-6 w-9 opacity-60" /></div>
             )}
           </div>
-          <div className="min-w-0">
-            <p className="line-clamp-2 text-sm font-bold">{item.title_translated || item.title}</p>
+          <div className="min-w-0 flex-1">
+            <p className="line-clamp-2 text-sm text-ink">{item.title_translated || item.title}</p>
             <p className="mt-0.5 text-xs text-ink-soft">
-              {SOURCE_LABEL[item.source as MarketSource]} · {formatPrice(item.price, item.currency)}
+              {t(lang, `source.${item.source as MarketSource}`)} · <span className="tnum font-bold text-ink">{formatPrice(item.price, item.currency)}</span>
             </p>
           </div>
         </Link>
@@ -66,49 +79,55 @@ export default async function ProxyDetailPage(props: { params: Promise<{ id: str
 
       <div className="card mb-4 p-4">
         {cancelled ? (
-          <p className="text-center text-sm font-bold text-ink-soft">취소된 신청이에요</p>
+          <p className="rounded-card bg-tomo-navy/5 p-3 text-center text-sm font-bold text-ink-soft">{t(lang, "proxy.cancelled")}</p>
         ) : (
           <ol className="flex flex-col gap-2">
-            {STEPS.map(([s, label], i) => (
-              <li key={s} className="flex items-center gap-3">
-                <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-                  i < cur ? "bg-tomo-blue/40 text-tomo-navy" : i === cur ? "bg-tomo-coral-deep text-white" : "bg-tomo-navy/10 text-ink-faint"}`}>
-                  {i < cur ? "✓" : i + 1}
-                </span>
-                <span className={`text-sm ${i === cur ? "font-bold text-tomo-navy" : i < cur ? "text-ink-soft" : "text-ink-faint"}`}>
-                  {label}
-                </span>
-              </li>
-            ))}
+            {STEPS.map((s, i) => {
+              const done = i < cur, active = i === cur;
+              return (
+                <li key={s} className="flex items-center gap-3" aria-current={active ? "step" : undefined}>
+                  <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
+                    done ? "bg-tomo-navy text-white" : active ? "bg-tomo-coral-deep text-white" : "bg-tomo-navy/10 text-ink-soft"}`}>
+                    {done ? (
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.6}
+                        strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5" aria-hidden><path d="m6 12.5 4 4 8-9" /></svg>
+                    ) : i + 1}
+                  </span>
+                  <span className={`text-sm ${active ? "font-bold text-ink" : done ? "text-ink-soft" : "text-ink-faint"}`}>
+                    {t(lang, `pstatus.${s}`)}
+                  </span>
+                </li>
+              );
+            })}
           </ol>
         )}
       </div>
 
       {r.quote_total != null ? (
-        <div className="card mb-4 p-4 text-sm">
-          <p className="mb-2 font-bold text-tomo-navy">견적</p>
-          <div className="flex justify-between"><span className="text-ink-soft">상품가</span><span>{formatPrice(r.quote_item_price ?? 0, "JPY")}</span></div>
-          <div className="mt-1 flex justify-between"><span className="text-ink-soft">대행 수수료</span><span>{formatPrice(r.quote_fee ?? 0, "JPY")}</span></div>
-          <div className="mt-1 flex justify-between"><span className="text-ink-soft">국제배송비</span><span>{formatPrice(r.quote_shipping ?? 0, "JPY")}</span></div>
-          <div className="mt-2 flex justify-between border-t border-tomo-navy/10 pt-2 font-bold">
-            <span>합계</span>
-            <span className="text-tomo-navy">
-              {formatPrice(r.quote_total, "JPY")}
-              {viewer.currency === "KRW" && ` (약 ${formatPrice(convertPrice(r.quote_total, "JPY", viewer.rate), "KRW")})`}
+        <div className="card mb-4 p-4 text-[13px]">
+          <p className="mb-2 font-bold text-tomo-navy">{t(lang, "proxy.quote")}</p>
+          <Line label={t(lang, "ext.item")} value={formatPrice(r.quote_item_price ?? 0, "JPY")} />
+          <Line label={t(lang, "ext.fee")} value={formatPrice(r.quote_fee ?? 0, "JPY")} />
+          <Line label={t(lang, "tx.intlShipping")} value={formatPrice(r.quote_shipping ?? 0, "JPY")} />
+          <div className="mt-2 flex items-baseline justify-between gap-3 border-t border-tomo-navy/10 pt-2">
+            <span className="font-bold text-ink">{t(lang, "ext.total")}</span>
+            <span className="text-right">
+              <span className="tnum block text-[15px] font-extrabold text-tomo-navy">{totalBuyer}</span>
+              {viewer.currency === "KRW" && <span className="tnum block text-[11px] font-bold text-ink-soft">{formatPrice(r.quote_total, "JPY")}</span>}
             </span>
           </div>
         </div>
-      ) : (
-        <p className="mb-4 rounded-card bg-tomo-navy/5 p-3 text-center text-xs text-ink-soft">
-          견적을 준비하고 있어요. 확정되면 알려드릴게요.
-        </p>
+      ) : !cancelled && (
+        <p className="mb-4 rounded-card bg-tomo-navy/5 p-3 text-center text-xs text-ink-soft">{t(lang, "proxy.quotePending")}</p>
       )}
 
       {r.intl_tracking && (
-        <p className="card mb-4 p-3 text-xs text-ink-soft">국제 운송장: {r.intl_tracking}</p>
+        <dl className="card mb-4 grid grid-cols-[auto_1fr] gap-x-3 p-3 text-xs text-ink-soft">
+          <dt className="font-bold text-ink">{t(lang, "tx.intlTracking")}</dt><dd className="tnum">{r.intl_tracking}</dd>
+        </dl>
       )}
 
-      <ProxyActions id={r.id} status={r.status} isOwner={isOwner} isAdmin={viewer.isAdmin} />
+      <ProxyActions id={r.id} status={r.status} isOwner={isOwner} isAdmin={viewer.isAdmin} lang={lang} />
     </main>
   );
 }

@@ -1,30 +1,33 @@
 import { createServerSupabase } from "@/lib/supabase/server";
 import { getViewer, displayTitle } from "@/lib/listings";
 import { formatPrice, type Currency } from "@/lib/currency";
+import { t, type I18nKey, type Lang } from "@/lib/i18n";
 import HeartGauge from "@/components/HeartGauge";
-import { CountryChip } from "@/components/Brand";
+import SectionHeader from "@/components/SectionHeader";
+import { CountryChip, TomoSymbol } from "@/components/Brand";
 import LogoutButton from "@/components/LogoutButton";
-import { SOURCE_LABEL, type MarketSource } from "@/lib/market/types";
+import { type MarketSource } from "@/lib/market/types";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-const TX_LABEL: Record<string, string> = {
-  pending_payment: "결제 대기", paid: "결제 완료", shipped: "발송",
-  shipped_to_center: "센터로 발송", center_received: "센터 입고",
-  shipped_international: "국제 발송", delivered: "배송 도착",
-  completed: "완료", cancelled: "취소", disputed: "분쟁",
+const TX_STATUS: Record<string, I18nKey> = {
+  pending_payment: "status.pending_payment", paid: "status.paid", shipped: "status.shipped",
+  shipped_to_center: "status.shipped_to_center", center_received: "status.center_received",
+  shipped_international: "status.shipped_international", delivered: "status.delivered",
+  completed: "status.completed", cancelled: "status.cancelled", disputed: "status.disputed",
 };
-const PROXY_LABEL: Record<string, string> = {
-  requested: "신청 접수", quoted: "견적 도착", approved: "승인",
-  paid: "결제 완료", purchasing: "현지 구매중", center_received: "센터 입고",
-  shipped_international: "국제 발송", delivered: "배송 도착",
-  completed: "완료", cancelled: "취소",
+const PROXY_STATUS: Record<string, I18nKey> = {
+  requested: "pstatus.requested", quoted: "pstatus.quoted", approved: "pstatus.approved",
+  paid: "pstatus.paid", purchasing: "pstatus.purchasing", center_received: "pstatus.center_received",
+  shipped_international: "pstatus.shipped_international", delivered: "pstatus.delivered",
+  completed: "pstatus.completed", cancelled: "pstatus.cancelled",
 };
 
 export default async function MyPage() {
   const supabase = await createServerSupabase();
   const viewer = await getViewer(supabase);
   if (!viewer) redirect("/login?next=/mypage");
+  const lang: Lang = viewer.language;
 
   const [{ data: profile }, { data: buying }, { data: selling }, { data: proxies }] = await Promise.all([
     supabase.from("profiles").select("nickname, country, region, trust_temp").eq("id", viewer.id).single(),
@@ -41,86 +44,84 @@ export default async function MyPage() {
 
   return (
     <main className="mx-auto max-w-md p-4 pb-24 md:max-w-2xl md:px-6 md:pb-16 md:pt-8">
-      <div className="card mb-5 p-4 md:p-6">
-        <div className="mb-3 flex items-center justify-between">
-          <div>
-            <p className="text-lg font-bold">{profile?.nickname}</p>
-            <p className="flex items-center gap-1.5 text-xs text-ink-soft">
-              <CountryChip country={(profile?.country ?? "KR") as "KR" | "JP"} />
-              {profile?.region}
-            </p>
+      <div className="card mb-6 p-4 md:p-6">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-tomo-navy/5 text-[17px] font-extrabold text-tomo-navy">
+              {profile?.nickname?.slice(0, 1)}
+            </span>
+            <div className="min-w-0">
+              <h1 className="truncate text-[17px] font-extrabold leading-tight text-ink">{profile?.nickname}</h1>
+              <p className="mt-0.5 flex items-center gap-1.5 text-xs text-ink-soft">
+                <CountryChip country={(profile?.country ?? "KR") as "KR" | "JP"} />
+                {profile?.region}
+              </p>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             {viewer.isAdmin && (
-              <Link href="/admin" className="btn bg-tomo-navy px-3 py-1.5 text-xs text-white">
-                운영자
-              </Link>
+              <Link href="/admin" className="btn bg-tomo-navy px-3 py-2 text-xs text-white">{t(lang, "my.admin")}</Link>
             )}
-            <LogoutButton />
+            <LogoutButton lang={lang} />
           </div>
         </div>
-        <HeartGauge temp={Number(profile?.trust_temp ?? 36.5)} lang={viewer.language} />
+        <HeartGauge temp={Number(profile?.trust_temp ?? 36.5)} lang={lang} />
       </div>
 
-      <Section title="구매대행" href="/global" hrefLabel="더 둘러보기">
-        {(proxies ?? []).map((p) => {
-          const it = p.external_items as unknown as { source: string; title: string; title_translated: string | null; images: string[] } | null;
-          return (
-            <Row key={p.id} href={`/proxy/${p.id}`}
-              image={it?.images?.[0]}
-              title={it?.title_translated || it?.title || "상품"}
-              sub={`${it ? SOURCE_LABEL[it.source as MarketSource] : ""} · ${PROXY_LABEL[p.status] ?? p.status}`}
-              right={p.quote_total ? formatPrice(p.quote_total, "JPY") : "견적 대기"} />
-          );
-        })}
-        {(proxies ?? []).length === 0 && <Empty text="대행 신청 내역이 없어요" />}
-      </Section>
+      <section aria-label={t(lang, "my.proxy")}>
+        <SectionHeader lang={lang} title={t(lang, "my.proxy")} href="/global" linkLabel={t(lang, "my.proxyMore")} />
+        <div className="flex flex-col gap-2">
+          {(proxies ?? []).map((p) => {
+            const it = p.external_items as unknown as { source: string; title: string; title_translated: string | null; images: string[] } | null;
+            return (
+              <Row key={p.id} href={`/proxy/${p.id}`}
+                image={it?.images?.[0]}
+                title={it?.title_translated || it?.title || t(lang, "my.item")}
+                sub={`${it ? t(lang, `source.${it.source as MarketSource}`) : ""} · ${PROXY_STATUS[p.status] ? t(lang, PROXY_STATUS[p.status]) : p.status}`}
+                right={p.quote_total ? formatPrice(p.quote_total, "JPY") : t(lang, "proxy.quoteWait")} />
+            );
+          })}
+          {(proxies ?? []).length === 0 && <Empty text={t(lang, "my.noProxy")} />}
+        </div>
+      </section>
 
-      <Section title="구매 내역">
-        {(buying ?? []).map((t) => {
-          const l = t.listings as unknown as {
-            title: string; source_language: string; images: string[];
-            listing_translations: { language: string; title: string }[];
-          } | null;
-          return (
-            <Row key={t.id} href={`/transactions/${t.id}`}
-              image={l?.images?.[0]} title={l ? displayTitle(l, viewer.language) : "상품"}
-              sub={TX_LABEL[t.status] ?? t.status}
-              right={formatPrice(t.item_price, t.currency as Currency)} />
-          );
-        })}
-        {(buying ?? []).length === 0 && <Empty text="구매 내역이 없어요" />}
-      </Section>
+      <section className="mt-8" aria-label={t(lang, "my.buying")}>
+        <SectionHeader lang={lang} title={t(lang, "my.buying")} />
+        <div className="flex flex-col gap-2">
+          {(buying ?? []).map((tx) => {
+            const l = tx.listings as unknown as {
+              title: string; source_language: string; images: string[];
+              listing_translations: { language: string; title: string }[];
+            } | null;
+            return (
+              <Row key={tx.id} href={`/transactions/${tx.id}`}
+                image={l?.images?.[0]} title={l ? displayTitle(l, lang) : t(lang, "my.item")}
+                sub={TX_STATUS[tx.status] ? t(lang, TX_STATUS[tx.status]) : tx.status}
+                right={formatPrice(tx.item_price, tx.currency as Currency)} />
+            );
+          })}
+          {(buying ?? []).length === 0 && <Empty text={t(lang, "my.noBuying")} />}
+        </div>
+      </section>
 
-      <Section title="판매 상품" href="/sell" hrefLabel="상품 등록">
-        {(selling ?? []).map((l) => (
-          <Row key={l.id} href={`/listings/${l.id}`}
-            image={(l.images as string[])?.[0]} title={l.title}
-            sub={l.status === "active" ? "판매중" : l.status === "reserved" ? "예약중" : "판매완료"}
-            right={formatPrice(l.price, l.currency as Currency)} />
-        ))}
-        {(selling ?? []).length === 0 && <Empty text="등록한 상품이 없어요" />}
-      </Section>
+      <section className="mt-8" aria-label={t(lang, "my.selling")}>
+        <SectionHeader lang={lang} title={t(lang, "my.selling")} href="/sell" linkLabel={t(lang, "my.sellNew")} />
+        <div className="flex flex-col gap-2">
+          {(selling ?? []).map((l) => (
+            <Row key={l.id} href={`/listings/${l.id}`}
+              image={(l.images as string[])?.[0]} title={l.title}
+              sub={t(lang, l.status === "active" ? "status.selling" : l.status === "reserved" ? "badge.reserved" : "status.soldDone")}
+              right={formatPrice(l.price, l.currency as Currency)} />
+          ))}
+          {(selling ?? []).length === 0 && <Empty text={t(lang, "profile.noListings")} />}
+        </div>
+      </section>
 
       <Link href={`/profile/${viewer.id}`}
-        className="card block p-3 text-center text-sm font-bold text-tomo-navy">
-        내 프로필·후기 보기
+        className="card mt-8 block p-3.5 text-center text-sm font-bold text-tomo-navy">
+        {t(lang, "my.profileLink")} →
       </Link>
     </main>
-  );
-}
-
-function Section({ title, href, hrefLabel, children }: {
-  title: string; href?: string; hrefLabel?: string; children: React.ReactNode;
-}) {
-  return (
-    <section className="mb-5">
-      <div className="mb-2 flex items-baseline justify-between">
-        <h2 className="text-sm font-bold text-ink-soft">{title}</h2>
-        {href && <Link href={href} className="text-xs text-tomo-navy">{hrefLabel} →</Link>}
-      </div>
-      <div className="flex flex-col gap-2">{children}</div>
-    </section>
   );
 }
 
@@ -129,17 +130,19 @@ function Row({ href, image, title, sub, right }: {
 }) {
   return (
     <Link href={href} className="card flex items-center gap-3 p-3">
-      <div className="h-11 w-11 shrink-0 overflow-hidden rounded-card bg-tomo-navy/5">
-        {image && (
+      <div className="h-11 w-11 shrink-0 overflow-hidden rounded-thumb bg-tomo-navy/5">
+        {image ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={image} alt="" className="h-full w-full object-cover" />
+          <img src={image} alt="" loading="lazy" className="h-full w-full object-cover" />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center"><TomoSymbol className="h-5 w-8 opacity-60" /></div>
         )}
       </div>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm">{title}</p>
-        <p className="text-xs text-ink-faint">{sub}</p>
+        <p className="truncate text-[13px] text-ink">{title}</p>
+        <p className="truncate text-[12px] text-ink-soft">{sub}</p>
       </div>
-      <span className="shrink-0 text-sm font-bold text-tomo-navy">{right}</span>
+      <span className="tnum shrink-0 text-[13px] font-extrabold text-ink">{right}</span>
     </Link>
   );
 }
