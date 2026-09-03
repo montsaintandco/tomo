@@ -82,7 +82,7 @@ export default async function ProfilePage(props: { params: Promise<{ id: string 
           <div key={i} className="rounded-card border bg-white p-3">
             <div className="flex items-center justify-between">
               <span className="text-sm text-tomo-coral">{"♥".repeat(r.rating)}</span>
-              <span className="text-[10px] text-ink-faint">{r.reviewer?.nickname}</span>
+              <span className="text-[11px] text-ink-faint">{r.reviewer?.nickname}</span>
             </div>
             {r.comment && <p className="mt-1 text-xs text-ink-soft">{r.comment}</p>}
           </div>

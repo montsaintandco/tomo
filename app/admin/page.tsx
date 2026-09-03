@@ -31,7 +31,7 @@ export default async function AdminHome() {
           <Link key={i} href={c.href} className="rounded-card border bg-white p-4">
             <p className="text-xs text-ink-soft">{c.label}</p>
             <p className="my-1 text-2xl font-bold text-tomo-navy">{c.value}</p>
-            <p className="text-[10px] text-ink-faint">{c.sub}</p>
+            <p className="text-[11px] text-ink-faint">{c.sub}</p>
           </Link>
         ))}
       </div>

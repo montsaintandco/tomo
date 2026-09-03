@@ -17,7 +17,7 @@ export default function HeartGauge({ temp }: { temp: number }) {
         <div className="absolute inset-y-0 left-0 rounded-full"
           style={{ width: `${pct}%`, background: "linear-gradient(90deg, #F2AFAF, #C14E4C)" }} />
       </div>
-      <div className="tnum mt-1 flex justify-between text-[10px] text-ink-faint">
+      <div className="tnum mt-1 flex justify-between text-[11px] text-ink-faint">
         <span>0°</span>
         <span>기본 36.5°</span>
         <span>50°</span>

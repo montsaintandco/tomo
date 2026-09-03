@@ -25,7 +25,7 @@ const config: Config = {
         "ink-soft": "#5C6B77",
         "ink-faint": "#93A0AB",
       },
-      borderRadius: { card: "20px" },
+      borderRadius: { card: "12px", thumb: "10px" },
     },
   },
   plugins: [],

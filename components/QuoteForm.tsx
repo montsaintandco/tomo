@@ -52,7 +52,7 @@ export default function QuoteForm({ id, defaultItemPrice, quoted, total }: {
 function Field({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   return (
     <label className="block">
-      <span className="mb-0.5 block text-[10px] text-ink-soft">{label} (¥)</span>
+      <span className="mb-0.5 block text-[11px] text-ink-soft">{label} (¥)</span>
       <input type="number" min={0} value={value} onChange={(e) => onChange(e.target.value)}
         className="w-full rounded border px-2 py-1 text-sm" />
     </label>

@@ -98,7 +98,7 @@ export default async function TransactionPage(props: { params: Promise<{ id: str
           </span>
         </div>
         {role === "seller" && (
-          <p className="mt-1 text-right text-[10px] text-ink-faint">
+          <p className="mt-1 text-right text-[11px] text-ink-faint">
             플랫폼 수수료 10% ({formatPrice(platformFee(tx.item_price), tx.currency)}) 차감
           </p>
         )}

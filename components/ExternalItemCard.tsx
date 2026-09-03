@@ -17,7 +17,7 @@ export default function ExternalItemCard({ item, rate, viewerCurrency }: {
   return (
     <Link href={`/global/${item.source}/${item.sourceId}`}
       className="press group flex flex-col">
-      <div className="relative aspect-square overflow-hidden rounded-2xl bg-tomo-navy/5">
+      <div className="relative aspect-square overflow-hidden rounded-thumb bg-tomo-navy/5">
         {item.thumb ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={item.thumb} alt="" loading="lazy"
@@ -25,11 +25,11 @@ export default function ExternalItemCard({ item, rate, viewerCurrency }: {
         ) : (
           <div className="skeleton h-full w-full" />
         )}
-        <span className="absolute left-1.5 top-1.5 rounded-full bg-tomo-navy/60 px-2 py-0.5 text-[10px] font-bold text-white backdrop-blur-sm">
+        <span className="absolute left-1.5 top-1.5 rounded-full bg-tomo-navy/60 px-2 py-0.5 text-[11px] font-bold text-white backdrop-blur-sm">
           {SOURCE_LABEL[item.source]}
         </span>
         {item.auction && (
-          <span className="absolute right-1.5 top-1.5 rounded-full bg-tomo-coral-deep px-2 py-0.5 text-[10px] font-bold text-white">
+          <span className="absolute right-1.5 top-1.5 rounded-full bg-tomo-coral-deep px-2 py-0.5 text-[11px] font-bold text-white">
             입찰중
           </span>
         )}
@@ -40,11 +40,11 @@ export default function ExternalItemCard({ item, rate, viewerCurrency }: {
         )}
       </div>
       <div className="mt-1.5 flex flex-col gap-0.5">
-        <p className="line-clamp-2 text-xs leading-snug text-ink-soft">{item.title}</p>
+        <p className="line-clamp-2 text-[13px] leading-snug text-ink">{item.title}</p>
         <p className="tnum text-[15px] font-extrabold text-ink">
           {formatWithConversion(item.price, item.currency, effectiveRate, viewerCurrency)}
         </p>
-        {item.auction && <p className="text-[10px] text-ink-faint">현재가 · 낙찰가 변동</p>}
+        {item.auction && <p className="text-[11px] text-ink-faint">현재가 · 낙찰가 변동</p>}
       </div>
     </Link>
   );

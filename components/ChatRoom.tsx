@@ -23,13 +23,13 @@ function Bubble({ m, mine, viewerLanguage }: {
       <div className={`chat-bubble ${mine ? "chat-bubble-mine" : "chat-bubble-theirs"} max-w-[75%] px-3.5 py-2.5 text-sm ${tone}`}>
         <p className="whitespace-pre-wrap break-words text-ink">{text}</p>
         {foreign && m.body_translated && (
-          <button className="mt-1 text-[10px] font-bold opacity-80 underline underline-offset-2"
+          <button className="mt-1 text-[11px] font-bold opacity-80 underline underline-offset-2"
             onClick={() => setShowOriginal(!showOriginal)}>
             {showOriginal ? "번역 보기 · 翻訳を見る" : "원문 보기 · 原文を見る"}
           </button>
         )}
         {foreign && !m.body_translated && (
-          <p className="mt-1 text-[10px] opacity-75">번역 준비 중 · 翻訳準備中</p>
+          <p className="mt-1 text-[11px] opacity-75">번역 준비 중 · 翻訳準備中</p>
         )}
       </div>
     </div>

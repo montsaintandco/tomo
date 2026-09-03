@@ -53,7 +53,7 @@ export default async function AdminCenterPage() {
                       {r.domestic_tracking && ` · ${r.domestic_tracking}`}
                     </p>
                   </div>
-                  <span className="ml-2 shrink-0 rounded-full bg-tomo-blue/40 px-2 py-1 text-[10px] font-bold text-tomo-navy">
+                  <span className="ml-2 shrink-0 rounded-full bg-tomo-blue/40 px-2 py-1 text-[11px] font-bold text-tomo-navy">
                     {STATUS_LABEL[r.status]}
                   </span>
                 </Link>

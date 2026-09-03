@@ -12,12 +12,12 @@ export const metadata: Metadata = {
   },
 };
 
-export const viewport: Viewport = { themeColor: "#FBF9F4" };
+export const viewport: Viewport = { themeColor: "#FFFFFF" };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ko">
-      <body className="bg-tomo-ivory pb-24 text-ink">
+      <body className="bg-white pb-24 text-ink">
         {/* impeccable direction contract · seed: brand-pinned redesign
         THESIS: 두 말풍선이 만나면 하트가 된다. 나라·언어 신호는 전부 말풍선 칩(KR=블루, JP=핑크)이고,
         두 나라가 만나는 순간(여행직거래·대행·번역채팅)에만 블루→핑크 그라데이션과 하트가 등장한다.

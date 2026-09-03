@@ -37,7 +37,7 @@ export default function ListingRow({ listing, viewer }: {
     <li className="border-b border-tomo-navy/5 last:border-0">
       <Link href={`/listings/${listing.id}`}
         className="press flex gap-3 py-3.5">
-        <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-2xl bg-tomo-navy/5">
+        <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-thumb bg-tomo-navy/5">
           {listing.images[0] ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={listing.images[0]} alt="" className="h-full w-full object-cover" loading="lazy" />
@@ -73,7 +73,7 @@ export default function ListingRow({ listing, viewer }: {
           {!sold && (
             <span className="mt-0.5 flex flex-wrap items-center gap-1">
               {travelDeal && (
-                <span className="grad-bridge-soft inline-flex w-fit items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold text-tomo-navy">
+                <span className="grad-bridge-soft inline-flex w-fit items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold text-tomo-navy">
                   <svg viewBox="0 0 24 24" className="h-2.5 w-2.5" aria-hidden>
                     <path d="M12 21C7.2 17.2 2.5 13.6 2.5 8.9 2.5 5.6 5 3.5 7.8 3.5c1.7 0 3.3.9 4.2 2.3.9-1.4 2.5-2.3 4.2-2.3 2.8 0 5.3 2.1 5.3 5.4 0 4.7-4.7 8.3-9.5 12.1z" fill="#C14E4C" />
                   </svg>
@@ -81,7 +81,7 @@ export default function ListingRow({ listing, viewer }: {
                 </span>
               )}
               {/* 모든 판매중 상품이 에스크로 대상 — 원칙 1: 안전장치를 숨기지 말 것 (외국 행에만 두면 국내는 미보호로 읽힌다) */}
-              <span className="inline-flex w-fit items-center gap-1 rounded-full bg-tomo-navy/5 px-2 py-0.5 text-[10px] font-bold text-tomo-navy">
+              <span className="inline-flex w-fit items-center gap-1 rounded-full bg-tomo-navy/5 px-2 py-0.5 text-[11px] font-bold text-tomo-navy">
                 <svg viewBox="0 0 24 24" fill="none" stroke="#0C447C" strokeWidth={2.2}
                   strokeLinecap="round" strokeLinejoin="round" className="h-2.5 w-2.5" aria-hidden>
                   <path d="M12 3.5l6.5 2.7v4.6c0 4.3-2.8 7.6-6.5 9.7-3.7-2.1-6.5-5.4-6.5-9.7V6.2z" />

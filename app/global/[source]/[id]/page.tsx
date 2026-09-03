@@ -101,7 +101,7 @@ export default async function ExternalItemPage(props: {
                 {viewer.currency === "KRW" && ` (약 ${formatPrice(convertPrice(est.total, "JPY", viewer.rate), "KRW")})`}
               </span>
             </div>
-            <p className="mt-2 text-[10px] text-ink-faint">
+            <p className="mt-2 text-[11px] text-ink-faint">
               무게·부피에 따라 국제배송비가 달라져요. 신청 후 정확한 견적을 보내드립니다.
             </p>
           </div>

@@ -69,13 +69,13 @@ export default async function ChatListPage() {
                   <div className="flex items-baseline justify-between gap-2">
                     <p className="truncate text-sm font-bold text-ink">{other.nickname}</p>
                     {last && (
-                      <p className="tnum shrink-0 text-[10px] text-ink-faint">
+                      <p className="tnum shrink-0 text-[11px] text-ink-faint">
                         {new Date(last.created_at).toLocaleDateString()}
                       </p>
                     )}
                   </div>
                   <p className="truncate text-xs text-ink-soft">{preview(last, viewer.language)}</p>
-                  <p className="truncate text-[10px] text-ink-faint">{displayTitle(l, viewer.language)}</p>
+                  <p className="truncate text-[11px] text-ink-faint">{displayTitle(l, viewer.language)}</p>
                 </div>
               </Link>
             </li>

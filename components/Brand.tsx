@@ -42,7 +42,7 @@ export function TomoSymbol({ className = "h-16 w-24" }: { className?: string }) 
 export function CountryChip({ country, className = "" }: { country: "KR" | "JP"; className?: string }) {
   return (
     <span
-      className={`${country === "KR" ? "bubble-kr" : "bubble-jp"} inline-block px-1.5 py-0.5 text-[10px] font-bold leading-none ${className}`}
+      className={`${country === "KR" ? "bubble-kr" : "bubble-jp"} inline-block px-1.5 py-0.5 text-[11px] font-bold leading-none ${className}`}
     >
       {country}
     </span>
