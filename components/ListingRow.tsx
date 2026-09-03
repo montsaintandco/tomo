@@ -34,13 +34,15 @@ export default function ListingRow({ listing, viewer }: {
   const travelDeal = foreign && (listing.trade_method === "direct" || listing.trade_method === "both");
 
   return (
-    <li className="border-b border-tomo-navy/5 last:border-0">
+    <li className="border-b border-tomo-navy/5 last:border-0 md:border-0">
+      {/* 모바일=당근식 가로 행, 데스크톱=이미지 우선 세로 카드 (같은 마크업, 반응형 전환) */}
       <Link href={`/listings/${listing.id}`}
-        className="press flex gap-3 py-3.5">
-        <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-thumb bg-tomo-navy/5">
+        className="press group flex gap-3 py-3.5 md:flex-col md:gap-2.5 md:py-0">
+        <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-thumb bg-tomo-navy/5 md:aspect-square md:h-auto md:w-full">
           {listing.images[0] ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={listing.images[0]} alt="" className="h-full w-full object-cover" loading="lazy" />
+            <img src={listing.images[0]} alt="" loading="lazy"
+              className="h-full w-full object-cover transition-transform duration-300 md:group-hover:scale-[1.03]" />
           ) : (
             <div className="flex h-full w-full items-center justify-center">
               <TomoSymbol className="h-10 w-[3.75rem] opacity-60" />
@@ -53,7 +55,7 @@ export default function ListingRow({ listing, viewer }: {
           )}
         </div>
 
-        <div className="flex min-w-0 flex-1 flex-col justify-center gap-1">
+        <div className="flex min-w-0 flex-1 flex-col justify-center gap-1 md:justify-start">
           <p className={`line-clamp-2 text-[15px] leading-snug ${sold ? "text-ink-faint" : "text-ink"}`}>
             {displayTitle(listing, viewer.language)}
           </p>

@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 
@@ -9,9 +9,11 @@ export default function TxActions({
   txId, status, isCrossBorder, role,
 }: { txId: string; status: string; isCrossBorder: boolean; role: Role }) {
   const [busy, setBusy] = useState(false);
+  const [isPending, startTransition] = useTransition();
   const [error, setError] = useState("");
   const [tracking, setTracking] = useState("");
   const router = useRouter();
+  const working = busy || isPending;
 
   // 현재 상태·역할에서 허용되는 단일 액션 (DB advance_transaction과 정합)
   let action: { label: string; to: string; tracking?: boolean; outline?: boolean } | null = null;
@@ -39,8 +41,10 @@ export default function TxActions({
     const { error } = await supabase.rpc("advance_transaction", {
       p_tx_id: txId, p_to: a.to, p_tracking: a.tracking ? (tracking.trim() || null) : null,
     });
-    if (error) { setError(error.message); setBusy(false); return; }
-    router.refresh();
+    setBusy(false);
+    if (error) { setError(error.message); return; }
+    // refresh 완료까지 isPending으로 잠금 — 새 상태의 다음 액션이 바로 눌리게
+    startTransition(() => router.refresh());
   }
 
   return (
@@ -48,12 +52,12 @@ export default function TxActions({
       {a.tracking && (
         <input value={tracking} onChange={(e) => setTracking(e.target.value)}
           placeholder="운송장 번호 (선택) · 追跡番号（任意）" maxLength={100}
-          className="rounded-full border px-4 py-2 text-sm" />
+          className="rounded-full bg-white px-4 py-2.5 text-sm shadow-soft placeholder:text-ink-soft" />
       )}
-      <button onClick={run} disabled={busy}
-        className={`w-full rounded-full py-3 font-bold disabled:opacity-50 ${
-          a.outline ? "border border-tomo-navy text-tomo-navy" : "bg-tomo-coral-deep text-white"}`}>
-        {busy ? "처리 중…" : a.label}
+      <button onClick={run} disabled={working}
+        className={`btn w-full py-3 ${
+          a.outline ? "border-[1.5px] border-tomo-navy bg-white text-tomo-navy" : "bg-tomo-coral-deep text-white"}`}>
+        {working ? "처리 중…" : a.label}
       </button>
       {error && <p className="text-xs text-tomo-rose">{error}</p>}
     </div>

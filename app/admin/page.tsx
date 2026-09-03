@@ -24,7 +24,7 @@ export default async function AdminHome() {
   ];
 
   return (
-    <main className="mx-auto max-w-md p-4 pb-24">
+    <main className="mx-auto max-w-md p-4 pb-24 md:max-w-3xl md:px-6 md:pb-16 md:pt-8">
       <h1 className="mb-4 text-xl font-bold text-tomo-navy">운영 · 管理</h1>
       <div className="mb-5 grid grid-cols-2 gap-3">
         {cards.map((c, i) => (

@@ -6,7 +6,6 @@ import TrustStrip from "@/components/TrustStrip";
 import SectionHeader from "@/components/SectionHeader";
 import MarketCarousel, { CarouselSkeleton } from "@/components/MarketCarousel";
 import ListingCard from "@/components/ListingCard";
-import SiteFooter from "@/components/SiteFooter";
 import { TomoSymbol } from "@/components/Brand";
 
 // 한 요청 안에서 두 Suspense 블록이 같은 프로미스를 공유한다 (테마 캐시는 별도로 1h)
@@ -67,7 +66,7 @@ export default function HomeHub({ viewer, listings, travel }: {
 }) {
   const market = MARKET_NAME[viewer.country];
   return (
-    <div className="px-4 pb-6 pt-1">
+    <div className="px-4 pb-6 pt-1 md:px-0 md:pb-16">
       <TrustStrip />
 
       <Suspense fallback={
@@ -82,7 +81,7 @@ export default function HomeHub({ viewer, listings, travel }: {
       <section className="mt-8" aria-label="토모에서 바로 거래">
         <SectionHeader title="토모에서 바로 거래" sub="에스크로로 안전하게, 센터 검수 후 배송" href="/?tab=local" />
         {listings.length > 0 ? (
-          <ul className="grid grid-cols-2 gap-x-3 gap-y-5">
+          <ul className="grid grid-cols-2 gap-x-3 gap-y-5 md:grid-cols-4 md:gap-x-5 md:gap-y-7">
             {listings.map((l) => <li key={l.id}><ListingCard listing={l} viewer={viewer} /></li>)}
           </ul>
         ) : (
@@ -106,7 +105,6 @@ export default function HomeHub({ viewer, listings, travel }: {
         <TrendingRest viewer={viewer} />
       </Suspense>
 
-      <SiteFooter />
     </div>
   );
 }

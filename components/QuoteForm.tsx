@@ -41,7 +41,7 @@ export default function QuoteForm({ id, defaultItemPrice, quoted, total }: {
       </div>
       <div className="mb-2 text-right text-xs font-bold text-tomo-navy">합계 ¥{sum.toLocaleString()}</div>
       <button onClick={send} disabled={busy}
-        className="w-full rounded-full bg-tomo-navy py-2 text-sm font-bold text-white disabled:opacity-50">
+        className="btn w-full bg-tomo-navy py-2 text-sm text-white">
         {busy ? "발송 중…" : quoted ? "견적 재발송" : "견적 발송"}
       </button>
       {error && <p className="mt-1 text-xs text-tomo-rose">{error}</p>}
@@ -54,7 +54,7 @@ function Field({ label, value, onChange }: { label: string; value: string; onCha
     <label className="block">
       <span className="mb-0.5 block text-[11px] text-ink-soft">{label} (¥)</span>
       <input type="number" min={0} value={value} onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded border px-2 py-1 text-sm" />
+        className="tnum w-full rounded-full bg-white px-2.5 py-1 text-sm shadow-soft" />
     </label>
   );
 }

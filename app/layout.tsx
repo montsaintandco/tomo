@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import BottomNav from "@/components/BottomNav";
+import SiteHeader from "@/components/SiteHeader";
+import SiteFooter from "@/components/SiteFooter";
 
 export const metadata: Metadata = {
   title: "TOMO — 한국·일본 중고거래",
@@ -17,7 +19,7 @@ export const viewport: Viewport = { themeColor: "#FFFFFF" };
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ko">
-      <body className="bg-white pb-24 text-ink">
+      <body className="bg-white pb-24 text-ink md:pb-0">
         {/* impeccable direction contract · v2: brand-pinned, applied like a mature marketplace
         THESIS: 두 말풍선이 만나면 하트가 된다 — 브랜드(블루/핑크/코랄, 하트-O, 써라운드)는 그대로, 적용은 당근·메루카리급 프로덕트로.
         OWN-WORLD: 흰 페이지 + 네이비 잉크 스케일. 아이보리는 신뢰 스트립·푸터·검색 입력의 틴트로만.
@@ -30,7 +32,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-full focus:bg-tomo-navy focus:px-4 focus:py-2 focus:text-sm focus:font-bold focus:text-white">
           본문 바로가기
         </a>
+        <SiteHeader />
         <div id="main">{children}</div>
+        <SiteFooter />
         <BottomNav />
       </body>
     </html>

@@ -43,30 +43,30 @@ export default async function GlobalPage(props: {
   }
 
   return (
-    <main className="mx-auto max-w-md">
-      <header className="sticky top-0 z-20 bg-tomo-ivory/95 px-4 pb-3 pt-3 backdrop-blur">
+    <main className="mx-auto max-w-md md:max-w-6xl md:px-6">
+      <header className="sticky top-0 z-20 bg-tomo-ivory/95 px-4 pb-3 pt-3 backdrop-blur md:static md:bg-transparent md:px-0 md:pb-4 md:pt-8 md:backdrop-blur-0">
         <div className="mb-1 flex items-center justify-between">
-          <h1 className="font-brand text-xl text-tomo-navy">해외직구</h1>
+          <h1 className="font-brand text-xl text-tomo-navy md:text-2xl">해외직구</h1>
           {viewer.guest && (
             <Link href="/login" className="btn bg-tomo-navy px-4 py-1.5 text-sm text-white">로그인</Link>
           )}
         </div>
-        <p className="mb-3 text-xs text-ink-soft">일본·한국 마켓 상품을 대신 사서 보내드려요. 견적 확인 후 결제하면 됩니다.</p>
+        <p className="mb-3 text-xs text-ink-soft md:mb-4 md:text-sm">일본·한국 마켓 상품을 대신 사서 보내드려요. 견적 확인 후 결제하면 됩니다.</p>
 
-        <form className="mb-3" role="search">
+        <form className="mb-3 md:max-w-xl" role="search">
           <label htmlFor="global-q" className="sr-only">해외 마켓 상품 검색</label>
           <div className="relative">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}
-              strokeLinecap="round" className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-faint" aria-hidden>
+              strokeLinecap="round" className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-faint md:left-4 md:h-[18px] md:w-[18px]" aria-hidden>
               <circle cx="11" cy="11" r="6.5" /><path d="m16 16 4.5 4.5" />
             </svg>
             <input id="global-q" name="q" defaultValue={q} placeholder="찾는 물건을 검색하세요 (예: 필름카메라)"
-              className="w-full rounded-full bg-white py-2.5 pl-10 pr-4 text-sm shadow-[var(--shadow-soft)] placeholder:text-ink-soft" />
+              className="w-full rounded-full bg-white py-2.5 pl-10 pr-4 text-sm shadow-soft placeholder:text-ink-soft md:py-3.5 md:pl-12 md:text-[15px]" />
           </div>
           {source !== "all" && <input type="hidden" name="source" value={source} />}
         </form>
 
-        <div className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1">
+        <div className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1 md:mx-0 md:px-0">
           {TABS.map((s) => {
             const params = new URLSearchParams();
             if (s !== "all") params.set("source", s);
@@ -75,8 +75,8 @@ export default async function GlobalPage(props: {
             const live = s === "all" || LIVE_SOURCES.includes(s as MarketSource);
             return (
               <Link key={s} href={qs ? `/global?${qs}` : "/global"} aria-current={source === s ? "page" : undefined}
-                className={`press shrink-0 rounded-full px-3.5 py-1.5 text-[13px] font-bold transition-colors ${
-                  source === s ? "bg-tomo-navy text-white shadow-[var(--shadow-soft)]" : "bg-white text-ink-soft hover:text-ink"}`}>
+                className={`press shrink-0 rounded-full px-3.5 py-1.5 text-[13px] font-bold transition-colors md:px-5 md:py-2 md:text-sm ${
+                  source === s ? "bg-tomo-navy text-white shadow-soft" : "bg-white text-ink-soft hover:text-ink"}`}>
                 {s === "all" ? "전체" : SOURCE_LABEL[s as MarketSource]}
                 {!live && <span className="ml-1 font-normal opacity-60">준비중</span>}
               </Link>
@@ -85,13 +85,13 @@ export default async function GlobalPage(props: {
         </div>
       </header>
 
-      <div className="px-4 pb-6 pt-2">
+      <div className="px-4 pb-6 pt-2 md:px-0 md:pb-16">
         {q && usedQueries.length > 0 && (
           <p className="mb-2 text-xs text-ink-soft">번역해서 찾았어요: {usedQueries.join(" · ")}</p>
         )}
 
         {items.length > 0 ? (
-          <div className="grid grid-cols-2 gap-x-3 gap-y-4">
+          <div className="grid grid-cols-2 gap-x-3 gap-y-4 sm:grid-cols-3 md:grid-cols-4 md:gap-x-5 md:gap-y-7 lg:grid-cols-5">
             {items.map((it) => (
               <ExternalItemCard key={`${it.source}-${it.sourceId}`} item={it}
                 rate={viewer.rate} viewerCurrency={viewer.currency} />

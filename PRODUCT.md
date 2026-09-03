@@ -38,7 +38,8 @@ web
 ## Capabilities and Constraints
 
 - Next.js App Router(16) + React 19 + Tailwind + Supabase. 서버 컴포넌트 기본
-- `max-w-md` 모바일 셸 중앙 정렬(데스크톱에서도 폰 폭)
+- 반응형: 모바일(<768px)은 `max-w-md` 셸 + 하단 탭바, 데스크톱(md+)은 상단 GNB·전역 푸터 + 와이드 그리드(피드 6xl, 상세 2컬럼)
+- 로그인: 이메일/비밀번호 + Google OAuth(`/auth/callback`)
 - 번역·결제 키 없이도 graceful 동작해야 함 (오류 아님, 대기 표시)
 - 전 테이블 RLS + 권한상승 차단. 에스크로 직접 쓰기 차단(함수 경유만)
 - 미결정: Stripe 3종 키 투입 시점(코드 완료, 키 대기), 커스텀 도메인

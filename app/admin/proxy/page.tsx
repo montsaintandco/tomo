@@ -35,7 +35,7 @@ export default async function AdminProxyPage() {
   const rows = (data ?? []) as unknown as Row[];
 
   return (
-    <main className="mx-auto max-w-md p-4 pb-24">
+    <main className="mx-auto max-w-md p-4 pb-24 md:max-w-3xl md:px-6 md:pb-16 md:pt-8">
       <div className="mb-4 flex items-baseline justify-between">
         <h1 className="text-xl font-bold text-tomo-navy">구매대행 관리</h1>
         <Link href="/admin" className="text-xs text-ink-soft">← 운영</Link>

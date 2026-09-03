@@ -63,25 +63,25 @@ export default async function Home(props: { searchParams: Promise<{ tab?: string
     : [null, null];
 
   return (
-    <main className="mx-auto max-w-md">
+    <main className="mx-auto max-w-md md:max-w-6xl md:px-6">
       {/* 워드마크 행은 스크롤과 함께 흘러간다 — 고정 크롬은 검색+탭만 (피드가 제품이다) */}
-      <div className="flex items-center justify-between px-4 pb-2 pt-3">
+      <div className="flex items-center justify-between px-4 pb-2 pt-3 md:hidden">
         <Link href="/" className="press"><Wordmark /></Link>
         {viewer.guest && (
           <Link href="/login" className="btn bg-tomo-navy px-4 py-1.5 text-sm text-white">로그인</Link>
         )}
       </div>
-      <header className="sticky top-0 z-20 bg-white/95 px-4 pb-3 pt-2 backdrop-blur">
-        <form className="mb-3" role="search">
+      <header className="sticky top-0 z-20 bg-white/95 px-4 pb-3 pt-2 backdrop-blur md:static md:bg-transparent md:px-0 md:pb-4 md:pt-8 md:backdrop-blur-0">
+        <form className="mb-3 md:max-w-xl" role="search">
           <label htmlFor="feed-q" className="sr-only">상품 검색</label>
           <div className="relative">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}
-              strokeLinecap="round" className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-faint" aria-hidden>
+              strokeLinecap="round" className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-faint md:left-4 md:h-[18px] md:w-[18px]" aria-hidden>
               <circle cx="11" cy="11" r="6.5" /><path d="m16 16 4.5 4.5" />
             </svg>
             {/* 16px 고정 — 14px 이하 입력은 iOS 사파리가 포커스 시 뷰포트를 확대한다 */}
             <input id="feed-q" name="q" type="search" enterKeyHint="search" autoComplete="off" defaultValue={q ?? ""} placeholder="어떤 물건을 찾으세요?"
-              className={`w-full rounded-full bg-tomo-ivory py-2.5 pl-10 text-base placeholder:text-ink-soft ${q ? "pr-11" : "pr-4"}`} />
+              className={`w-full rounded-full bg-tomo-ivory py-2.5 pl-10 text-base placeholder:text-ink-soft md:py-3.5 md:pl-12 ${q ? "pr-11" : "pr-4"}`} />
             {q && (
               <Link href={tab !== "all" ? `/?tab=${tab}` : "/"} aria-label="검색어 지우기"
                 className="press absolute right-1 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full text-ink-soft hover:text-ink">
@@ -104,8 +104,8 @@ export default async function Home(props: { searchParams: Promise<{ tab?: string
             const qs = params.toString();
             return (
               <Link key={v} href={qs ? `/?${qs}` : "/"} aria-current={tab === v ? "page" : undefined}
-                className={`press rounded-full px-3.5 py-3 text-[13px] font-bold transition-colors ${
-                  tab === v ? "bg-tomo-navy text-white shadow-[var(--shadow-soft)]" : "bg-white text-ink-soft hover:text-ink"}`}>
+                className={`press rounded-full px-3.5 py-3 text-[13px] font-bold transition-colors md:px-5 md:py-2 md:text-sm ${
+                  tab === v ? "bg-tomo-navy text-white shadow-soft" : "bg-white text-ink-soft hover:text-ink"}`}>
                 {l}
               </Link>
             );
@@ -119,7 +119,17 @@ export default async function Home(props: { searchParams: Promise<{ tab?: string
           listings={(hubOwn?.data ?? []) as unknown as FeedListing[]}
           travel={(hubTravel?.data ?? []) as unknown as FeedListing[]} />
       ) : (
-      <div className="px-4 pb-6 pt-1">
+      <div className="px-4 pb-6 pt-1 md:px-0 md:pb-16">
+
+        {/* 피드 섹션 헤딩 — 히어로 다음 스크롤 리듬 (데스크톱 전용) */}
+        {!feedError && !localNeedsLogin && (listings ?? []).length > 0 && (
+          <div className="mb-5 hidden items-baseline justify-between md:flex">
+            <h2 className="text-lg font-bold text-ink">
+              {q ? `'${q}' 검색 결과` : tab === "local" ? "내 동네 물건" : tab === "travel" ? "여행 중 직거래" : "지금 올라온 물건"}
+            </h2>
+            <p className="text-xs text-ink-soft">색이 나라를 말해요 — 블루는 한국, 핑크는 일본</p>
+          </div>
+        )}
 
         {feedError ? (
           <div role="alert" className="mt-12 flex flex-col items-center px-6 text-center">
@@ -145,7 +155,7 @@ export default async function Home(props: { searchParams: Promise<{ tab?: string
           </div>
         ) : (listings ?? []).length > 0 ? (
           <>
-            <ul className="flex flex-col">
+            <ul className="flex flex-col md:grid md:grid-cols-3 md:gap-x-5 md:gap-y-8 lg:grid-cols-4">
               {(listings ?? []).map((l) => (
                 <ListingRow key={l.id} listing={l as unknown as FeedListing} viewer={viewer} />
               ))}

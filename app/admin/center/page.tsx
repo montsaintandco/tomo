@@ -33,7 +33,7 @@ export default async function AdminCenterPage() {
   const rows = (data ?? []) as unknown as Row[];
 
   return (
-    <main className="mx-auto max-w-md p-4 pb-24">
+    <main className="mx-auto max-w-md p-4 pb-24 md:max-w-3xl md:px-6 md:pb-16 md:pt-8">
       <h1 className="mb-4 text-xl font-bold text-tomo-navy">센터 관리 · センター管理</h1>
       {(["SEOUL", "NARITA"] as const).map((c) => {
         const items = rows.filter((r) => r.center === c);
