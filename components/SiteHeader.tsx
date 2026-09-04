@@ -67,7 +67,7 @@ export default function SiteHeader({ lang = "ko", unread = 0, cartCount = 0 }: {
           <LangToggle lang={lang} label={t(lang, "lang.toggle")} />
 
           <Link href="/cart" aria-label={t(lang, "cart.count", { n: count })} aria-current={isActive("/cart") ? "page" : undefined}
-            className={`press relative flex h-11 w-10 items-center justify-center rounded-full ${isActive("/cart") ? "text-tomo-navy" : "text-ink-soft"}`}>
+            className={`press relative flex h-11 w-9 items-center justify-center rounded-full ${isActive("/cart") ? "text-tomo-navy" : "text-ink-soft"}`}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="h-[22px] w-[22px]" aria-hidden>
               <path d="M3.5 4.5h2l2.2 10.5h10.6l1.9-7.5H7" /><circle cx="9.5" cy="19" r="1.3" /><circle cx="17" cy="19" r="1.3" />
             </svg>
@@ -82,7 +82,7 @@ export default function SiteHeader({ lang = "ko", unread = 0, cartCount = 0 }: {
               {MOBILE.map((m) => (
                 <li key={m.href}>
                   <Link href={m.href} aria-label={t(lang, m.label)} aria-current={isActive(m.href) ? "page" : undefined}
-                    className={`press relative flex h-11 w-10 items-center justify-center rounded-full ${
+                    className={`press relative flex h-11 w-9 items-center justify-center rounded-full ${
                       isActive(m.href) ? "text-tomo-navy" : "text-ink-soft"}`}>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={isActive(m.href) ? 2.1 : 1.7}
                       strokeLinecap="round" strokeLinejoin="round" className="h-[22px] w-[22px]" aria-hidden>
@@ -97,13 +97,14 @@ export default function SiteHeader({ lang = "ko", unread = 0, cartCount = 0 }: {
             </ul>
           </nav>
 
-          <Link href="/sell" className="btn flex shrink-0 items-center gap-1.5 whitespace-nowrap bg-tomo-coral-deep px-3.5 py-2 text-sm text-white md:px-5">
+          {/* 모바일은 아이콘만(카트 추가로 375px가 꽉 참) — 라벨은 aria-label로 */}
+          <Link href="/sell" aria-label={t(lang, "nav.sellFull")}
+            className="btn flex h-10 w-10 shrink-0 items-center justify-center whitespace-nowrap bg-tomo-coral-deep p-0 text-sm text-white md:h-auto md:w-auto md:gap-1.5 md:px-5 md:py-2">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2}
               strokeLinecap="round" className="h-4 w-4" aria-hidden>
               <path d="M12 5.5v13M5.5 12h13" />
             </svg>
             <span className="hidden md:inline">{t(lang, "nav.sellFull")}</span>
-            <span className="md:hidden">{t(lang, "nav.sell")}</span>
           </Link>
         </div>
       </div>

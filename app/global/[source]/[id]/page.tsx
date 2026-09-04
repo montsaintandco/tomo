@@ -8,6 +8,10 @@ import { t, type Lang } from "@/lib/i18n";
 import ProxyRequestButton from "@/components/ProxyRequestButton";
 import CartButtons from "@/components/CartButtons";
 import MarketCarousel from "@/components/MarketCarousel";
+import Gallery from "@/components/Gallery";
+import ExternalItemCard from "@/components/ExternalItemCard";
+import { searchSource } from "@/lib/market/search";
+import { Suspense } from "react";
 import { TomoSymbol, CountryChip } from "@/components/Brand";
 import Link from "next/link";
 import { Fragment } from "react";
@@ -83,7 +87,7 @@ export default async function ExternalItemPage(props: {
   return (
     <main className="mx-auto max-w-md pb-24 standalone:pb-28 md:grid md:max-w-5xl md:grid-cols-2 md:items-start md:gap-10 md:px-6 md:pb-16 md:pt-8">
       {/* 이미지 컬럼 — 상품 상세와 같은 골격. 이미지 없으면 브랜드 심볼 */}
-      <div className="relative md:sticky md:top-24 md:overflow-hidden md:rounded-card md:shadow-soft">
+      <div className="relative md:sticky md:top-24">
         <Link href="/global" aria-label={t(lang, "detail.back")}
           className="press absolute left-3 top-3 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-tomo-navy/60 backdrop-blur-sm md:hidden">
           <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2.2}
@@ -92,21 +96,8 @@ export default async function ExternalItemPage(props: {
           </svg>
         </Link>
         {images.length > 0 ? (
-          <div className="relative bg-tomo-navy/5">
-            {/* 가로 스와이프 — 세로로 쌓으면 제목·가격이 두 화면 아래로 밀린다 */}
-            <div className="flex snap-x snap-mandatory gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {images.map((src, i) => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img key={i} src={src} alt={i === 0 ? item.title : ""} lang={i === 0 ? sourceLang : undefined}
-                  className="aspect-square w-full shrink-0 snap-center object-cover" loading={i === 0 ? "eager" : "lazy"} />
-              ))}
-            </div>
-            {images.length > 1 && (
-              <span className="tnum absolute bottom-3 right-3 rounded-full bg-tomo-navy/75 px-2.5 py-1 text-[11px] font-bold text-white backdrop-blur-sm">
-                {t(lang, "ext.photos", { n: images.length })}
-              </span>
-            )}
-          </div>
+          <Gallery images={images} alt={item.title} lang={sourceLang} counter={t(lang, "ext.photos", { n: images.length })}
+            prevLabel={t(lang, "ext.prevPhoto")} nextLabel={t(lang, "ext.nextPhoto")} />
         ) : (
           <div className="flex aspect-square w-full items-center justify-center bg-tomo-navy/5">
             <TomoSymbol className="h-20 w-28 opacity-60" />
@@ -248,6 +239,14 @@ export default async function ExternalItemPage(props: {
           </section>
         )}
 
+        {/* 비슷한 상품 — 같은 마켓에서 제목 키워드로 검색, 스트리밍 */}
+        <section aria-label={t(lang, "ext.similar")} className="pt-1">
+          <h2 className="mb-2 text-[15px] font-extrabold text-ink">{t(lang, "ext.similar")}</h2>
+          <Suspense fallback={<SimilarSkeleton />}>
+            <Similar source={source} id={params.id} title={item.title} rate={viewer.rate} viewerCurrency={viewer.currency} lang={lang} />
+          </Suspense>
+        </section>
+
         {(item.condition || Object.keys(item.extra).length > 0) && (
           <dl className="card grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 p-3.5 text-xs text-ink-soft">
             {item.condition && <><dt className="font-bold text-ink">{t(lang, "ext.condition")}</dt><dd lang={sourceLang}>{item.condition}</dd></>}
@@ -305,5 +304,35 @@ export default async function ExternalItemPage(props: {
         </div>
       </div>
     </main>
+  );
+}
+
+// 제목 앞 키워드 몇 개로 같은 마켓 검색 — 괄호·기호 제거. ponytail: 카테고리 기반 추천은 검색 로그 쌓이면
+function similarQuery(title: string): string {
+  return title.replace(/[【】\[\]()（）★☆◆■●※!！?？"'「」『』]/g, " ").replace(/\s+/g, " ").trim().split(" ").slice(0, 3).join(" ");
+}
+
+async function Similar({ source, id, title, rate, viewerCurrency, lang }: {
+  source: MarketSource; id: string; title: string; rate: number; viewerCurrency: "KRW" | "JPY"; lang: Lang;
+}) {
+  const q = similarQuery(title);
+  const items = q ? (await searchSource(source, q)).filter((i) => i.sourceId !== id && !i.soldOut).slice(0, 8) : [];
+  if (items.length === 0) return <p className="text-[13px] text-ink-soft">{t(lang, "ext.similarNone")}</p>;
+  return (
+    <ul className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      {items.map((it) => (
+        <li key={it.sourceId}><ExternalItemCard item={it} rate={rate} viewerCurrency={viewerCurrency} lang={lang} /></li>
+      ))}
+    </ul>
+  );
+}
+
+function SimilarSkeleton() {
+  return (
+    <div className="grid grid-cols-2 gap-3 md:grid-cols-4" aria-hidden>
+      {Array.from({ length: 4 }, (_, i) => (
+        <div key={i}><div className="skeleton aspect-square rounded-thumb" /><div className="skeleton mt-2 h-3 w-4/5 rounded" /><div className="skeleton mt-1.5 h-4 w-1/2 rounded" /></div>
+      ))}
+    </div>
   );
 }

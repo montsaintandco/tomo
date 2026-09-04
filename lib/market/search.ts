@@ -12,6 +12,11 @@ const SEARCHERS: Record<MarketSource, (q: string) => Promise<MarketItem[]>> = {
   joongna: joongnaSearch,
 };
 
+// 소스 언어 그대로 검색 (번역 없음). 비슷한 상품처럼 검색어가 이미 그 나라 말일 때
+export function searchSource(source: MarketSource, q: string): Promise<MarketItem[]> {
+  return SEARCHERS[source](q).catch(() => [] as MarketItem[]);
+}
+
 /**
  * 외부 마켓 통합 검색.
  * 소스별로 그 나라 언어로 검색어를 번역해 조회하고(일본 소스=ja, 한국 소스=ko),
