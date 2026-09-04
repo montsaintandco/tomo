@@ -82,12 +82,15 @@ export default async function MyPage() {
   const drops = wishRows.filter((w) => w.price_at_wish && w.listings!.price < w.price_at_wish).length;
   const toShip = shipRes.count ?? 0;
   const toReceive = receiveRes.count ?? 0;
+  const { data: travelersRaw } = await supabase.rpc("travelers_to", { p_country: viewer.country, p_region: viewer.region });
+  const travelers = typeof travelersRaw === "number" ? travelersRaw : 0;
   const todos: { text: string; href: string }[] = [
     ...(toShip ? [{ text: t(lang, "my.todoShip", { n: toShip }), href: "#selling" }] : []),
     ...(toReceive ? [{ text: t(lang, "my.todoReceive", { n: toReceive }), href: "#buying" }] : []),
     ...(pendingIn ? [{ text: t(lang, "my.todoOffersIn", { n: pendingIn }), href: "#offers-in" }] : []),
     ...(acceptedOut ? [{ text: t(lang, "my.todoOfferAccepted", { n: acceptedOut }), href: "#offers-out" }] : []),
     ...(drops ? [{ text: t(lang, "my.todoDrop", { n: drops }), href: "#wishlist" }] : []),
+    ...(travelers ? [{ text: t(lang, "trip.travelers", { n: travelers }), href: "/sell" }] : []),
   ];
 
   const priceOf = (l: { price: number; currency: string }) => l.price === 0 ? t(lang, "price.free") : formatPrice(l.price, l.currency as Currency);

@@ -2,7 +2,10 @@
 import { useState } from "react";
 import { t, type Lang } from "@/lib/i18n";
 
-export default function CheckoutButton({ listingId, lang = "ko" }: { listingId: string; lang?: Lang }) {
+// meetup=true: 만남 거래(여행 직거래) — 선결제 에스크로, 센터·국제배송 없음. variant link는 보조 경로용
+export default function CheckoutButton({ listingId, lang = "ko", meetup = false, variant = "primary" }: {
+  listingId: string; lang?: Lang; meetup?: boolean; variant?: "primary" | "link";
+}) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
 
@@ -12,7 +15,7 @@ export default function CheckoutButton({ listingId, lang = "ko" }: { listingId: 
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ listingId }),
+        body: JSON.stringify({ listingId, meetup }),
       });
       const json = await res.json().catch(() => ({}));
       // 503 = 결제 키 미투입 — 오류가 아니라 대기 상태
@@ -26,6 +29,20 @@ export default function CheckoutButton({ listingId, lang = "ko" }: { listingId: 
     }
   }
 
+  const label = meetup ? t(lang, "detail.buyMeetup") : t(lang, "detail.buy");
+
+  if (variant === "link") {
+    return (
+      <span>
+        <button type="button" onClick={go} disabled={busy}
+          className="press text-[12px] font-bold text-tomo-navy underline underline-offset-2 disabled:opacity-45">
+          {busy ? t(lang, "detail.connecting") : label}
+        </button>
+        {msg && <span className="ml-2 text-[11px] text-ink-soft">{msg}</span>}
+      </span>
+    );
+  }
+
   return (
     <div className="flex-1">
       <button onClick={go} disabled={busy}
@@ -36,7 +53,7 @@ export default function CheckoutButton({ listingId, lang = "ko" }: { listingId: 
               strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden>
               <path d="M12 3.5l6.5 2.7v4.6c0 4.3-2.8 7.6-6.5 9.7-3.7-2.1-6.5-5.4-6.5-9.7V6.2z" /><path d="m9.3 11.6 1.9 1.9 3.5-3.5" />
             </svg>
-            {t(lang, "detail.buy")}
+            {label}
           </>
         )}
       </button>

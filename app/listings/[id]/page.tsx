@@ -12,6 +12,7 @@ import SellerPanel, { type ReceivedOffer } from "@/components/SellerPanel";
 import TrustStrip from "@/components/TrustStrip";
 import { CountryChip, TomoSymbol } from "@/components/Brand";
 import HeartGauge from "@/components/HeartGauge";
+import SellerStats, { type SellerStatsData } from "@/components/SellerStats";
 import ListingCard from "@/components/ListingCard";
 import type { FeedListing } from "@/components/ListingRow";
 import Link from "next/link";
@@ -63,6 +64,17 @@ export default async function ListingDetail(props: { params: Promise<{ id: strin
   const wished = !!mineRes.data;
   const myOffer = (myOfferRes.data ?? null) as MyOffer;
   const receivedOffers = (receivedRes.data ?? []) as unknown as ReceivedOffer[];
+  // 판매자 신뢰 지표(공개 함수) + 내 여행 일정과 이 상품 동네 매칭(본인 행 RLS)
+  const today = new Date().toISOString().slice(0, 10);
+  const [statsRes, tripRes] = await Promise.all([
+    supabase.rpc("seller_stats", { uid: seller.id }),
+    viewer.guest || l.country === viewer.country ? Promise.resolve({ data: null })
+      : supabase.from("trips").select("region, start_date, end_date").eq("user_id", viewer.id).eq("country", l.country)
+          .gte("end_date", today).order("start_date").limit(1).maybeSingle(),
+  ]);
+  const sellerStats = (statsRes.data ?? null) as SellerStatsData | null;
+  const myTrip = (tripRes.data ?? null) as { region: string; start_date: string; end_date: string } | null;
+  const fmtDay = (d: string) => new Date(d + "T00:00:00").toLocaleDateString(lang === "ja" ? "ja-JP" : "ko-KR", { month: "short", day: "numeric" });
 
   const needsTranslation = l.source_language !== lang;
   const tr = l.listing_translations.find((x: { language: string }) => x.language === lang);
@@ -84,6 +96,10 @@ export default async function ListingDetail(props: { params: Promise<{ id: strin
   const shipDays = (["1_2", "2_3", "4_7"] as const).find((d) => d === l.ship_days) ?? "2_3";
   // 배송 주석 — 메루카리의 「送料込み」 자리. 해외 배송이면 국제배송비 안내, 아니면 거래 방법
   const methodLabel = method === "both" ? t(lang, "method.bothLong") : t(lang, `method.${method}`);
+  // 결제 경로: 직거래 전용·해외 직거래(여행)는 만남 거래가 기본, 둘 다면 보조 링크로 다른 경로
+  const meetupPrimary = method === "direct" || (method === "both" && foreign);
+  const shipAvailable = method !== "direct" && (!foreign || !!l.cross_border_enabled);
+  const secondaryCheckout = meetupPrimary ? shipAvailable : method === "both";
   const shipNote = foreign && method !== "direct" ? t(lang, "ship.intl") : methodLabel;
   const listedAt = new Date(l.created_at).toLocaleDateString(lang === "ja" ? "ja-JP" : "ko-KR", { year: "numeric", month: "long", day: "numeric" });
 
@@ -199,9 +215,19 @@ export default async function ListingDetail(props: { params: Promise<{ id: strin
 
         {/* 크로스보더 안내 웰 */}
         {travelDeal && (
-          <p className="rounded-card bg-tomo-navy/5 p-3.5 text-[13px] leading-relaxed text-ink">
-            {t(lang, "detail.travelBody", { market: t(lang, `market.${country}`) })}
-          </p>
+          <div className="rounded-card bg-tomo-navy/5 p-3.5 text-[13px] leading-relaxed text-ink">
+            <p>{t(lang, "detail.travelBody", { market: t(lang, `market.${country}`) })}</p>
+            <p className="mt-1 text-[12px] text-ink-soft">{t(lang, "detail.meetupNote")}</p>
+            {myTrip ? (
+              <p className="mt-2 font-bold text-tomo-navy">
+                {t(lang, "trip.detailMatch", { start: fmtDay(myTrip.start_date), end: fmtDay(myTrip.end_date), region: myTrip.region })}
+              </p>
+            ) : (
+              <Link href="/travel" className="press mt-2 inline-block text-[12px] font-bold text-tomo-navy underline underline-offset-2">
+                {t(lang, "trip.detailNoTrip")}
+              </Link>
+            )}
+          </div>
         )}
         {foreign && method !== "direct" && (
           <p className="rounded-card bg-tomo-navy/5 p-3.5 text-[13px] leading-relaxed text-ink">
@@ -226,6 +252,7 @@ export default async function ListingDetail(props: { params: Promise<{ id: strin
         {/* 판매자 — 메루카리 「出品者」 */}
         <section>
           <h2 className="mb-2 text-[15px] font-extrabold text-ink">{t(lang, "detail.sellerTitle")}</h2>
+          <SellerStats stats={sellerStats} lang={lang} className="mb-2" />
           <Link href={`/profile/${seller.id}`} className="card block p-3.5 md:p-5">
             <span className="flex items-center justify-between gap-3">
               <span className="flex min-w-0 items-center gap-2.5">
@@ -306,16 +333,22 @@ export default async function ListingDetail(props: { params: Promise<{ id: strin
                 </Link>
               </div>
             ) : (
-              <div className="relative flex items-center gap-3">
-                <ChatButton listingId={l.id} lang={lang} compact />
-                <span className="min-w-0 flex-1">
-                  <span className="tnum block truncate text-[17px] font-extrabold leading-tight text-ink">{buyerPrice}</span>
-                  <span className="block truncate text-[11px] text-ink-soft">{shipNote}</span>
-                </span>
-                {!free && (
-                  <div className="w-[46%] shrink-0">
-                    <CheckoutButton listingId={l.id} lang={lang} />
-                  </div>
+              <div className="relative flex flex-col gap-1.5">
+                <div className="flex items-center gap-3">
+                  <ChatButton listingId={l.id} lang={lang} compact />
+                  <span className="min-w-0 flex-1">
+                    <span className="tnum block truncate text-[17px] font-extrabold leading-tight text-ink">{buyerPrice}</span>
+                    <span className="block truncate text-[11px] text-ink-soft">{shipNote}</span>
+                  </span>
+                  {!free && (
+                    <div className="w-[46%] shrink-0">
+                      {/* 직거래 상품(특히 여행 직거래)은 만남 거래가 기본 — 선결제 에스크로로 노쇼 방지 */}
+                      <CheckoutButton listingId={l.id} lang={lang} meetup={meetupPrimary} />
+                    </div>
+                  )}
+                </div>
+                {!free && secondaryCheckout && (
+                  <div className="text-right"><CheckoutButton listingId={l.id} lang={lang} meetup={!meetupPrimary} variant="link" /></div>
                 )}
               </div>
             )}

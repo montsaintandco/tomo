@@ -21,11 +21,15 @@ const pick = <T extends readonly string[]>(list: T, v: string | undefined, d: T[
   (list as readonly string[]).includes(v ?? "") ? (v as T[number]) : d;
 
 // initial이 있으면 수정 모드 (PATCH /api/listings/[id]) — 같은 폼, 같은 검증
-export default function SellForm({ lang, hint, initial }: { lang: Lang; hint: string; initial?: SellInitial }) {
+export type SellPrefill = { title: string; description: string; price?: number; images: string[] };
+
+export default function SellForm({ lang, hint, initial, prefill, importMsg }: {
+  lang: Lang; hint: string; initial?: SellInitial; prefill?: SellPrefill; importMsg?: string;
+}) {
   const editing = !!initial;
-  const [title, setTitle] = useState(initial?.title ?? hint);
-  const [description, setDescription] = useState(initial?.description ?? "");
-  const [price, setPrice] = useState(initial && initial.price > 0 ? String(initial.price) : "");
+  const [title, setTitle] = useState(initial?.title ?? prefill?.title ?? hint);
+  const [description, setDescription] = useState(initial?.description ?? prefill?.description ?? "");
+  const [price, setPrice] = useState(initial && initial.price > 0 ? String(initial.price) : prefill?.price ? String(prefill.price) : "");
   const [category, setCategory] = useState<(typeof CATEGORIES)[number]>(pick(CATEGORIES, initial?.category, "etc"));
   const [tradeMethod, setTradeMethod] = useState<(typeof METHODS)[number]>(pick(METHODS, initial?.trade_method, "both"));
   const [crossBorder, setCrossBorder] = useState(initial?.cross_border_enabled ?? true);
@@ -54,6 +58,8 @@ export default function SellForm({ lang, hint, initial }: { lang: Lang; hint: st
         uploadedPaths.push(path);
         images.push(supabase.storage.from("listing-images").getPublicUrl(path).data.publicUrl);
       }
+      // 크로스리스팅: 새 사진이 없으면 가져온 원본 링크를 그대로 (핫링크 — 원본이 지워지면 사진도 사라짐)
+      if (images.length === 0 && prefill?.images?.length) images.push(...prefill.images.slice(0, 5));
       const res = await fetch(editing ? `/api/listings/${initial!.id}` : "/api/listings", {
         method: editing ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
@@ -80,6 +86,18 @@ export default function SellForm({ lang, hint, initial }: { lang: Lang; hint: st
     <main className="mx-auto max-w-md p-4 pb-8 standalone:pb-24 md:max-w-2xl md:px-6 md:pb-16 md:pt-8">
       <h1 className="text-[17px] font-extrabold leading-tight text-ink md:text-xl">{t(lang, editing ? "sell.editTitle" : "sell.title")}</h1>
       <p className="mb-4 mt-0.5 text-[12px] text-ink-soft">{t(lang, editing ? "sell.imagesKeep" : "sell.sub")}</p>
+      {!editing && (
+        <form method="get" action="/sell" className="mb-5 rounded-card bg-tomo-navy/5 p-3.5">
+          <label htmlFor="sell-from" className="block text-[13px] font-bold text-ink">{t(lang, "sell.import")}</label>
+          <p className="mt-0.5 text-[12px] leading-relaxed text-ink-soft">{t(lang, "sell.importHint")}</p>
+          <div className="mt-2 flex gap-2">
+            <input id="sell-from" name="from" type="url" inputMode="url" placeholder="https://jp.mercari.com/item/…"
+              className="min-w-0 flex-1 rounded-full bg-white px-4 py-2.5 text-base font-normal shadow-soft placeholder:text-ink-soft" />
+            <button className="btn shrink-0 bg-tomo-navy px-4 py-2 text-sm text-white">{t(lang, "sell.importGo")}</button>
+          </div>
+          {importMsg && <p role="status" className="mt-2 text-[12px] font-bold text-tomo-navy">{importMsg}</p>}
+        </form>
+      )}
       <form onSubmit={submit} className="flex flex-col gap-4">
         <label className="text-[13px] font-bold text-ink">{t(lang, "sell.photos")}
           <input type="file" accept="image/*" multiple className="mt-1 block w-full text-sm font-normal text-ink-soft file:mr-3 file:rounded-full file:border-0 file:bg-tomo-navy/5 file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-tomo-navy"

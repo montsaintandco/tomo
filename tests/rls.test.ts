@@ -110,6 +110,18 @@ describe("RLS", () => {
     await alice.from("listings").update({ hidden: false }).eq("id", listingId);
   });
 
+  it("trips: own rows only; travelers_to is a public count", async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    const { data: tr, error } = await alice.from("trips")
+      .insert({ user_id: aliceId, country: "JP", region: "東京 新宿区", start_date: today, end_date: today }).select().single();
+    expect(error).toBeNull();
+    const { data: bobSees } = await bob.from("trips").select("id").eq("id", tr!.id);
+    expect(bobSees).toEqual([]);
+    const { data: n } = await bob.rpc("travelers_to", { p_country: "JP", p_region: "東京 新宿区" });
+    expect(Number(n)).toBeGreaterThanOrEqual(1);
+    await alice.from("trips").delete().eq("id", tr!.id);
+  });
+
   it("bump: only the seller, and not within 48h of listing", async () => {
     const { error: bobBump } = await bob.rpc("bump_listing", { lid: listingId });
     expect(bobBump).not.toBeNull();

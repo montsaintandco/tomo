@@ -8,8 +8,8 @@ type Role = "buyer" | "seller" | "admin" | "other";
 const DISPUTABLE = ["paid", "shipped", "shipped_to_center", "center_received", "shipped_international", "delivered"];
 
 export default function TxActions({
-  txId, status, isCrossBorder, role, lang = "ko",
-}: { txId: string; status: string; isCrossBorder: boolean; role: Role; lang?: Lang }) {
+  txId, status, isCrossBorder, role, meetup = false, lang = "ko",
+}: { txId: string; status: string; isCrossBorder: boolean; role: Role; meetup?: boolean; lang?: Lang }) {
   const [busy, setBusy] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState("");
@@ -23,7 +23,11 @@ export default function TxActions({
 
   // 현재 상태·역할에서 허용되는 단일 액션 (DB advance_transaction과 정합)
   let action: { label: string; to: string; tracking?: boolean; outline?: boolean } | null = null;
-  if (role === "seller" && status === "paid") {
+  if (meetup && role === "buyer" && status === "paid") {
+    action = { label: t(lang, "act.met"), to: "delivered" };            // 만남 거래: 구매자가 받았다고 확인
+  } else if (meetup && role === "buyer" && status === "delivered") {
+    action = { label: t(lang, "act.confirm"), to: "completed" };
+  } else if (!meetup && role === "seller" && status === "paid") {
     action = isCrossBorder
       ? { label: t(lang, "act.shipToCenter"), to: "shipped_to_center", tracking: true }
       : { label: t(lang, "act.shipped"), to: "shipped", tracking: true };

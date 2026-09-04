@@ -11,7 +11,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 type TxDetail = {
-  id: string; status: string; is_cross_border: boolean; center: string | null;
+  id: string; status: string; is_cross_border: boolean; meetup: boolean; center: string | null;
   buyer_id: string; seller_id: string;
   item_price: number; intl_shipping_fee: number; platform_fee: number; currency: Currency;
   domestic_tracking: string | null; intl_tracking: string | null;
@@ -41,7 +41,7 @@ export default async function TransactionPage(props: { params: Promise<{ id: str
   const lang: Lang = viewer.language;
 
   const { data } = await supabase.from("transactions")
-    .select(`id, status, is_cross_border, center, buyer_id, seller_id,
+    .select(`id, status, is_cross_border, meetup, center, buyer_id, seller_id,
       item_price, intl_shipping_fee, platform_fee, currency, domestic_tracking, intl_tracking, dispute_reason, dispute_resolution,
       listings(id, title, source_language, country, images, listing_translations(language, title)),
       buyer:profiles!transactions_buyer_id_fkey(id, nickname),
@@ -82,13 +82,13 @@ export default async function TransactionPage(props: { params: Promise<{ id: str
           <p className="truncate text-sm font-bold text-ink">{displayTitle(l, lang)}</p>
           <p className="truncate text-xs text-ink-soft">
             {t(lang, role === "buyer" ? "tx.seller" : "tx.buyer")} · {other.nickname}
-            {tx.is_cross_border && tx.center && ` · ${t(lang, "tx.centerVia", { center: t(lang, `center.${tx.center === "NARITA" ? "NARITA" : "SEOUL"}`) })}`}
+            {tx.is_cross_border && tx.center && ` · ${t(lang, "tx.centerVia", { center: t(lang, `center.${tx.center === "NARITA" ? "NARITA" : "SEOUL"}`) })}`}{tx.meetup && ` · ${t(lang, "tx.meetup")}`}
           </p>
         </div>
       </Link>
 
       <div className="card mb-4 p-4">
-        <EscrowTimeline status={tx.status} isCrossBorder={tx.is_cross_border} lang={lang} />
+        <EscrowTimeline status={tx.status} isCrossBorder={tx.is_cross_border} meetup={tx.meetup} lang={lang} />
       </div>
 
       {(tx.dispute_reason || tx.dispute_resolution) && (
@@ -132,7 +132,7 @@ export default async function TransactionPage(props: { params: Promise<{ id: str
         </dl>
       )}
 
-      <TxActions txId={tx.id} status={tx.status} isCrossBorder={tx.is_cross_border} role={role} lang={lang} />
+      <TxActions txId={tx.id} status={tx.status} isCrossBorder={tx.is_cross_border} meetup={tx.meetup} role={role} lang={lang} />
 
       {tx.status === "completed" && isParty && (
         <div className="mt-4">

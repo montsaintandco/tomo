@@ -3,6 +3,7 @@ import { getViewerOrGuest } from "@/lib/listings";
 import { formatPrice, type Currency } from "@/lib/currency";
 import { t, type Lang } from "@/lib/i18n";
 import HeartGauge from "@/components/HeartGauge";
+import SellerStats, { type SellerStatsData } from "@/components/SellerStats";
 import SectionHeader from "@/components/SectionHeader";
 import { CountryChip, TomoSymbol } from "@/components/Brand";
 import AdminDeleteReview from "@/components/AdminDeleteReview";
@@ -41,6 +42,8 @@ export default async function ProfilePage(props: { params: Promise<{ id: string 
     .or(`buyer_id.eq.${targetId},seller_id.eq.${targetId}`, { referencedTable: "transactions" })
     .order("created_at", { ascending: false }).limit(20);
   const reviews = (reviewsRaw ?? []) as unknown as Review[];
+  const { data: statsRaw } = await supabase.rpc("seller_stats", { uid: targetId });
+  const stats = (statsRaw ?? null) as SellerStatsData | null;
 
   return (
     <main className="mx-auto max-w-md p-4 pb-8 standalone:pb-24 md:max-w-2xl md:px-6 md:pb-16 md:pt-8">
@@ -57,6 +60,7 @@ export default async function ProfilePage(props: { params: Promise<{ id: string 
           </div>
         </div>
         <HeartGauge temp={Number(p.trust_temp)} lang={lang} />
+        <SellerStats stats={stats} lang={lang} className="mt-3" />
       </div>
 
       <section aria-label={t(lang, "profile.listings")}>

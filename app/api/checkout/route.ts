@@ -8,7 +8,7 @@ export async function POST(req: Request) {
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
-  const { listingId, intlShippingFee } = await req.json().catch(() => ({}));
+  const { listingId, intlShippingFee, meetup } = await req.json().catch(() => ({}));
   if (typeof listingId !== "string")
     return NextResponse.json({ error: "invalid listingId" }, { status: 400 });
 
@@ -18,7 +18,7 @@ export async function POST(req: Request) {
   // 거래 생성 + 예약 선점 + 수수료 계산 (DB가 소유권·경합 검증)
   // ponytail: intlShippingFee 미전달 시 0. 국제배송비 견적 UI는 별도(견적 소스 없음) → 생기면 연결
   const { data: tx, error } = await supabase.rpc("start_transaction", {
-    p_listing_id: listingId, p_intl_shipping_fee: Number(intlShippingFee) || 0,
+    p_listing_id: listingId, p_intl_shipping_fee: Number(intlShippingFee) || 0, p_meetup: !!meetup,
   });
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
@@ -31,7 +31,7 @@ export async function POST(req: Request) {
       price_data: {
         currency: (tx.currency as string).toLowerCase(),
         unit_amount: amount, // KRW/JPY zero-decimal — 원값 그대로
-        product_data: { name: "TOMO 안전결제" },
+        product_data: { name: tx.meetup ? "TOMO 안전결제 (만남 거래)" : "TOMO 안전결제" },
       },
     }],
     metadata: { transaction_id: tx.id },

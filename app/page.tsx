@@ -138,6 +138,12 @@ export default async function Home(props: { searchParams: Promise<{ tab?: string
           travel={(hubTravel?.data ?? []) as unknown as FeedListing[]} />
       ) : (
       <div className="px-4 pb-6 pt-1 md:px-0 md:pb-16">
+        {tab === "travel" && (
+          <Link href="/travel" className="press mb-3 flex items-center justify-between rounded-card bg-tomo-coral-deep/10 px-3.5 py-3 text-[13px] font-bold text-tomo-coral-deep">
+            {t(lang, "trip.cta")}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden><path d="m9 5 7 7-7 7" /></svg>
+          </Link>
+        )}
         {/* 카테고리 칩 — 리스트 모드에서도 한 탭 거리 */}
         <div className="mb-3">
           <CategoryChips lang={lang} active={cat} q={q} />
