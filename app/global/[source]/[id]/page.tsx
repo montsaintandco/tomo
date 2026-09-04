@@ -28,6 +28,18 @@ async function loadItem(source: MarketSource, id: string): Promise<MarketItemDet
   return null;
 }
 
+// 게시 시각 상대 표기 (ListingRow와 같은 규칙)
+function ago(iso: string, lang: Lang): string {
+  const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+  if (!Number.isFinite(m) || m < 0) return "";
+  if (m < 1) return t(lang, "time.now");
+  if (m < 60) return t(lang, "time.min", { n: m });
+  const h = Math.floor(m / 60);
+  if (h < 24) return t(lang, "time.hour", { n: h });
+  const d = Math.floor(h / 24);
+  return d < 30 ? t(lang, "time.day", { n: d }) : t(lang, "time.month", { n: Math.floor(d / 30) });
+}
+
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="mt-1 flex justify-between gap-3 first:mt-0">
@@ -116,6 +128,31 @@ export default async function ExternalItemPage(props: {
 
         <h1 lang={sourceLang} className="text-[17px] font-bold leading-snug text-ink">{item.title}</h1>
 
+        {/* 원본 맥락 한 줄 — 카테고리 · 게시 시각 · 조회/관심/채팅 (당근·메루카리가 보여주는 것을 그대로) */}
+        {(item.category || item.postedAt || item.counts) && (
+          <p className="-mt-2 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[12px] text-ink-soft">
+            {item.category && <span lang={sourceLang}>{item.category}</span>}
+            {item.category && item.postedAt && <span aria-hidden>·</span>}
+            {item.postedAt && <time dateTime={item.postedAt} className="tnum">{ago(item.postedAt, lang)}</time>}
+            {item.counts && (item.counts.chats != null || item.counts.favorites != null || item.counts.views != null) && (
+              <span className="tnum basis-full">
+                {[
+                  item.counts.chats != null && t(lang, "ext.chats", { n: item.counts.chats }),
+                  item.counts.favorites != null && t(lang, "ext.favorites", { n: item.counts.favorites }),
+                  item.counts.views != null && t(lang, "ext.views", { n: item.counts.views }),
+                ].filter(Boolean).join(" · ")}
+              </span>
+            )}
+          </p>
+        )}
+        {item.tradeTags && item.tradeTags.length > 0 && (
+          <div className="-mt-2 flex flex-wrap gap-1">
+            {item.tradeTags.map((tag) => (
+              <span key={tag} lang={sourceLang} className="rounded-full bg-tomo-navy/5 px-2 py-0.5 text-[11px] font-bold text-tomo-navy">{tag}</span>
+            ))}
+          </div>
+        )}
+
         <div>
           <p className="tnum text-[17px] font-extrabold leading-tight text-ink">{buyerPrice}</p>
           {foreign && <p className="tnum mt-0.5 text-xs font-bold text-ink-soft">{formatPrice(item.price, item.currency)}</p>}
@@ -150,13 +187,34 @@ export default async function ExternalItemPage(props: {
           </div>
         )}
 
-        {item.description && (
-          <p lang={sourceLang} className="whitespace-pre-wrap text-sm leading-relaxed text-ink-soft">{item.description}</p>
+        {/* 설명은 본문이다 — 보조색이 아니라 잉크 */}
+        {item.description ? (
+          <p lang={sourceLang} className="whitespace-pre-wrap text-sm leading-relaxed text-ink">{item.description}</p>
+        ) : (
+          <p className="text-sm text-ink-soft">{t(lang, "ext.noDescription")}</p>
         )}
 
-        {(item.sellerName || item.condition || Object.keys(item.extra).length > 0) && (
+        {/* 판매자 카드 — 닉네임 · 동네 · 매너온도(원본 마켓 기준) */}
+        {(item.sellerName || item.region || item.sellerTemp != null) && (
+          <div className="card flex items-center gap-3 p-3.5">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-tomo-navy/5 text-sm font-bold text-tomo-navy">
+              {(item.sellerName || "?").slice(0, 1)}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-bold text-ink" lang={sourceLang}>{item.sellerName || t(lang, "ext.seller")}</span>
+              {item.region && <span className="block truncate text-[12px] text-ink-soft" lang={sourceLang}>{item.region}</span>}
+            </span>
+            {item.sellerTemp != null && (
+              <span className="shrink-0 text-right">
+                <span className="tnum block text-[15px] font-extrabold text-tomo-navy">{item.sellerTemp.toFixed(1)}°</span>
+                <span className="block text-[10px] text-ink-soft">{t(lang, "ext.sellerTemp")}</span>
+              </span>
+            )}
+          </div>
+        )}
+
+        {(item.condition || Object.keys(item.extra).length > 0) && (
           <dl className="card grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 p-3.5 text-xs text-ink-soft">
-            {item.sellerName && <><dt className="font-bold text-ink">{t(lang, "ext.seller")}</dt><dd className="min-w-0 truncate">{item.sellerName}</dd></>}
             {item.condition && <><dt className="font-bold text-ink">{t(lang, "ext.condition")}</dt><dd lang={sourceLang}>{item.condition}</dd></>}
             {Object.entries(item.extra).filter(([, v]) => v).map(([k, v]) => (
               <Fragment key={k}><dt className="font-bold text-ink" lang={sourceLang}>{k}</dt><dd lang={sourceLang}>{v}</dd></Fragment>

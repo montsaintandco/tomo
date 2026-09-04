@@ -56,6 +56,8 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzd
 - **계정 삭제**: `/api/account/delete` — `deactivate_my_account`(익명화·상품 숨김) 후 service_role 있으면 `auth.admin.deleteUser`; 없으면 202(비활성화만). 어드민 사용자 화면 "완전 삭제" 버튼(`/api/admin/users/delete`). 프로필은 유령으로 남아 거래 기록 보존.
 - **큐레이션**: `lib/market/themes.ts`가 `trending_themes`를 10분 캐시로 읽고 실패/비어있음이면 `trending-data.ts` 폴백. 어드민 `/admin/trending`에서 추가·수정·순서·노출·삭제. 홈 캐러셀은 앞 4개, 팔기 칩은 전부.
 
+- **외부 상품 상세 보강(당근·중고나라)**: `MarketItemDetail`에 `region/category/postedAt/sellerTemp/counts/tradeTags` 추가. 당근은 임베디드 아폴로 JSON(`"content"…"recommendedArticles"` 앵커에서 역방향 탐색)으로 닉네임·동네·카테고리·끌올시각·관심/채팅/조회 + 마크업의 매너온도(`45.6<!-- -->°C`), 중고나라는 `self.__next_f` 플라이트 JSON(`\"productSeq\":ID` 세그먼트를 언이스케이프)으로 닉네임·동네·카테고리 경로·게시시각·조회·라벨(직거래/새상품/안전결제)·이미지 전부. 상세 페이지에 맥락 줄·거래 라벨 칩·판매자 카드(매너온도)·설명 본문 색(ink). 파서는 `parseDaangnContext/parseJoongnaContext`로 분리돼 저장 HTML로 오프라인 검증 가능.
+
 ## 인프라
 
 - Supabase: 프로젝트 `tomo` (id `zftztnkczlblnkgaijzc`, 서울 리전, seoulbuy 조직 — 이든에이치 계정)

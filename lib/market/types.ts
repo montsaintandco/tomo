@@ -21,6 +21,13 @@ export type MarketItemDetail = MarketItem & {
   sellerName: string;
   condition: string;    // 상품 상태 표기 (소스 원문)
   extra: Record<string, string>; // 배송부담·지역 등 소스별 부가정보 (표시용)
+  // 원본 페이지가 주는 맥락 — 있으면 상세에 그대로 보여준다 (당근·중고나라·메루카리 공통 형태)
+  region?: string;      // 거래 동네
+  category?: string;    // 원본 카테고리 경로
+  postedAt?: string;    // ISO 게시(끌올) 시각
+  sellerTemp?: number;  // 매너온도 등 판매자 신뢰 지표 (소스 단위 그대로)
+  counts?: { views?: number; favorites?: number; chats?: number };
+  tradeTags?: string[]; // 직거래·택배·새상품·안전결제 같은 원본 라벨
 };
 
 export const SOURCE_LABEL: Record<MarketSource, string> = {
