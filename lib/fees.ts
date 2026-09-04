@@ -29,3 +29,17 @@ export function proxyEstimateJpy(itemPriceJpy: number): {
   const fee = PROXY_FEE_JPY, remit = PROXY_REMIT_FEE_JPY, shipping = PROXY_SHIPPING_ESTIMATE_JPY;
   return { item: itemPriceJpy, fee, remit, shipping, total: itemPriceJpy + fee + remit + shipping };
 }
+
+// 한국 마켓 상품을 일본 구매자가 대행할 때 (KRW 기준). ponytail: JPY 상수의 환율 근사치 — 운영 데이터 쌓이면 보정
+export const PROXY_FEE_KRW = 4000;
+export const PROXY_REMIT_FEE_KRW = 1500;
+export const PROXY_SHIPPING_ESTIMATE_KRW = 20000;
+
+export type ProxyEstimate = { item: number; fee: number; remit: number; shipping: number; total: number; currency: "KRW" | "JPY" };
+
+// 상품 통화 기준 예상 총액 — 어느 방향이든 같은 구조
+export function proxyEstimate(itemPrice: number, currency: "KRW" | "JPY"): ProxyEstimate {
+  if (currency === "JPY") return { ...proxyEstimateJpy(itemPrice), currency };
+  const fee = PROXY_FEE_KRW, remit = PROXY_REMIT_FEE_KRW, shipping = PROXY_SHIPPING_ESTIMATE_KRW;
+  return { item: itemPrice, fee, remit, shipping, total: itemPrice + fee + remit + shipping, currency };
+}

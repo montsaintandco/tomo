@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { convertPrice, formatPrice, type Currency } from "@/lib/currency";
-import { SOURCE_LABEL, type MarketSource } from "@/lib/market/types";
+import type { MarketSource } from "@/lib/market/types";
 import { t, type Lang } from "@/lib/i18n";
 import { TomoSymbol } from "@/components/Brand";
 
@@ -30,8 +30,8 @@ export default function ExternalItemCard({ item, rate, viewerCurrency, lang = "k
             <TomoSymbol className="h-10 w-[3.75rem] opacity-60" />
           </div>
         )}
-        <span className="absolute left-1.5 top-1.5 rounded-full bg-tomo-navy/60 px-2 py-0.5 text-[11px] font-bold text-white backdrop-blur-sm">
-          {SOURCE_LABEL[item.source]}
+        <span className="absolute left-1.5 top-1.5 rounded-full bg-tomo-navy/75 px-2 py-0.5 text-[11px] font-bold text-white backdrop-blur-sm">
+          {t(lang, `source.${item.source}`)}
         </span>
         {item.auction && (
           <span className="absolute bottom-1.5 left-1.5 rounded-full bg-tomo-coral-deep px-2 py-0.5 text-[11px] font-bold text-white">
@@ -46,16 +46,19 @@ export default function ExternalItemCard({ item, rate, viewerCurrency, lang = "k
       </div>
       <div className="mt-1.5 flex flex-col gap-0.5">
         {/* 번역 제목이 있으면 그걸로, 원문은 title 속성에 — 원칙 2: 번역은 원문을 대체하지 않는다 */}
-        <p className="line-clamp-2 min-h-9 text-[13px] leading-snug text-ink"
-          lang={item.titleTranslated ? undefined : originalLang} title={item.titleTranslated ? item.title : undefined}>
+        <p className="line-clamp-2 min-h-9 text-[13px] leading-snug text-ink" lang={item.titleTranslated ? undefined : originalLang}>
           {item.titleTranslated ?? item.title}
         </p>
+        {/* 원칙 2: 번역은 원문을 대체하지 않는다 — 원문을 한 줄로 항상 보인다 */}
+        {item.titleTranslated && (
+          <p className="line-clamp-1 text-[11px] leading-snug text-ink-soft" lang={originalLang}>{item.title}</p>
+        )}
         <p className="tnum text-[15px] font-extrabold text-ink">
           {foreign ? `${t(lang, "price.approx")} ${formatPrice(convertPrice(item.price, item.currency, rate), viewerCurrency)}` : formatPrice(item.price, item.currency)}
         </p>
         <p className="tnum text-[11px] font-bold text-ink-soft">
           {foreign ? formatPrice(item.price, item.currency) : " "}
-          {item.auction && <span className="ml-1 font-normal">· {t(lang, "price.current")}</span>}
+          {item.auction && <span className="ml-1 font-normal"> · {t(lang, "price.current")}</span>}
         </p>
       </div>
     </Link>

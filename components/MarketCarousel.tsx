@@ -2,11 +2,11 @@ import ExternalItemCard, { type ExternalCardItem } from "@/components/ExternalIt
 import type { Lang } from "@/lib/i18n";
 
 // 가로 스냅 — 네이티브 스크롤, JS 없음. 페이지 가터(px-4)를 뚫고 나가게 -mx-4
-export default function MarketCarousel({ items, rate, viewerCurrency, lang = "ko" }: {
-  items: ExternalCardItem[]; rate: number; viewerCurrency: "KRW" | "JPY"; lang?: Lang;
+export default function MarketCarousel({ items, rate, viewerCurrency, lang = "ko", label }: {
+  items: ExternalCardItem[]; rate: number; viewerCurrency: "KRW" | "JPY"; lang?: Lang; label?: string;
 }) {
   return (
-    <ul className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+    <ul aria-label={label} className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       {items.map((it) => (
         <li key={`${it.source}:${it.sourceId}`} className="w-[140px] shrink-0 snap-start">
           <ExternalItemCard item={it} rate={rate} viewerCurrency={viewerCurrency} lang={lang} />

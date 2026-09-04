@@ -1,7 +1,7 @@
 import { createServerSupabase } from "@/lib/supabase/server";
 import { getViewerOrGuest } from "@/lib/listings";
 import { formatPrice, convertPrice } from "@/lib/currency";
-import { proxyEstimateJpy } from "@/lib/fees";
+import { proxyEstimate } from "@/lib/fees";
 import { mercariItem } from "@/lib/market/mercari";
 import { yahooAuctionItem } from "@/lib/market/yahoo-auction";
 import { daangnItem } from "@/lib/market/daangn";
@@ -10,7 +10,7 @@ import { SOURCE_LABEL, LIVE_SOURCES, SOURCE_CURRENCY, type MarketSource, type Ma
 import { t, type Lang } from "@/lib/i18n";
 import ProxyRequestButton from "@/components/ProxyRequestButton";
 import MarketCarousel from "@/components/MarketCarousel";
-import { TomoSymbol } from "@/components/Brand";
+import { TomoSymbol, CountryChip } from "@/components/Brand";
 import Link from "next/link";
 import { Fragment } from "react";
 import { notFound } from "next/navigation";
@@ -85,26 +85,39 @@ export default async function ExternalItemPage(props: {
   const buyerPrice = foreign
     ? `${t(lang, "price.approx")} ${formatPrice(convertPrice(item.price, item.currency, viewer.rate), viewer.currency)}`
     : formatPrice(item.price, item.currency);
-  const est = item.currency === "JPY" ? proxyEstimateJpy(item.price) : null;
+  // 견적은 국경을 넘을 때만 — 같은 나라 상품은 대행이 필요 없다 (양방향 모두)
+  const est = foreign ? proxyEstimate(item.price, item.currency) : null;
+  const toViewer = (n: number) => (foreign ? convertPrice(n, item.currency, viewer.rate) : n);
+  const totalLabel = est ? `${t(lang, "price.approx")} ${formatPrice(toViewer(est.total), viewer.currency)}` : buyerPrice;
   const sourceLang: Lang = SOURCE_CURRENCY[source] === "JPY" ? "ja" : "ko";
+  const sourceCountry = SOURCE_CURRENCY[source] === "JPY" ? "JP" : "KR";
 
   return (
     <main className="mx-auto max-w-md pb-24 standalone:pb-28 md:grid md:max-w-5xl md:grid-cols-2 md:items-start md:gap-10 md:px-6 md:pb-16 md:pt-8">
       {/* 이미지 컬럼 — 상품 상세와 같은 골격. 이미지 없으면 브랜드 심볼 */}
       <div className="relative md:sticky md:top-24 md:overflow-hidden md:rounded-card md:shadow-soft">
         <Link href="/global" aria-label={t(lang, "detail.back")}
-          className="press absolute left-3 top-3 z-10 hidden standalone:flex h-11 w-11 items-center justify-center rounded-full bg-tomo-navy/60 backdrop-blur-sm">
+          className="press absolute left-3 top-3 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-tomo-navy/60 backdrop-blur-sm md:hidden">
           <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2.2}
             strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden>
             <path d="M15 5l-7 7 7 7" />
           </svg>
         </Link>
         {images.length > 0 ? (
-          <div className="grid grid-cols-1 gap-1 bg-tomo-navy/5">
-            {images.map((src, i) => (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img key={i} src={src} alt="" className="aspect-square w-full object-cover" loading={i === 0 ? "eager" : "lazy"} />
-            ))}
+          <div className="relative bg-tomo-navy/5">
+            {/* 가로 스와이프 — 세로로 쌓으면 제목·가격이 두 화면 아래로 밀린다 */}
+            <div className="flex snap-x snap-mandatory gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {images.map((src, i) => (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img key={i} src={src} alt={i === 0 ? item.title : ""} lang={i === 0 ? sourceLang : undefined}
+                  className="aspect-square w-full shrink-0 snap-center object-cover" loading={i === 0 ? "eager" : "lazy"} />
+              ))}
+            </div>
+            {images.length > 1 && (
+              <span className="tnum absolute bottom-3 right-3 rounded-full bg-tomo-navy/75 px-2.5 py-1 text-[11px] font-bold text-white backdrop-blur-sm">
+                {t(lang, "ext.photos", { n: images.length })}
+              </span>
+            )}
           </div>
         ) : (
           <div className="flex aspect-square w-full items-center justify-center bg-tomo-navy/5">
@@ -156,36 +169,54 @@ export default async function ExternalItemPage(props: {
         )}
 
         <div>
-          <p className="tnum text-[17px] font-extrabold leading-tight text-ink">{buyerPrice}</p>
-          {foreign && <p className="tnum mt-0.5 text-xs font-bold text-ink-soft">{formatPrice(item.price, item.currency)}</p>}
-          {item.auction && <p className="mt-1 text-[11px] text-ink-faint">{t(lang, "ext.auctionNote")}</p>}
+          {est ? (
+            <>
+              <p className="text-[12px] font-bold text-ink-soft">{item.auction ? t(lang, "ext.estimateCurrent") : t(lang, "ext.totalLabel")}</p>
+              <p className="tnum text-[17px] font-extrabold leading-tight text-ink">{totalLabel}</p>
+              <p className="tnum mt-0.5 text-xs font-bold text-ink-soft">
+                {t(lang, "ext.listPrice")} {formatPrice(item.price, item.currency)} · {buyerPrice}
+              </p>
+            </>
+          ) : (
+            <p className="tnum text-[17px] font-extrabold leading-tight text-ink">{buyerPrice}</p>
+          )}
+          {item.auction && <p className="mt-1 text-[12px] text-ink-soft">{t(lang, "ext.auctionNote")}</p>}
         </div>
+
+        {/* 대행 진행 안내 — 원칙 1: 안전장치를 결정 지점에서 보인다. 사실만, 수치 없음 */}
+        {est && (
+          <ol className="rounded-card bg-tomo-navy/5 p-3.5 text-[13px] text-ink">
+            <li className="mb-2 font-bold text-tomo-navy">{t(lang, "ext.howItWorks")}</li>
+            {(["ext.step1", "ext.step2", "ext.step3", "ext.step4"] as const).map((k, i) => (
+              <li key={k} className="mt-1 flex gap-2">
+                <span className="tnum flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-tomo-navy text-[11px] font-bold text-white">{i + 1}</span>
+                <span className="leading-snug">{t(lang, k)}</span>
+              </li>
+            ))}
+          </ol>
+        )}
 
         {/* 예상 금액표 — 구조 틴트 웰 (아이보리는 틴트 3곳 전용) */}
         {est && (
           <div className="rounded-card bg-tomo-navy/5 p-3.5 text-[13px]">
-            <p className="mb-2 font-bold text-tomo-navy">{t(lang, "ext.estimateTitle")}</p>
-            <Row label={t(lang, "ext.item")} value={formatPrice(est.item, "JPY")} />
-            <Row label={t(lang, "ext.fee")} value={formatPrice(est.fee, "JPY")} />
-            <Row label={t(lang, "ext.remit")} value={formatPrice(est.remit, "JPY")} />
-            <Row label={t(lang, "ext.shipping")} value={formatPrice(est.shipping, "JPY")} />
+            <p className="mb-2 font-bold text-tomo-navy">{item.auction ? t(lang, "ext.estimateCurrent") : t(lang, "ext.estimateTitle")}</p>
+            <Row label={t(lang, "ext.item")} value={formatPrice(est.item, est.currency)} />
+            <Row label={t(lang, "ext.fee")} value={formatPrice(est.fee, est.currency)} />
+            <Row label={t(lang, "ext.remit")} value={formatPrice(est.remit, est.currency)} />
+            <Row label={t(lang, "ext.shipping")} value={formatPrice(est.shipping, est.currency)} />
             {/* SAZO식 총액 투명성 — 관세는 금액을 지어내지 않고 면세 기준만 말한다 */}
             <div className="mt-1 flex justify-between gap-3">
               <span className="text-ink-soft">{t(lang, "ext.customs")}</span>
-              <span className="text-right text-[11px] leading-snug text-ink-soft">{t(lang, "ext.customsNote")}</span>
+              <span className="text-right text-[12px] leading-snug text-ink-soft">{t(lang, "ext.customsNote")}</span>
             </div>
             <div className="mt-2 flex items-baseline justify-between gap-3 border-t border-tomo-navy/10 pt-2">
               <span className="font-bold text-ink">{t(lang, "ext.total")}</span>
               <span className="text-right">
-                <span className="tnum block text-[15px] font-extrabold text-tomo-navy">
-                  {viewer.currency === "KRW"
-                    ? `${t(lang, "price.approx")} ${formatPrice(convertPrice(est.total, "JPY", viewer.rate), "KRW")}`
-                    : formatPrice(est.total, "JPY")}
-                </span>
-                {viewer.currency === "KRW" && <span className="tnum block text-[11px] font-bold text-ink-soft">{formatPrice(est.total, "JPY")}</span>}
+                <span className="tnum block text-[15px] font-extrabold text-tomo-navy">{totalLabel}</span>
+                <span className="tnum block text-[11px] font-bold text-ink-soft">{formatPrice(est.total, est.currency)}</span>
               </span>
             </div>
-            <p className="mt-2 text-[11px] leading-relaxed text-ink-faint">{t(lang, "ext.estimateNote")}</p>
+            <p className="mt-2 text-[12px] leading-relaxed text-ink-soft">{t(lang, "ext.estimateNote")}</p>
           </div>
         )}
 
@@ -206,11 +237,12 @@ export default async function ExternalItemPage(props: {
               <span className="block truncate text-sm font-bold text-ink" lang={sourceLang}>{item.sellerName || t(lang, "ext.seller")}</span>
               {item.region && <span className="block truncate text-[12px] text-ink-soft" lang={sourceLang}>{item.region}</span>}
               {item.sellerRating && <span className="tnum block truncate text-[12px] text-ink-soft">{t(lang, "ext.sellerRating")} {item.sellerRating}</span>}
+              <span className="mt-1 flex items-center gap-1 text-[11px] text-ink-soft"><CountryChip country={sourceCountry} />{t(lang, "ext.sellerTempNote")}</span>
             </span>
             {item.sellerTemp != null && (
               <span className="shrink-0 text-right">
                 <span className="tnum block text-[15px] font-extrabold text-tomo-navy">{item.sellerTemp.toFixed(1)}°</span>
-                <span className="block text-[10px] text-ink-soft">{t(lang, "ext.sellerTemp")}</span>
+                <span className="block text-[11px] text-ink-soft">{t(lang, "ext.sellerTemp")}</span>
               </span>
             )}
           </div>
@@ -228,10 +260,8 @@ export default async function ExternalItemPage(props: {
                 </a>
               )}
             </div>
-            {item.sellerItems && item.sellerItems.length > 0 ? (
-              <MarketCarousel items={item.sellerItems} rate={viewer.rate} viewerCurrency={viewer.currency} lang={lang} />
-            ) : (
-              <p className="text-[12px] text-ink-soft">{t(lang, "ext.sellerItemsMore")} ↗</p>
+            {item.sellerItems && item.sellerItems.length > 0 && (
+              <MarketCarousel items={item.sellerItems} rate={viewer.rate} viewerCurrency={viewer.currency} lang={lang} label={t(lang, "ext.sellerItems")} />
             )}
           </section>
         )}
@@ -255,21 +285,38 @@ export default async function ExternalItemPage(props: {
         </a>
 
         {/* CTA — 모바일은 하단 고정 바, 데스크톱은 정보 컬럼 안에서 흐름 배치 */}
-        <div className="fixed bottom-0 standalone:bottom-[62px] left-0 right-0 z-20 mx-auto max-w-md border-t border-tomo-navy/5 bg-white/95 p-3 backdrop-blur md:static md:mt-2 md:max-w-none md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-0">
-          {viewer.guest ? (
-            <Link href={`/login?next=/global/${source}/${params.id}`}
-              className="btn block bg-tomo-coral-deep py-3 text-center text-sm text-white">
-              {t(lang, "ext.loginCta")}
-            </Link>
+        <div className="fixed bottom-0 standalone:bottom-[62px] left-0 right-0 z-20 mx-auto max-w-md border-t border-tomo-navy/5 bg-white/95 p-3 backdrop-blur md:sticky md:bottom-4 md:mt-2 md:max-w-none md:rounded-card md:border md:p-3 md:shadow-lift">
+          {!foreign ? (
+            <div className="flex flex-col gap-2">
+              <p className="text-[12px] text-ink-soft">{t(lang, "ext.domesticNote")}</p>
+              <a href={item.url} target="_blank" rel="noopener noreferrer" className="btn block bg-tomo-navy py-3 text-center text-sm text-white">
+                {t(lang, "ext.openDirect")} ↗
+              </a>
+            </div>
           ) : item.soldOut ? (
             <button disabled className="btn w-full bg-tomo-navy/70 py-3 text-sm text-white">{t(lang, "ext.soldOutCta")}</button>
           ) : (
-            <ProxyRequestButton lang={lang}
-              source={source} sourceId={params.id}
-              title={item.title} price={item.price} currency={item.currency}
-              url={item.url} images={images}
-              sellerName={item.sellerName}
-            />
+            <div className="flex items-center gap-3">
+              <div className="min-w-0 shrink-0">
+                <p className="text-[11px] font-bold text-ink-soft">{t(lang, "ext.totalLabel")}</p>
+                <p className="tnum text-[15px] font-extrabold leading-tight text-ink">{totalLabel}</p>
+              </div>
+              <div className="min-w-0 flex-1">
+                {viewer.guest ? (
+                  <Link href={`/login?next=/global/${source}/${params.id}`}
+                    className="btn block bg-tomo-coral-deep py-3 text-center text-sm text-white">
+                    {t(lang, "ext.loginCta")}
+                  </Link>
+                ) : (
+                  <ProxyRequestButton lang={lang} auction={item.auction} totalLabel={totalLabel}
+                    source={source} sourceId={params.id}
+                    title={item.title} price={item.price} currency={item.currency}
+                    url={item.url} images={images}
+                    sellerName={item.sellerName}
+                  />
+                )}
+              </div>
+            </div>
           )}
         </div>
       </div>

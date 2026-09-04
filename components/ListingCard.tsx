@@ -31,7 +31,7 @@ export default function ListingCard({ listing, viewer }: {
       </p>
       <p className="mt-0.5 flex items-center gap-1 text-[11px] text-ink-soft">
         <CountryChip country={listing.country} />
-        <span className="truncate">{listing.region}</span>
+        <span className="truncate" lang={listing.country === "JP" ? "ja" : "ko"}>{listing.region}</span>
       </p>
     </Link>
   );

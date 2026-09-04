@@ -20,7 +20,7 @@ function ThemeBlock({ section, viewer }: { section: TrendingSection; viewer: Vie
   return (
     <div>
       <SectionHeader level={3} lang={lang} title={lang === "ja" ? section.theme.labelJa : section.theme.label}
-        href={`/global?q=${encodeURIComponent(section.theme.label)}`} />
+        href={`/global?q=${encodeURIComponent(lang === "ja" ? section.theme.labelJa : section.theme.label)}`} />
       <MarketCarousel items={section.items} rate={viewer.rate} viewerCurrency={viewer.currency} lang={lang} />
     </div>
   );
@@ -86,7 +86,7 @@ async function SellPrompt({ viewer }: { viewer: ViewerOrGuest }) {
             {lang === "ja" ? th.labelJa : th.label}
           </Link>
         ))}
-        <Link href="/sell" className="btn ml-auto bg-tomo-coral-deep px-4 py-2 text-sm text-white">
+        <Link href="/sell" className="btn ml-auto bg-tomo-navy px-4 py-2 text-sm text-white">
           {t(lang, "hub.sellCta")}
         </Link>
       </div>
@@ -119,8 +119,9 @@ export default function HomeHub({ viewer, listings, travel }: {
       </Suspense>
 
       <section className="mt-8" aria-label={t(lang, "hub.own")}>
+        {/* 게스트에게 "내 동네"는 로그인 벽 — 게스트는 전체 리스트로 */}
         <SectionHeader lang={lang} title={t(lang, "hub.own")} sub={t(lang, "hub.ownSub")}
-          href="/?tab=local" linkLabel={t(lang, "hub.ownLink")} />
+          href={viewer.guest ? "/?tab=all" : "/?tab=local"} linkLabel={viewer.guest ? t(lang, "hub.more") : t(lang, "hub.ownLink")} />
         {listings.length > 0 ? (
           <ul className="grid grid-cols-2 gap-x-3 gap-y-5 md:grid-cols-4 md:gap-x-5 md:gap-y-7">
             {listings.map((l) => <li key={l.id}><ListingCard listing={l} viewer={viewer} /></li>)}

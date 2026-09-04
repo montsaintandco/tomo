@@ -50,6 +50,12 @@
         "value": "rgb(251, 249, 244)",
         "createdAt": "2026-09-03T01:17:52.910Z",
         "reason": "design token: tomo-ivory #FBF9F4 — v2에서는 신뢰 스트립·푸터·검색 입력 틴트 전용 (페이지 배경은 흰색); runtime detector only"
+      },
+      {
+        "rule": "bounce-easing",
+        "value": "cubic-bezier(.34, 1.56, .64, 1)",
+        "createdAt": "2026-09-04T02:59:26.618Z",
+        "reason": "same --squish token, browser-normalized form (no leading zeros)"
       }
     ]
   },

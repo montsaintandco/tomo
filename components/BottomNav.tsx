@@ -61,7 +61,7 @@ export default function BottomNav({ lang = "ko", unread = 0 }: { lang?: Lang; un
                     {ICONS[i.icon]}
                   </svg>
                   {i.icon === "chat" && unread > 0 && (
-                    <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-tomo-coral-deep px-1 text-[10px] font-bold leading-none text-white"
+                    <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-tomo-coral-deep px-1 text-[11px] font-bold leading-none text-white"
                       aria-label={t(lang, "chat.unread", { n: unread })}>{unread > 9 ? "9+" : unread}</span>
                   )}
                 </span>

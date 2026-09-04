@@ -19,14 +19,17 @@ export default function LangToggle({ lang, label }: { lang: Lang; label: string 
   const chip = (code: "KR" | "JP", value: Lang) => {
     const active = lang === value;
     return (
+      // 44px 히트영역, 시각은 작은 말풍선 칩 그대로
       <button type="button" onClick={() => set(value)} aria-pressed={active} disabled={pending}
-        className={`press ${code === "KR" ? "bubble-kr" : "bubble-jp"} px-2 py-1 text-[11px] font-bold leading-none transition-opacity ${active ? "opacity-100" : "opacity-40 hover:opacity-70"}`}>
-        {code}
+        className="press flex h-11 min-w-8 items-center justify-center">
+        <span className={`${code === "KR" ? "bubble-kr" : "bubble-jp"} px-2 py-1 text-[11px] font-bold leading-none transition-opacity ${active ? "opacity-100" : "opacity-40 hover:opacity-70"}`}>
+          {code}
+        </span>
       </button>
     );
   };
   return (
-    <div role="group" aria-label={label} className="flex items-center gap-1">
+    <div role="group" aria-label={label} className="flex items-center">
       {chip("KR", "ko")}
       {chip("JP", "ja")}
     </div>

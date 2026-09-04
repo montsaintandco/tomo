@@ -128,3 +128,9 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzd
 ## Claude에서 이어서 작업하려면
 
 새 세션에서 이 폴더를 연결하고: "TOMO 프로젝트 이어서. HANDOFF.md 읽고 진행". 최우선 잔여 작업은 Stripe 3종 키 투입(Plan 04 Task 2~3 라이브 테스트 — STRIPE_SECRET_KEY/STRIPE_WEBHOOK_SECRET/SUPABASE_SERVICE_ROLE_KEY). 번역은 무료 구글 경로로 전환 완료(키 불필요), 이월 이슈 4건도 정리 완료.
+
+## 2026-09-04 (오피스) — "전부 수정" 라운드
+- 외부 상품 상세(`app/global/[source]/[id]/page.tsx`) 재구성: 가로 스와이프 갤러리+사진 N장, 예상 총액 히어로(정가 서브라인), 양방향 `proxyEstimate`(KRW/JPY), 같은 나라 상품은 원본 직거래 링크, 고정 바 = 총액+버튼, 대행 신청은 `<dialog>` 바텀시트(요청사항·묶음·경매 최대 입찰가), 진행 4단계 안내, 판매자 카드 국가칩+검수 문구.
+- 홈 재베이스라인 26/40 후 수정: 국내 서브카피 사실화, 외부 카드에 원문 제목 1줄 상시, KR/JP 토글 44px(폭 32, 375px 오버플로 주의), 게스트 "내 동네"→전체 리스트, 팔기 버튼 네이비, 허브 검색 헤더 비고정, 소스 배지 i18n·지역 lang·ja 더보기 라벨.
+- 디텍터 0건(11px 플로어, 푸터 17px). 크리틱 스냅샷 `.impeccable/critique/` (상세 21, 홈 26 — 수정 전 기준). 다음 크리틱은 수정 후 재채점.
+- 검증: tsc/lint/vitest 58 통과, 375/데스크톱 브라우저 확인.

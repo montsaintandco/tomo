@@ -47,7 +47,7 @@ export default function SiteHeader({ lang = "ko", unread = 0 }: { lang?: Lang; u
                     isActive(l.href) ? "bg-tomo-navy text-white" : "text-ink-soft hover:text-ink"}`}>
                   {t(lang, l.label)}
                   {l.href === "/chat" && unread > 0 && (
-                    <span className="tnum ml-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-tomo-coral-deep px-1 text-[10px] font-bold text-white" aria-label={t(lang, "chat.unread", { n: unread })}>{unread > 9 ? "9+" : unread}</span>
+                    <span className="tnum ml-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-tomo-coral-deep px-1 text-[11px] font-bold text-white" aria-label={t(lang, "chat.unread", { n: unread })}>{unread > 9 ? "9+" : unread}</span>
                   )}
                 </Link>
               </li>

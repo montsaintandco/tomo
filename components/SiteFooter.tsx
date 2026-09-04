@@ -15,7 +15,7 @@ export default function SiteFooter({ lang = "ko" }: { lang?: Lang }) {
       {/* 브랜드 밴드 — 디자인 테제를 브랜드 보이스로 (데스크톱) */}
       <div className="hidden border-b border-tomo-navy/5 md:block">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-8 px-6 py-8">
-          <p className="text-[22px] font-extrabold text-tomo-navy">{t(lang, "footer.thesis")}</p>
+          <p className="text-[17px] font-extrabold text-tomo-navy md:text-xl">{t(lang, "footer.thesis")}</p>
           <TomoSymbol className="h-16 w-24 shrink-0" />
         </div>
       </div>
