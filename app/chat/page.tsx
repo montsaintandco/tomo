@@ -50,6 +50,8 @@ export default async function ChatListPage() {
     .limit(1, { referencedTable: "messages" })
     .limit(50);
 
+  const { data: unreadRows } = await supabase.rpc("unread_by_conversation");
+  const unread = new Map<string, number>(((unreadRows ?? []) as { conversation_id: string; n: number }[]).map((r) => [r.conversation_id, r.n]));
   const convos = (data ?? []) as unknown as ConvoRow[];
   const sorted = convos.slice().sort((a, b) => {
     const at = a.messages[0]?.created_at ?? a.created_at;
@@ -65,6 +67,7 @@ export default async function ChatListPage() {
           const other = c.buyer_id === viewer.id ? c.seller : c.buyer;
           const l = c.listings;
           const last = c.messages[0];
+          const n = unread.get(c.id) ?? 0;
           return (
             <li key={c.id} className="border-b border-tomo-navy/5 last:border-0">
               <Link href={`/chat/${c.id}`} className="press flex items-center gap-3 py-3">
@@ -83,9 +86,13 @@ export default async function ChatListPage() {
                     <p className="truncate text-sm font-bold text-ink">{other.nickname}</p>
                     {last && <p className="tnum shrink-0 text-[11px] text-ink-soft">{when(last.created_at, lang)}</p>}
                   </div>
-                  <p className="truncate text-[13px] text-ink">{preview(last, lang)}</p>
+                  <p className={`truncate text-[13px] text-ink ${n > 0 ? "font-bold" : ""}`}>{preview(last, lang)}</p>
                   <p className="truncate text-[11px] text-ink-soft">{displayTitle(l, lang)}</p>
                 </div>
+                {n > 0 && (
+                  <span className="tnum shrink-0 rounded-full bg-tomo-coral-deep px-2 py-0.5 text-[11px] font-bold text-white"
+                    aria-label={t(lang, "chat.unread", { n })}>{n > 99 ? "99+" : n}</span>
+                )}
               </Link>
             </li>
           );

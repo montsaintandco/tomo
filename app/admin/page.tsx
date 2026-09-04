@@ -49,6 +49,7 @@ export default async function AdminHome() {
           ["/admin/users", "사용자 관리 (정지·운영자)"],
           ["/admin/external", "외부 상품 (등록·숨김·삭제)"],
           ["/admin/rates", "환율 보정"],
+          ["/admin/trending", "인기 큐레이션 (홈 테마)"],
         ].map(([href, label]) => (
           <Link key={href} href={href} className="card flex items-center justify-between p-3.5 text-sm font-bold text-ink">
             {label}

@@ -5,6 +5,7 @@ import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
 import { getRequestLang } from "@/lib/locale";
 import { t } from "@/lib/i18n";
+import { createServerSupabase } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
   title: "TOMO — 한국·일본 중고거래 · 韓国と日本のフリマ",
@@ -25,6 +26,13 @@ export const viewport: Viewport = { themeColor: "#FFFFFF", viewportFit: "cover" 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   // 뷰어 언어가 문서 언어다 — 스크린리더 발음·폰트 셰이핑·번역 방향의 기준
   const lang = await getRequestLang();
+  // 안읽은 채팅 수 — 로그인 시에만, 실패(미적용 마이그레이션 등)면 0
+  let unread = 0;
+  try {
+    const supabase = await createServerSupabase();
+    const { data: auth } = await supabase.auth.getUser();
+    if (auth.user) { const { data } = await supabase.rpc("unread_count"); unread = Number(data ?? 0); }
+  } catch { unread = 0; }
   return (
     <html lang={lang}>
       <body className="bg-white text-ink standalone:pb-24 md:pb-0">
@@ -41,10 +49,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-full focus:bg-tomo-navy focus:px-4 focus:py-2 focus:text-sm focus:font-bold focus:text-white">
           {t(lang, "skip.main")}
         </a>
-        <SiteHeader lang={lang} />
+        <SiteHeader lang={lang} unread={unread} />
         <div id="main">{children}</div>
         <SiteFooter lang={lang} />
-        <BottomNav lang={lang} />
+        <BottomNav lang={lang} unread={unread} />
       </body>
     </html>
   );

@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 import { formatPrice, type Currency } from "@/lib/currency";
@@ -20,7 +20,15 @@ export default function SellerPanel({ listingId, currency, bumpedAt, active, off
   const [msg, setMsg] = useState("");
   const router = useRouter();
 
-  const hoursLeft = Math.max(0, Math.ceil(48 - (Date.now() - new Date(bumpedAt).getTime()) / 3600000));
+  // Date.now()는 렌더 밖에서 — 마운트 후 계산 (react-hooks/purity)
+  const [hoursLeft, setHoursLeft] = useState(48);
+  useEffect(() => {
+    let alive = true;
+    Promise.resolve().then(() => {
+      if (alive) setHoursLeft(Math.max(0, Math.ceil(48 - (Date.now() - new Date(bumpedAt).getTime()) / 3600000)));
+    });
+    return () => { alive = false; };
+  }, [bumpedAt]);
   const canBump = active && hoursLeft === 0;
 
   async function bump() {

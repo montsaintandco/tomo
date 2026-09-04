@@ -9,6 +9,7 @@ import LogoutButton from "@/components/LogoutButton";
 import ListingOwnerActions from "@/components/ListingOwnerActions";
 import UnwishButton from "@/components/UnwishButton";
 import DeactivateButton from "@/components/DeactivateButton";
+import PushToggle from "@/components/PushToggle";
 import { type MarketSource } from "@/lib/market/types";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -229,6 +230,7 @@ export default async function MyPage() {
       <Link href={`/profile/${me}`} className="card mt-8 block p-3.5 text-center text-sm font-bold text-tomo-navy">
         {t(lang, "my.profileLink")} →
       </Link>
+      <div className="card mt-6 p-3.5"><PushToggle lang={lang} /></div>
       <div className="mt-6"><DeactivateButton lang={lang} /></div>
     </main>
   );

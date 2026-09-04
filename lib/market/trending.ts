@@ -4,7 +4,8 @@ import { yahooAuctionSearch } from "./yahoo-auction";
 import { daangnSearch } from "./daangn";
 import { joongnaSearch } from "./joongna";
 import { translateTexts } from "@/lib/translate";
-import { TRENDING, pickTrendingItems, type TrendingTheme } from "./trending-data";
+import { pickTrendingItems, type TrendingTheme } from "./trending-data";
+import { getThemes } from "./themes";
 import { SOURCE_CURRENCY, type MarketItem, type MarketSource } from "./types";
 
 export type TrendingSection = { theme: TrendingTheme; items: MarketItem[] };
@@ -43,7 +44,7 @@ const cachedTheme = (theme: TrendingTheme) =>
     .catch(() => [] as MarketItem[]);
 
 export async function getTrendingSections(country: "KR" | "JP", limitThemes = 4): Promise<TrendingSection[]> {
-  const themes = TRENDING[country].slice(0, limitThemes);
+  const themes = (await getThemes(country)).slice(0, limitThemes);
   const items = await Promise.all(themes.map(cachedTheme));
   return themes.map((theme, i) => ({ theme, items: items[i] })).filter((s) => s.items.length > 0);
 }

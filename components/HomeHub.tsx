@@ -2,7 +2,7 @@ import { Suspense, cache } from "react";
 import Link from "next/link";
 import type { ViewerOrGuest } from "@/lib/listings";
 import { getTrendingSections, type TrendingSection } from "@/lib/market/trending";
-import { TRENDING } from "@/lib/market/trending-data";
+import { getThemes } from "@/lib/market/themes";
 import { t, otherCountry, type Lang } from "@/lib/i18n";
 import type { FeedListing } from "@/components/ListingRow";
 import TrustStrip from "@/components/TrustStrip";
@@ -68,10 +68,10 @@ async function TrendingRest({ viewer }: { viewer: ViewerOrGuest }) {
 }
 
 // 팔기 — 상대국 사람들이 "내 나라"에서 찾는 테마. 큐레이션 테이블을 뒤집어 쓴다: 모든 방문자는 판매자이기도 하다
-function SellPrompt({ viewer }: { viewer: ViewerOrGuest }) {
+async function SellPrompt({ viewer }: { viewer: ViewerOrGuest }) {
   const lang = viewer.language;
   const other = otherCountry(viewer.country);
-  const themes = TRENDING[other]; // 상대국 뷰어의 인기 테마 = 상대국 사람들이 내 나라 마켓에서 찾는 것
+  const themes = await getThemes(other); // 상대국 뷰어의 인기 테마 = 상대국 사람들이 내 나라 마켓에서 찾는 것
   const otherName = t(lang, `market.${other}`);
   const chipStyle = other === "JP" ? "bubble-jp" : "bubble-kr";
   return (

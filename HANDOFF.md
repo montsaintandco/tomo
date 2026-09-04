@@ -43,6 +43,20 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzd
 - 주의: 저장소 안에 `tomo/`(중복 clone)가 생기면 `tsc`가 같이 컴파일해 실패한다. 2026-09-03에 `C:/dev/tomo-clone-duplicate`로 옮겨 둠 — 필요 없으면 삭제.
 - 시드 상품에 `[test]` 접두 2건 남아 있음(의도적 유지). vitest 53개.
 
+## 2026-09-04 (회사 컴) — 채팅 이미지·알림 / 계정 완전 삭제 / 큐레이션 DB화
+
+코드는 전부 들어갔고 **DB·환경변수 2가지는 직접 해야 켜집니다** (그 전엔 폴백으로 동작, 오류 없음):
+
+1. **마이그레이션 0017 적용** — `supabase/migrations/0017_chat_push_curation_delete.sql`을 대시보드 SQL 에디터에 붙여넣어 실행 (MCP는 쓰기 권한 없음). 내용: `messages.image_path`, 비공개 버킷 `chat-images` + 참여자 RLS, `conversation_reads`(읽음), `push_subscriptions`, `trending_themes`(코드 테이블로 시드), `profiles.id → auth.users` FK 제거 + `deleted_at`, 함수 `unread_count / unread_by_conversation / push_targets`.
+2. **Vercel 환경변수** — `.env.local`에 있는 `NEXT_PUBLIC_VAPID_PUBLIC_KEY`·`VAPID_PRIVATE_KEY`·`VAPID_SUBJECT`(웹푸시), 그리고 `SUPABASE_SERVICE_ROLE_KEY`(계정 완전 삭제; 대시보드 → Project Settings → API Keys). 로컬 `.env.local`에도 service_role 추가.
+
+무엇이 어떻게 동작하나:
+- **채팅 이미지**: 첨부 버튼 → 클라이언트가 `chat-images/<대화>/<유저>/<uuid>`에 업로드 → `/api/messages`에 `imagePath` → 말풍선에 서명 URL(1h)로 표시. 5MB·jpeg/png/webp/gif.
+- **안읽음**: 방에 있으면 `conversation_reads` 갱신. 채팅 목록 배지, 하단 탭바·GNB 채팅 아이콘 숫자/점(`unread_count` rpc, layout에서 1회).
+- **웹푸시**: 마이페이지 "채팅 알림" 스위치 → `public/sw.js` 등록·구독 → `push_subscriptions`. 발송은 `/api/messages`에서 `push_targets(대화)`(SECURITY DEFINER, 상대 구독만) → `web-push`. VAPID 없으면 조용히 생략. iOS는 홈 화면에 추가한 PWA에서만 동작.
+- **계정 삭제**: `/api/account/delete` — `deactivate_my_account`(익명화·상품 숨김) 후 service_role 있으면 `auth.admin.deleteUser`; 없으면 202(비활성화만). 어드민 사용자 화면 "완전 삭제" 버튼(`/api/admin/users/delete`). 프로필은 유령으로 남아 거래 기록 보존.
+- **큐레이션**: `lib/market/themes.ts`가 `trending_themes`를 10분 캐시로 읽고 실패/비어있음이면 `trending-data.ts` 폴백. 어드민 `/admin/trending`에서 추가·수정·순서·노출·삭제. 홈 캐러셀은 앞 4개, 팔기 칩은 전부.
+
 ## 인프라
 
 - Supabase: 프로젝트 `tomo` (id `zftztnkczlblnkgaijzc`, 서울 리전, seoulbuy 조직 — 이든에이치 계정)

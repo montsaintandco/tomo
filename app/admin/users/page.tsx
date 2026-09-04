@@ -1,6 +1,7 @@
 import { createServerSupabase } from "@/lib/supabase/server";
 import { getViewer } from "@/lib/listings";
 import AdminToggle from "@/components/AdminToggle";
+import AdminDeleteUserButton from "@/components/AdminDeleteUserButton";
 import { CountryChip } from "@/components/Brand";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -57,6 +58,7 @@ export default async function AdminUsersPage(props: { searchParams: Promise<{ q?
                   confirmText={u.is_admin ? undefined : `${u.nickname} 님에게 운영자 권한을 줄까요?`}
                   action={{ rpc: "admin_set_user", args: { p_id: u.id, p_suspended: u.suspended, p_admin: !u.is_admin } }} />
               )}
+              {u.id !== viewer.id && <AdminDeleteUserButton userId={u.id} nickname={u.nickname} />}
             </span>
           </div>
         ))}

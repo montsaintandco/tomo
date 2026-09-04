@@ -25,7 +25,7 @@ const MOBILE = [
   { href: "/mypage", label: "nav.my", icon: "user" },
 ] as const;
 
-export default function SiteHeader({ lang = "ko" }: { lang?: Lang }) {
+export default function SiteHeader({ lang = "ko", unread = 0 }: { lang?: Lang; unread?: number }) {
   const path = usePathname();
   if (path.startsWith("/login") || path.startsWith("/onboarding")) return null;
   const isActive = (href: string) => (href === "/" ? path === "/" : path.startsWith(href));
@@ -46,6 +46,9 @@ export default function SiteHeader({ lang = "ko" }: { lang?: Lang }) {
                   className={`press block rounded-full px-4 py-2 text-sm font-bold transition-colors ${
                     isActive(l.href) ? "bg-tomo-navy text-white" : "text-ink-soft hover:text-ink"}`}>
                   {t(lang, l.label)}
+                  {l.href === "/chat" && unread > 0 && (
+                    <span className="tnum ml-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-tomo-coral-deep px-1 text-[10px] font-bold text-white" aria-label={t(lang, "chat.unread", { n: unread })}>{unread > 9 ? "9+" : unread}</span>
+                  )}
                 </Link>
               </li>
             ))}
@@ -61,12 +64,15 @@ export default function SiteHeader({ lang = "ko" }: { lang?: Lang }) {
               {MOBILE.map((m) => (
                 <li key={m.href}>
                   <Link href={m.href} aria-label={t(lang, m.label)} aria-current={isActive(m.href) ? "page" : undefined}
-                    className={`press flex h-11 w-10 items-center justify-center rounded-full ${
+                    className={`press relative flex h-11 w-10 items-center justify-center rounded-full ${
                       isActive(m.href) ? "text-tomo-navy" : "text-ink-soft"}`}>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={isActive(m.href) ? 2.1 : 1.7}
                       strokeLinecap="round" strokeLinejoin="round" className="h-[22px] w-[22px]" aria-hidden>
                       {ICONS[m.icon]}
                     </svg>
+                    {m.href === "/chat" && unread > 0 && (
+                      <span className="absolute right-1 top-1.5 h-2 w-2 rounded-full bg-tomo-coral-deep" aria-label={t(lang, "chat.unread", { n: unread })} />
+                    )}
                   </Link>
                 </li>
               ))}
