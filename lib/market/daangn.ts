@@ -71,6 +71,25 @@ export function parseDaangnContext(html: string): Partial<MarketItemDetail> & { 
     // 매너온도는 마크업에만 있다 — "41.2<!-- -->°C" 첫 등장 (React 텍스트 경계 주석 허용)
     const temp = /(\d{2}\.\d)(?:<!--\s*-->)?\s*°C/.exec(html);
     if (temp) out.sellerTemp = Number(temp[1]);
+    // 판매자 페이지 + 판매자의 다른 글 (userArticles — 메인 글 앞쪽 user 객체 안)
+    const userHref = lastBefore(html, anchor, /"href":"(https:\/\/www\.daangn\.com\/kr\/users\/[^"]+)"/);
+    if (userHref) out.sellerUrl = jstr(userHref[1]);
+    const ua = html.lastIndexOf('"userArticles":[', anchor);
+    if (ua >= 0) {
+      const seg = html.slice(ua, Math.min(anchor, ua + 60_000));
+      const items: MarketItem[] = [];
+      const re = /"id":"(\/kr\/buy-sell\/[^"]+)","title":"((?:[^"\\]|\\.)*)","price":"([^"]*)","thumbnail":"([^"]*)"/g;
+      let m: RegExpExecArray | null;
+      while ((m = re.exec(seg)) && items.length < 8) {
+        const url = `https://www.daangn.com${jstr(m[1])}`;
+        items.push({
+          source: "daangn", sourceId: idFromUrl(url), url, title: jstr(m[2]),
+          price: Math.round(Number(m[3]) || 0), currency: "KRW",
+          thumb: jstr(m[4]), soldOut: false,
+        });
+      }
+      if (items.length) out.sellerItems = items;
+    }
     return out;
   } catch {
     return {};
@@ -128,5 +147,6 @@ export async function daangnItem(id: string): Promise<MarketItemDetail> {
     extra: {},
     region: ctx.region, category: ctx.category, postedAt: ctx.postedAt,
     sellerTemp: ctx.sellerTemp, counts: ctx.counts,
+    sellerUrl: ctx.sellerUrl, sellerItems: ctx.sellerItems?.filter((i) => i.sourceId !== id),
   };
 }

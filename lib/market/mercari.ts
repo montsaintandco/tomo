@@ -40,7 +40,7 @@ async function makeDpop(method: string, htu: string): Promise<string> {
   return `${input}.${b64url(sig)}`;
 }
 
-async function mercariFetch(method: "GET" | "POST", path: string, body?: unknown): Promise<any> {
+export async function mercariFetch(method: "GET" | "POST", path: string, body?: unknown): Promise<any> {
   const url = `${API_BASE}${path}`;
   const dpop = await makeDpop(method, url.split("?")[0]);
   const res = await fetchWithRetry(url, {
@@ -78,21 +78,49 @@ export async function mercariSearch(keyword: string, page = 1): Promise<MarketIt
   }));
 }
 
+// 판매자의 판매중 상품 — 구 API(get_items)가 seller_id 필터를 지원한다 (v2 검색의 sellerIds는 무시됨)
+export async function mercariSellerItems(sellerId: string | number, limit = 12): Promise<MarketItem[]> {
+  const r = await mercariFetch("GET", `/items/get_items?seller_id=${encodeURIComponent(String(sellerId))}&status=on_sale&limit=${limit}`);
+  return ((r.data ?? []) as any[]).map((it): MarketItem => ({
+    source: "mercari", sourceId: it.id,
+    url: `https://jp.mercari.com/item/${it.id}`,
+    title: it.name, price: Number(it.price), currency: "JPY",
+    thumb: it.thumbnails?.[0] ?? it.photos?.[0] ?? "", soldOut: it.status !== "on_sale",
+  }));
+}
+
 export async function mercariItem(id: string): Promise<MarketItemDetail> {
   const res = await mercariFetch("GET", `/items/get?id=${encodeURIComponent(id)}`);
   const d = res.data;
+  const s = d.seller ?? {};
+  const r = s.ratings ?? {};
+  const ratingTotal = Number(s.num_ratings ?? 0);
+  const sellerItems = s.id
+    ? await mercariSellerItems(s.id).then((l) => l.filter((i) => i.sourceId !== d.id).slice(0, 8)).catch(() => undefined)
+    : undefined;
+  const cat = d.item_category;
   return {
     source: "mercari", sourceId: d.id,
     url: `https://jp.mercari.com/item/${d.id}`,
     title: d.name, price: Number(d.price), currency: "JPY",
     thumb: d.photos?.[0] ?? "", soldOut: d.status !== "on_sale",
     description: d.description ?? "", images: d.photos ?? [],
-    sellerName: d.seller?.name ?? "",
+    sellerName: s.name ?? "",
     condition: d.item_condition?.name ?? "",
     extra: {
       배송부담: d.shipping_payer?.name ?? "",
       발송지: d.shipping_from_area?.name ?? "",
       발송까지: d.shipping_duration?.name ?? "",
     },
+    category: cat ? [cat.root_category_name, cat.parent_category_name, cat.name].filter(Boolean).join(" › ") : undefined,
+    postedAt: d.updated ? new Date(Number(d.updated) * 1000).toISOString() : undefined,
+    counts: { favorites: Number(d.num_likes ?? 0), chats: Number(d.num_comments ?? 0) },
+    // 메루카리 평가는 좋아요/보통/나쁨 개수 — 총 건수와 좋아요 비율로 요약
+    sellerRating: ratingTotal > 0
+      ? `👍 ${Number(r.good ?? 0)} · ${Math.round((Number(r.good ?? 0) / ratingTotal) * 100)}% (${ratingTotal})`
+      : undefined,
+    sellerUrl: s.id ? `https://jp.mercari.com/user/profile/${s.id}` : undefined,
+    sellerItems,
+    tradeTags: [d.is_anonymous_shipping ? "匿名配送" : "", d.shipping_payer?.name ?? ""].filter(Boolean),
   };
 }

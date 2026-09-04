@@ -82,6 +82,33 @@ function findItem(o: any): any {
   return null;
 }
 
+// __NEXT_DATA__ 안의 상품 목록 객체들(auctionId+title) 수집 — 판매자 페이지용
+function collectItems(o: any, out: any[], depth = 0): void {
+  if (!o || typeof o !== "object" || depth > 12) return;
+  if (typeof o.auctionId === "string" && typeof o.title === "string" && !out.some((x) => x.auctionId === o.auctionId)) { out.push(o); return; }
+  for (const v of Array.isArray(o) ? o : Object.values(o)) collectItems(v, out, depth + 1);
+}
+
+// 판매자의 출품 목록 — /seller/<id> 페이지의 __NEXT_DATA__
+export async function yahooSellerItems(sellerId: string, limit = 12): Promise<MarketItem[]> {
+  const html = await fetchHtml(`https://auctions.yahoo.co.jp/seller/${encodeURIComponent(sellerId)}`);
+  const j = extractNextData(html);
+  const found: any[] = [];
+  collectItems(j?.props?.pageProps ?? j, found);
+  return found.slice(0, limit).map((it): MarketItem => {
+    const buyNow = Number(it.buyNowPrice ?? it.bidorbuy ?? 0) || 0;
+    const img = it.imageUrl ?? (typeof it.image === "string" ? it.image : it.image?.url) ?? it.img?.[0]?.image ?? "";
+    const fixed = Boolean(it.isFixedPrice || it.isFleamarketItem || it.isFleaMarket);
+    return {
+      source: "yahoo_auction", sourceId: String(it.auctionId),
+      url: `https://auctions.yahoo.co.jp/jp/auction/${it.auctionId}`,
+      title: String(it.title), price: buyNow > 0 ? buyNow : Number(it.price) || 0, currency: "JPY",
+      thumb: typeof img === "string" ? img : "", soldOut: Boolean(it.isClosed),
+      auction: !fixed && buyNow === 0,
+    };
+  });
+}
+
 export async function yahooAuctionItem(id: string): Promise<MarketItemDetail> {
   if (!/^[a-zA-Z]?\d{5,}$/.test(id) && !/^[a-zA-Z]\d{5,}$/.test(id)) throw new Error("잘못된 상품 번호");
   const html = await fetchHtml(`https://auctions.yahoo.co.jp/jp/auction/${id}`);
@@ -105,18 +132,37 @@ export async function yahooAuctionItem(id: string): Promise<MarketItemDetail> {
   })();
   const price = buyNow > 0 ? buyNow : Number(item.taxinPrice) || Number(item.price) || 0;
 
+  const seller = item.seller ?? {};
+  const sellerId: string = String(seller.aucUserId ?? seller.id ?? "");
+  const rating = seller.rating ?? {};
+  const catPath: string[] = Array.isArray(item.category?.path)
+    ? item.category.path.map((c: any) => String(c?.name ?? "")).filter((n: string) => n && n !== "オークション")
+    : [];
+  const sellerItems = sellerId
+    ? await yahooSellerItems(sellerId).then((l) => l.filter((i) => i.sourceId !== String(item.auctionId ?? id)).slice(0, 8)).catch(() => undefined)
+    : undefined;
+
   return {
+    category: catPath.length ? catPath.join(" › ") : undefined,
+    postedAt: item.startTime ? String(item.startTime) : undefined,
+    counts: { favorites: Number(item.watchListNum ?? 0), bids: Number(item.bids ?? 0) },
+    sellerRating: rating.summary != null ? `${rating.goodRating ?? ""} (${rating.summary})`.trim() : undefined,
+    sellerUrl: seller.listUrl ?? (sellerId ? `https://auctions.yahoo.co.jp/seller/${sellerId}` : undefined),
+    sellerItems,
+    tradeTags: [
+      item.isFleaMarket ? "フリマ(定額)" : buyNow > 0 ? "即決あり" : "オークション",
+      item.chargeForShipping === "seller" ? "送料出品者負担" : item.chargeForShipping === "buyer" ? "送料落札者負担" : "",
+      item.shipScheduleName ?? "",
+      item.isWorldwideDelivery ? "海外発送可" : "",
+    ].filter(Boolean),
     source: "yahoo_auction", sourceId: item.auctionId ?? id,
     url: `https://auctions.yahoo.co.jp/jp/auction/${item.auctionId ?? id}`,
     title: String(item.title), price, currency: "JPY",
     thumb: images[0] ?? "", soldOut: Boolean(item.isClosed),
     auction: !item.isFleaMarket && buyNow === 0,
     description: (Array.isArray(item.description) ? item.description.join("\n") : String(item.description ?? "")).slice(0, 800),
-    images, sellerName: String(item.seller?.displayName ?? item.seller?.id ?? ""),
+    images, sellerName: String(item.seller?.displayName ?? item.seller?.nickname ?? item.seller?.aucUserId ?? item.seller?.id ?? ""),
     condition: String(item.conditionName ?? ""),
-    extra: {
-      형태: item.isFleaMarket ? "플리마(정액)" : buyNow > 0 ? "경매+즉시구매" : "경매",
-      입찰수: String(item.bids ?? 0),
-    },
+    extra: {}, // 형태·입찰수는 tradeTags/counts로 옮김
   };
 }

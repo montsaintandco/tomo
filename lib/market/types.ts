@@ -26,8 +26,11 @@ export type MarketItemDetail = MarketItem & {
   category?: string;    // 원본 카테고리 경로
   postedAt?: string;    // ISO 게시(끌올) 시각
   sellerTemp?: number;  // 매너온도 등 판매자 신뢰 지표 (소스 단위 그대로)
-  counts?: { views?: number; favorites?: number; chats?: number };
+  counts?: { views?: number; favorites?: number; chats?: number; bids?: number };
   tradeTags?: string[]; // 직거래·택배·새상품·안전결제 같은 원본 라벨
+  sellerRating?: string; // 원본 마켓의 판매자 평가 요약 ("좋아요 115 · 100%", "★4.8" 등)
+  sellerUrl?: string;    // 원본 마켓 판매자 페이지 (다른 상품 더 보기 링크)
+  sellerItems?: MarketItem[]; // 판매자의 다른 판매중 상품 (최대 8)
 };
 
 export const SOURCE_LABEL: Record<MarketSource, string> = {

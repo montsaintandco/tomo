@@ -85,6 +85,8 @@ export function parseJoongnaContext(html: string, id: string): Partial<MarketIte
     out.title = str("productTitle") || undefined;
     out.description = str("productDescription") || undefined;
     out.sellerName = str("nickName") || undefined;
+    // 스토어 페이지는 상품이 클라이언트 렌더라 목록은 못 긁고 링크만 (ponytail: 중고나라 스토어 API 확인되면 sellerItems 채움)
+    const store = num("storeSeq"); if (store) out.sellerUrl = `https://web.joongna.com/store/${store}`;
     out.region = str("locationName") || undefined;
     const cat = str("categoryName");
     if (cat) out.category = cat.split(",").map((x) => x.trim()).filter(Boolean).join(" › ");
@@ -145,6 +147,6 @@ export async function joongnaItem(id: string): Promise<MarketItemDetail> {
     images,
     sellerName: ctx.sellerName ?? "", condition: ctx.condition ?? "", extra: {},
     region: ctx.region, category: ctx.category, postedAt: ctx.postedAt,
-    counts: ctx.counts, tradeTags: ctx.tradeTags,
+    counts: ctx.counts, tradeTags: ctx.tradeTags, sellerUrl: ctx.sellerUrl,
   };
 }

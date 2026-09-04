@@ -9,6 +9,7 @@ import { joongnaItem } from "@/lib/market/joongna";
 import { SOURCE_LABEL, LIVE_SOURCES, SOURCE_CURRENCY, type MarketSource, type MarketItemDetail } from "@/lib/market/types";
 import { t, type Lang } from "@/lib/i18n";
 import ProxyRequestButton from "@/components/ProxyRequestButton";
+import MarketCarousel from "@/components/MarketCarousel";
 import { TomoSymbol } from "@/components/Brand";
 import Link from "next/link";
 import { Fragment } from "react";
@@ -134,11 +135,12 @@ export default async function ExternalItemPage(props: {
             {item.category && <span lang={sourceLang}>{item.category}</span>}
             {item.category && item.postedAt && <span aria-hidden>·</span>}
             {item.postedAt && <time dateTime={item.postedAt} className="tnum">{ago(item.postedAt, lang)}</time>}
-            {item.counts && (item.counts.chats != null || item.counts.favorites != null || item.counts.views != null) && (
+            {item.counts && Object.values(item.counts).some((v) => v != null) && (
               <span className="tnum basis-full">
                 {[
-                  item.counts.chats != null && t(lang, "ext.chats", { n: item.counts.chats }),
-                  item.counts.favorites != null && t(lang, "ext.favorites", { n: item.counts.favorites }),
+                  item.counts.chats != null && t(lang, source === "mercari" ? "ext.comments" : "ext.chats", { n: item.counts.chats }),
+                  item.counts.favorites != null && t(lang, source === "mercari" ? "ext.likes" : source === "yahoo_auction" ? "ext.watch" : "ext.favorites", { n: item.counts.favorites }),
+                  item.counts.bids != null && t(lang, "ext.bids", { n: item.counts.bids }),
                   item.counts.views != null && t(lang, "ext.views", { n: item.counts.views }),
                 ].filter(Boolean).join(" · ")}
               </span>
@@ -203,6 +205,7 @@ export default async function ExternalItemPage(props: {
             <span className="min-w-0 flex-1">
               <span className="block truncate text-sm font-bold text-ink" lang={sourceLang}>{item.sellerName || t(lang, "ext.seller")}</span>
               {item.region && <span className="block truncate text-[12px] text-ink-soft" lang={sourceLang}>{item.region}</span>}
+              {item.sellerRating && <span className="tnum block truncate text-[12px] text-ink-soft">{t(lang, "ext.sellerRating")} {item.sellerRating}</span>}
             </span>
             {item.sellerTemp != null && (
               <span className="shrink-0 text-right">
@@ -211,6 +214,26 @@ export default async function ExternalItemPage(props: {
               </span>
             )}
           </div>
+        )}
+
+        {/* 판매자의 다른 상품 — 같은 마켓 카드로, 원본 판매자 페이지 링크 */}
+        {((item.sellerItems && item.sellerItems.length > 0) || item.sellerUrl) && (
+          <section aria-label={t(lang, "ext.sellerItems")} className="pt-1">
+            <div className="mb-2 flex items-end justify-between gap-3">
+              <h2 className="text-[15px] font-extrabold text-ink">{t(lang, "ext.sellerItems")}</h2>
+              {item.sellerUrl && (
+                <a href={item.sellerUrl} target="_blank" rel="noopener noreferrer"
+                  className="press -my-2 -mr-2 shrink-0 py-2 pl-2 pr-2 text-[13px] font-bold text-tomo-navy">
+                  {t(lang, "ext.sellerItemsMore")} ↗
+                </a>
+              )}
+            </div>
+            {item.sellerItems && item.sellerItems.length > 0 ? (
+              <MarketCarousel items={item.sellerItems} rate={viewer.rate} viewerCurrency={viewer.currency} lang={lang} />
+            ) : (
+              <p className="text-[12px] text-ink-soft">{t(lang, "ext.sellerItemsMore")} ↗</p>
+            )}
+          </section>
         )}
 
         {(item.condition || Object.keys(item.extra).length > 0) && (

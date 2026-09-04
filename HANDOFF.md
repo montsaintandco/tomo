@@ -58,6 +58,8 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzd
 
 - **외부 상품 상세 보강(당근·중고나라)**: `MarketItemDetail`에 `region/category/postedAt/sellerTemp/counts/tradeTags` 추가. 당근은 임베디드 아폴로 JSON(`"content"…"recommendedArticles"` 앵커에서 역방향 탐색)으로 닉네임·동네·카테고리·끌올시각·관심/채팅/조회 + 마크업의 매너온도(`45.6<!-- -->°C`), 중고나라는 `self.__next_f` 플라이트 JSON(`\"productSeq\":ID` 세그먼트를 언이스케이프)으로 닉네임·동네·카테고리 경로·게시시각·조회·라벨(직거래/새상품/안전결제)·이미지 전부. 상세 페이지에 맥락 줄·거래 라벨 칩·판매자 카드(매너온도)·설명 본문 색(ink). 파서는 `parseDaangnContext/parseJoongnaContext`로 분리돼 저장 HTML로 오프라인 검증 가능.
 
+- **메루카리·야후 상세 보강 + 판매자의 다른 상품(4마켓)**: `MarketItemDetail.sellerRating/sellerUrl/sellerItems`, `counts.bids`. 메루카리는 `/items/get`의 seller(평가 good/normal/bad, num_ratings)·num_likes/comments·item_category·updated + `/items/get_items?seller_id=`로 판매자 상품(v2 검색 sellerIds는 무시됨). 야후는 `__NEXT_DATA__`의 seller.rating(goodRating/summary)·watchListNum·bids·category.path·startTime·shipSchedule + `/seller/<aucUserId>` 페이지 `__NEXT_DATA__`(imageUrl·buyNowPrice·isFixedPrice)로 판매자 상품. 당근은 상세 JSON의 `userArticles`. 중고나라는 스토어가 클라이언트 렌더라 `sellerUrl`(store/<storeSeq>) 링크만. 상세 하단 "판매자의 다른 상품" 캐러셀 + "원본에서 더 보기".
+
 ## 인프라
 
 - Supabase: 프로젝트 `tomo` (id `zftztnkczlblnkgaijzc`, 서울 리전, seoulbuy 조직 — 이든에이치 계정)
