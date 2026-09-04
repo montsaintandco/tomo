@@ -2,13 +2,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserSupabase } from "@/lib/supabase/client";
-import { PROXY_FEE_JPY, PROXY_REMIT_FEE_JPY, PROXY_SHIPPING_ESTIMATE_JPY } from "@/lib/fees";
+import { PROXY_SERVICE_RATE, PROXY_SHIPPING_ESTIMATE_JPY } from "@/lib/fees";
 
 export default function QuoteForm({ id, defaultItemPrice, quoted, total }: {
   id: string; defaultItemPrice: number; quoted: boolean; total: number | null;
 }) {
   const [itemPrice, setItemPrice] = useState(String(defaultItemPrice));
-  const [fee, setFee] = useState(String(PROXY_FEE_JPY + PROXY_REMIT_FEE_JPY));
+  const [fee, setFee] = useState(String(Math.floor(defaultItemPrice * PROXY_SERVICE_RATE)));
   const [shipping, setShipping] = useState(String(PROXY_SHIPPING_ESTIMATE_JPY));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");

@@ -41,11 +41,11 @@ function ago(iso: string, lang: Lang): string {
   return d < 30 ? t(lang, "time.day", { n: d }) : t(lang, "time.month", { n: Math.floor(d / 30) });
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function Row({ label, value, strong = false }: { label: string; value: string; strong?: boolean }) {
   return (
-    <div className="mt-1 flex justify-between gap-3 first:mt-0">
-      <span className="text-ink-soft">{label}</span>
-      <span className="tnum text-ink">{value}</span>
+    <div className={`flex justify-between gap-3 py-0.5 ${strong ? "border-t border-tomo-navy/10 pt-1.5 font-bold text-ink" : ""}`}>
+      <span className={strong ? "" : "text-ink-soft"}>{label}</span>
+      <span className="tnum">{value}</span>
     </div>
   );
 }
@@ -83,12 +83,14 @@ export default async function ExternalItemPage(props: {
   // 구매자 통화가 큰 숫자 — 같은 통화면 환산 없이
   const foreign = item.currency !== viewer.currency;
   const buyerPrice = foreign
-    ? `${t(lang, "price.approx")} ${formatPrice(convertPrice(item.price, item.currency, viewer.rate), viewer.currency)}`
+    ? formatPrice(convertPrice(item.price, item.currency, viewer.rate), viewer.currency)
     : formatPrice(item.price, item.currency);
   // 견적은 국경을 넘을 때만 — 같은 나라 상품은 대행이 필요 없다 (양방향 모두)
   const est = foreign ? proxyEstimate(item.price, item.currency) : null;
   const toViewer = (n: number) => (foreign ? convertPrice(n, item.currency, viewer.rate) : n);
-  const totalLabel = est ? `${t(lang, "price.approx")} ${formatPrice(toViewer(est.total), viewer.currency)}` : buyerPrice;
+  // 사줘식: 금액은 뷰어 통화 하나로만, "약" 없이 — 환율 기준은 표 아래 한 줄로
+  const v = (n: number) => formatPrice(toViewer(n), viewer.currency);
+  const totalLabel = est ? v(est.total) : buyerPrice;
   const sourceLang: Lang = SOURCE_CURRENCY[source] === "JPY" ? "ja" : "ko";
   const sourceCountry = SOURCE_CURRENCY[source] === "JPY" ? "JP" : "KR";
 
@@ -174,7 +176,7 @@ export default async function ExternalItemPage(props: {
               <p className="text-[12px] font-bold text-ink-soft">{item.auction ? t(lang, "ext.estimateCurrent") : t(lang, "ext.totalLabel")}</p>
               <p className="tnum text-[17px] font-extrabold leading-tight text-ink">{totalLabel}</p>
               <p className="tnum mt-0.5 text-xs font-bold text-ink-soft">
-                {t(lang, "ext.listPrice")} {formatPrice(item.price, item.currency)} · {buyerPrice}
+                {t(lang, "ext.listPrice")} {v(est.item)} · {formatPrice(item.price, item.currency)}
               </p>
             </>
           ) : (
@@ -200,23 +202,17 @@ export default async function ExternalItemPage(props: {
         {est && (
           <div className="rounded-card bg-tomo-navy/5 p-3.5 text-[13px]">
             <p className="mb-2 font-bold text-tomo-navy">{item.auction ? t(lang, "ext.estimateCurrent") : t(lang, "ext.estimateTitle")}</p>
-            <Row label={t(lang, "ext.item")} value={formatPrice(est.item, est.currency)} />
-            <Row label={t(lang, "ext.fee")} value={formatPrice(est.fee, est.currency)} />
-            <Row label={t(lang, "ext.remit")} value={formatPrice(est.remit, est.currency)} />
-            <Row label={t(lang, "ext.shipping")} value={formatPrice(est.shipping, est.currency)} />
-            {/* SAZO식 총액 투명성 — 관세는 금액을 지어내지 않고 면세 기준만 말한다 */}
-            <div className="mt-1 flex justify-between gap-3">
-              <span className="text-ink-soft">{t(lang, "ext.customs")}</span>
-              <span className="text-right text-[12px] leading-snug text-ink-soft">{t(lang, "ext.customsNote")}</span>
-            </div>
+            <Row label={t(lang, "ext.item")} value={v(est.item)} />
+            <Row label={t(lang, "ext.localShip")} value={v(est.localShipping)} />
+            <Row label={t(lang, "ext.subtotal")} value={v(est.subtotal)} strong />
+            <Row label={t(lang, "ext.shipping")} value={v(est.intlShipping)} />
+            <Row label={t(lang, "ext.serviceFee")} value={v(est.serviceFee)} />
             <div className="mt-2 flex items-baseline justify-between gap-3 border-t border-tomo-navy/10 pt-2">
               <span className="font-bold text-ink">{t(lang, "ext.total")}</span>
-              <span className="text-right">
-                <span className="tnum block text-[15px] font-extrabold text-tomo-navy">{totalLabel}</span>
-                <span className="tnum block text-[11px] font-bold text-ink-soft">{formatPrice(est.total, est.currency)}</span>
-              </span>
+              <span className="tnum text-[17px] font-extrabold text-tomo-navy">{totalLabel}</span>
             </div>
-            <p className="mt-2 text-[12px] leading-relaxed text-ink-soft">{t(lang, "ext.estimateNote")}</p>
+            <p className="mt-1 text-[12px] font-bold text-tomo-navy">{t(lang, "ext.oncePayment")}</p>
+            <p className="mt-1 text-[12px] leading-relaxed text-ink-soft">{t(lang, "ext.estimateNote")}</p>
           </div>
         )}
 

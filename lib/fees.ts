@@ -16,30 +16,22 @@ export function sellerPayout(itemPrice: number): number {
   return itemPrice - platformFee(itemPrice);
 }
 
-// ── 구매대행 (외부 마켓 상품) ─────────────────────────────
-// 대행 수수료: 건당 정액(JPY 기준). 국제배송비는 무게·부피에 따라 어드민이 견적 시 확정.
-export const PROXY_FEE_JPY = 400;          // 대행 수수료(건당)
-export const PROXY_REMIT_FEE_JPY = 185;    // 현지 결제·송금 수수료(건당)
-export const PROXY_SHIPPING_ESTIMATE_JPY = 2000; // 국제배송 개략치(견적 전 안내용)
 
-// 견적 전 "예상 총액" — 확정 아님을 UI에서 반드시 표기
-export function proxyEstimateJpy(itemPriceJpy: number): {
-  item: number; fee: number; remit: number; shipping: number; total: number;
-} {
-  const fee = PROXY_FEE_JPY, remit = PROXY_REMIT_FEE_JPY, shipping = PROXY_SHIPPING_ESTIMATE_JPY;
-  return { item: itemPriceJpy, fee, remit, shipping, total: itemPriceJpy + fee + remit + shipping };
-}
+// 사줘(SAZO)식 결제 구조: 상품 소계 → 국제 배송비 → 통관·수수료(상품가의 10%) → 주문 시 1회 결제, 2차 결제 없음
+export const PROXY_SERVICE_RATE = 0.1;
+// 국제배송 첫 건 개략치 (사줘: 최초 1건 7~9천원). ponytail: 무게 미상이라 정액, 무게 데이터 쌓이면 구간표로
+export const PROXY_SHIPPING_ESTIMATE_KRW = 8000;
+export const PROXY_SHIPPING_ESTIMATE_JPY = 900;
 
-// 한국 마켓 상품을 일본 구매자가 대행할 때 (KRW 기준). ponytail: JPY 상수의 환율 근사치 — 운영 데이터 쌓이면 보정
-export const PROXY_FEE_KRW = 4000;
-export const PROXY_REMIT_FEE_KRW = 1500;
-export const PROXY_SHIPPING_ESTIMATE_KRW = 20000;
+export type ProxyEstimate = {
+  item: number; localShipping: number; subtotal: number; intlShipping: number; serviceFee: number; total: number;
+  currency: "KRW" | "JPY";
+};
 
-export type ProxyEstimate = { item: number; fee: number; remit: number; shipping: number; total: number; currency: "KRW" | "JPY" };
-
-// 상품 통화 기준 예상 총액 — 어느 방향이든 같은 구조
-export function proxyEstimate(itemPrice: number, currency: "KRW" | "JPY"): ProxyEstimate {
-  if (currency === "JPY") return { ...proxyEstimateJpy(itemPrice), currency };
-  const fee = PROXY_FEE_KRW, remit = PROXY_REMIT_FEE_KRW, shipping = PROXY_SHIPPING_ESTIMATE_KRW;
-  return { item: itemPrice, fee, remit, shipping, total: itemPrice + fee + remit + shipping, currency };
+// 상품 통화 기준 예상 결제 금액 — 어느 방향이든 같은 구조. 현지 유통비(판매자→센터 배송)는 마켓 대부분 0
+export function proxyEstimate(itemPrice: number, currency: "KRW" | "JPY", localShipping = 0): ProxyEstimate {
+  const subtotal = itemPrice + localShipping;
+  const intlShipping = currency === "JPY" ? PROXY_SHIPPING_ESTIMATE_JPY : PROXY_SHIPPING_ESTIMATE_KRW;
+  const serviceFee = Math.floor(itemPrice * PROXY_SERVICE_RATE);
+  return { item: itemPrice, localShipping, subtotal, intlShipping, serviceFee, total: subtotal + intlShipping + serviceFee, currency };
 }

@@ -53,12 +53,10 @@ export default function ExternalItemCard({ item, rate, viewerCurrency, lang = "k
         {item.titleTranslated && (
           <p className="line-clamp-1 text-[11px] leading-snug text-ink-soft" lang={originalLang}>{item.title}</p>
         )}
+        {/* 사줘식: 뷰어 통화 하나만. 원문 통화는 상세에서 */}
         <p className="tnum text-[15px] font-extrabold text-ink">
-          {foreign ? `${t(lang, "price.approx")} ${formatPrice(convertPrice(item.price, item.currency, rate), viewerCurrency)}` : formatPrice(item.price, item.currency)}
-        </p>
-        <p className="tnum text-[11px] font-bold text-ink-soft">
-          {foreign ? formatPrice(item.price, item.currency) : " "}
-          {item.auction && <span className="ml-1 font-normal"> · {t(lang, "price.current")}</span>}
+          {foreign ? formatPrice(convertPrice(item.price, item.currency, rate), viewerCurrency) : formatPrice(item.price, item.currency)}
+          {item.auction && <span className="ml-1 text-[11px] font-normal text-ink-soft">{t(lang, "price.current")}</span>}
         </p>
       </div>
     </Link>
