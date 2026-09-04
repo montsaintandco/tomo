@@ -2,6 +2,7 @@ import Link from "next/link";
 import { t, type Lang } from "@/lib/i18n";
 import { formatPrice } from "@/lib/currency";
 import type { ProxyOrderTotal } from "@/lib/fees";
+import CostInfo from "@/components/CostInfo";
 
 function Line({ k, v }: { k: string; v: string }) {
   return (
@@ -19,12 +20,12 @@ export default function OrderSummary({ lang, totals, cta }: {
       <h2 className="mb-1 text-[15px] font-extrabold text-ink">{t(lang, "order.summary")}</h2>
       <Line k={t(lang, "order.subtotal")} v={f(totals.subtotal)} />
       <Line k={t(lang, "order.intlShipping")} v={f(totals.intlShipping)} />
-      <Line k={t(lang, "order.serviceFee")} v={f(totals.serviceFee)} />
+      <Line k={t(lang, "order.customsLine")} v={f(totals.customs)} />
       <div className="mt-2 flex items-baseline justify-between gap-3 border-t border-tomo-navy/10 pt-2.5">
         <span className="text-[13px] font-bold text-ink">{t(lang, "order.total")}</span>
         <span className="tnum text-[17px] font-extrabold text-tomo-navy">{f(totals.total)}</span>
       </div>
-      <p className="text-right text-[11px] text-ink-soft">{t(lang, "order.noExtra")}</p>
+      <p className="text-right text-[11px] text-ink-soft">{t(lang, "order.noExtra")}<CostInfo lang={lang} /></p>
       {cta && (cta.href ? (
         <Link href={cta.href} aria-disabled={cta.disabled} className={`btn mt-2 block bg-tomo-coral-deep py-3 text-center text-sm text-white ${cta.disabled ? "pointer-events-none opacity-45" : ""}`}>{cta.label}</Link>
       ) : (

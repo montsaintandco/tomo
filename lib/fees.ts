@@ -18,35 +18,38 @@ export function sellerPayout(itemPrice: number): number {
   return itemPrice - platformFee(itemPrice);
 }
 
-
-// 사줘(SAZO)식 결제 구조: 상품 소계 → 국제 배송비 → 통관·수수료(상품가의 10%) → 주문 시 1회 결제, 2차 결제 없음
-export const PROXY_SERVICE_RATE = 0.1;
-// 국제배송 첫 건 개략치 (사줘: 최초 1건 7~9천원). ponytail: 무게 미상이라 정액, 무게 데이터 쌓이면 구간표로
+// ── 구매대행 결제 구조 (사줘 역산 기준) ─────────────────────────────
+// 상품 소계 → 국제 배송비(주문당 1회) → 통관·관세 → 주문 시 1회 결제, 받을 때 추가 청구 없음.
+// "통관·관세"는 면세 한도 이하면 소계의 10%(세금 0, 전부 운영 몫), 초과면 실제 세금 + 5%.
+//   KR: 관세 8% + 부가세 10% — 과세가격은 소계 + 운임(CIF). 한도 미화 150달러 ≈ 20만원
+//   JP: 소비세 10% — 한도 1万円 (간이). 관세는 품목별이라 0으로 둔다
+// DB create_proxy_order(0020)와 같은 규칙. ponytail: 한도는 KRW 상수 — USD 환율 붙으면 동적으로
 export const PROXY_SHIPPING_ESTIMATE_KRW = 8000;
 export const PROXY_SHIPPING_ESTIMATE_JPY = 900;
+export const CUSTOMS_FREE_LIMIT = { KRW: 200000, JPY: 10000 } as const;
+export const CUSTOMS_RATE_BELOW = 0.1;   // 면세 구간: 소계의 10%
+export const CUSTOMS_RATE_ABOVE = 0.05;  // 과세 구간: 세금 + 소계의 5%
+export const DUTY_RATE = { KRW: 0.08, JPY: 0 } as const;
+export const VAT_RATE = 0.1;
 
-export type ProxyEstimate = {
-  item: number; localShipping: number; subtotal: number; intlShipping: number; serviceFee: number; total: number;
-  currency: "KRW" | "JPY";
-};
-
-// 상품 통화 기준 예상 결제 금액 — 어느 방향이든 같은 구조. 현지 유통비(판매자→센터 배송)는 마켓 대부분 0
-export function proxyEstimate(itemPrice: number, currency: "KRW" | "JPY", localShipping = 0): ProxyEstimate {
-  const subtotal = itemPrice + localShipping;
-  const intlShipping = currency === "JPY" ? PROXY_SHIPPING_ESTIMATE_JPY : PROXY_SHIPPING_ESTIMATE_KRW;
-  const serviceFee = Math.floor(itemPrice * PROXY_SERVICE_RATE);
-  return { item: itemPrice, localShipping, subtotal, intlShipping, serviceFee, total: subtotal + intlShipping + serviceFee, currency };
+export function customsCharge(subtotal: number, intlShipping: number, currency: "KRW" | "JPY"): number {
+  if (subtotal <= 0) return 0;
+  if (subtotal <= CUSTOMS_FREE_LIMIT[currency]) return Math.floor(subtotal * CUSTOMS_RATE_BELOW);
+  const base = subtotal + intlShipping;
+  const duty = Math.floor(base * DUTY_RATE[currency]);
+  const vat = Math.floor((base + duty) * VAT_RATE);
+  return duty + vat + Math.floor(subtotal * CUSTOMS_RATE_ABOVE);
 }
 
-export type ProxyOrderTotal = { subtotal: number; intlShipping: number; serviceFee: number; total: number; currency: "KRW" | "JPY" };
+export type ProxyOrderTotal = { subtotal: number; intlShipping: number; customs: number; total: number; currency: "KRW" | "JPY" };
 
-// 카트 합산 — DB create_proxy_order와 같은 규칙: 항목별 환산 round 합 → 배송비 주문당 1회 → 수수료 10% 내림
+// 카트 합산 — 항목별 환산 round 합 → 배송비 주문당 1회 → 통관·관세
 export function proxyOrderTotal(
   items: { price: number; currency: "KRW" | "JPY" }[], viewer: "KRW" | "JPY", rate: number,
 ): ProxyOrderTotal {
   const subtotal = items.reduce((s, i) => s + (i.currency === viewer ? i.price : convertPrice(i.price, i.currency, rate)), 0);
-  if (items.length === 0) return { subtotal: 0, intlShipping: 0, serviceFee: 0, total: 0, currency: viewer };
+  if (items.length === 0) return { subtotal: 0, intlShipping: 0, customs: 0, total: 0, currency: viewer };
   const intlShipping = viewer === "JPY" ? PROXY_SHIPPING_ESTIMATE_JPY : PROXY_SHIPPING_ESTIMATE_KRW;
-  const serviceFee = Math.floor(subtotal * PROXY_SERVICE_RATE);
-  return { subtotal, intlShipping, serviceFee, total: subtotal + intlShipping + serviceFee, currency: viewer };
+  const customs = customsCharge(subtotal, intlShipping, viewer);
+  return { subtotal, intlShipping, customs, total: subtotal + intlShipping + customs, currency: viewer };
 }

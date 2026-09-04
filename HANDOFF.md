@@ -9,7 +9,7 @@ git clone https://github.com/montsaintandco/tomo.git   # 이미 있으면: git p
 cd tomo
 npm install
 npm run dev   # http://localhost:3000
-npm test      # vitest 67개 통과해야 정상 (라이브 Supabase라 첫 실행 JWT 시계 오차로 1~2개 튀면 재실행)
+npm test      # vitest 70개 통과해야 정상 (라이브 Supabase라 첫 실행 JWT 시계 오차로 1~2개 튀면 재실행)
 ```
 
 `.env.local`은 gitignore라 직접 생성 (둘 다 공개값 — anon key는 RLS로 보호됨):
@@ -26,7 +26,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzd
 
 **새 세션 시작 프롬프트 (그대로 붙여넣기)**
 
-> TOMO 프로젝트 이어서. HANDOFF.md 읽고 진행. 최근 상태(2026-09-04): Next 16, v2 재디자인 완료, 하이브리드 PWA(브라우저=상단 GNB 웹사이트, 홈화면 설치=탭바 앱, tailwind `standalone:` 변형), 상세는 메루카리 골격, 당근·메루카리·SAZO 흡수 3팩(가격제안·끌올·카운터·나눔·카테고리·URL 붙여넣기 대행) + 관리 팩(마이페이지 전면 컨트롤·어드민 분쟁/상품/사용자/환율) 배포됨, 마이그레이션 0019까지 DB 적용, vitest 67. 사줘식 장바구니·주문·결제(카트→주문서→Stripe 1회 결제) 반영됨. 시작 전 `git pull` + `npm test`로 기준 확인. 남은 로드맵: Stripe 키 라이브 테스트·커스텀 도메인·폰트 셀프호스팅·채팅 이미지/알림·auth 계정 완전 삭제(service_role). 결정 원칙: 한국 구매자 우선·브랜드 유지·11px 하한·마이그레이션은 대시보드 SQL(에디터는 전체가 한 트랜잭션).
+> TOMO 프로젝트 이어서. HANDOFF.md 읽고 진행. 최근 상태(2026-09-04): Next 16, v2 재디자인 완료, 하이브리드 PWA(브라우저=상단 GNB 웹사이트, 홈화면 설치=탭바 앱, tailwind `standalone:` 변형), 상세는 메루카리 골격, 당근·메루카리·SAZO 흡수 3팩(가격제안·끌올·카운터·나눔·카테고리·URL 붙여넣기 대행) + 관리 팩(마이페이지 전면 컨트롤·어드민 분쟁/상품/사용자/환율) 배포됨, 마이그레이션 0020까지 DB 적용, vitest 70. 사줘식 장바구니·주문·결제(카트→주문서→Stripe 1회 결제) 반영됨. 시작 전 `git pull` + `npm test`로 기준 확인. 남은 로드맵: Stripe 키 라이브 테스트·커스텀 도메인·폰트 셀프호스팅·채팅 이미지/알림·auth 계정 완전 삭제(service_role). 결정 원칙: 한국 구매자 우선·브랜드 유지·11px 하한·마이그레이션은 대시보드 SQL(에디터는 전체가 한 트랜잭션).
 
 ## 2026-09-03 세션 반영
 
@@ -142,3 +142,4 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzd
 - 거주 국가 변경 가능(2026-09-04): 마이페이지 프로필 편집에 KR/JP 토글, 바꾸면 지역은 그 나라 첫 항목으로. 마이그레이션 **0019**(`grant update (country)`) Supabase MCP로 적용 완료. 기존 등록 상품의 country는 유지, 이후 등록·주문 통화만 바뀜. vitest 67.
 - GNB를 사줘식으로(2026-09-04): 로고 | 검색창(키워드·URL, /global로 GET) | KR/JP·카트·로그인/채팅·마이·판매, 2열 내비 = 홈·서비스 소개(/about)·카테고리(/categories)·고객센터(/help, FAQ <details>)·공지사항(/notice, lib/notices.ts 코드 테이블). 홈 데스크톱의 페이지 검색창은 숨김(모바일은 유지). 푸터는 한 줄 메뉴 + 회사 정보로 축소(브랜드 밴드·설명 제거).
 - 속도(2026-09-04): 원인 = Vercel 함수가 미국(iad1)에서 서울 Supabase(ap-northeast-2)로 페이지당 직렬 5~7 RTT + Pretendard 2MB 통파일. 조치: `vercel.json` regions icn1(서울), 레이아웃 unread·카트 병렬, getViewer 프로필·환율·언어 병렬, Pretendard 다이나믹 서브셋 CSS(@import). 로그인 사용자 TTFB가 크게 줄어야 정상.
+- 결제 구조 사줘 역산 반영(2026-09-04): "수수료" 단어 제거. 상세는 상품 가격·총 상품 금액(상품 가격 + 현지 유통비 ₩0)·배송 예상(약 10~14일)·"주문 전 3가지 확인" 모달만. 배송비·통관은 장바구니·주문서에서: 상품 소계 → 국제 배송비 → **통관·관세** → 전체 금액 + "받으실 때 추가 청구 없음" ? 모달(비용 안내). 통관·관세 = 면세 한도(KRW 20만/JPY 1만) 이하 소계 10%, 초과 시 KR 관세 8%+부가세 10%(CIF) + 5%, JP 소비세 10% + 5% (`lib/fees.ts customsCharge`, DB `proxy_customs`, 마이그레이션 **0020** MCP 적용). 사줘 캡처(소계 1,410,657 → 통관·관세 337,276)를 ±2원으로 재현하는 테스트 포함. vitest 70, 파일 병렬 끔(alice 픽스처 경합).

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { platformFee, buyerTotal, sellerPayout, PLATFORM_FEE_RATE, proxyOrderTotal } from "../lib/fees";
+import { platformFee, buyerTotal, sellerPayout, PLATFORM_FEE_RATE, proxyOrderTotal, customsCharge } from "../lib/fees";
 import { convertPrice, formatWithConversion } from "../lib/currency";
 
 describe("platform fee", () => {
@@ -35,12 +35,26 @@ describe("currency conversion", () => {
   });
 });
 
+describe("customs tiers (사줘 역산)", () => {
+  it("below limit: 10% of subtotal", () => {
+    expect(customsCharge(100000, 8000, "KRW")).toBe(10000);
+    expect(customsCharge(5000, 900, "JPY")).toBe(500);
+  });
+  it("above limit (KR): duty 8% + VAT 10% on CIF + 5% — 사줘 캡처 재현", () => {
+    // 캡처: 소계 1,410,657 / 배송 8,209 / 통관·관세 337,276
+    expect(customsCharge(1410657, 8209, "KRW")).toBe(337278); // 캡처 337,276과 ±2 (반올림 차이)
+  });
+  it("above limit (JP): consumption tax 10% on CIF + 5%", () => {
+    expect(customsCharge(20000, 900, "JPY")).toBe(2090 + 1000);
+  });
+});
+
 describe("proxy order total (SAZO식 카트 합산)", () => {
   it("sums converted items, charges intl shipping once, fee 10% floored", () => {
     const o = proxyOrderTotal([{ price: 1000, currency: "JPY" }, { price: 555, currency: "JPY" }], "KRW", 9.0);
     expect(o.subtotal).toBe(9000 + 4995);
     expect(o.intlShipping).toBe(8000);
-    expect(o.serviceFee).toBe(1399); // floor(13995*0.1)
+    expect(o.customs).toBe(1399); // 면세 구간: floor(13995*0.1)
     expect(o.total).toBe(13995 + 8000 + 1399);
     expect(o.currency).toBe("KRW");
   });

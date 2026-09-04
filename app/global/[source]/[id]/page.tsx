@@ -1,7 +1,7 @@
 import { createServerSupabase } from "@/lib/supabase/server";
 import { getViewerOrGuest } from "@/lib/listings";
 import { formatPrice, convertPrice } from "@/lib/currency";
-import { proxyEstimate } from "@/lib/fees";
+import PreorderCheck from "@/components/PreorderCheck";
 import { loadItem } from "@/lib/market/item";
 import { SOURCE_LABEL, LIVE_SOURCES, SOURCE_CURRENCY, type MarketSource, type MarketItemDetail } from "@/lib/market/types";
 import { t, type Lang } from "@/lib/i18n";
@@ -75,12 +75,8 @@ export default async function ExternalItemPage(props: {
   const buyerPrice = foreign
     ? formatPrice(convertPrice(item.price, item.currency, viewer.rate), viewer.currency)
     : formatPrice(item.price, item.currency);
-  // 견적은 국경을 넘을 때만 — 같은 나라 상품은 대행이 필요 없다 (양방향 모두)
-  const est = foreign ? proxyEstimate(item.price, item.currency) : null;
-  const toViewer = (n: number) => (foreign ? convertPrice(n, item.currency, viewer.rate) : n);
-  // 사줘식: 금액은 뷰어 통화 하나로만, "약" 없이 — 환율 기준은 표 아래 한 줄로
-  const v = (n: number) => formatPrice(toViewer(n), viewer.currency);
-  const totalLabel = est ? v(est.total) : buyerPrice;
+  // 사줘식: 상세는 상품 가격만. 배송비·통관은 장바구니·주문서에서 (받을 때 추가 청구 없음)
+  const totalLabel = buyerPrice;
   const sourceLang: Lang = SOURCE_CURRENCY[source] === "JPY" ? "ja" : "ko";
   const sourceCountry = SOURCE_CURRENCY[source] === "JPY" ? "JP" : "KR";
 
@@ -148,49 +144,32 @@ export default async function ExternalItemPage(props: {
         )}
 
         <div>
-          {est ? (
-            <>
-              <p className="text-[12px] font-bold text-ink-soft">{item.auction ? t(lang, "ext.estimateCurrent") : t(lang, "ext.totalLabel")}</p>
-              <p className="tnum text-[17px] font-extrabold leading-tight text-ink">{totalLabel}</p>
-              <p className="tnum mt-0.5 text-xs font-bold text-ink-soft">
-                {t(lang, "ext.listPrice")} {v(est.item)} · {formatPrice(item.price, item.currency)}
-              </p>
-            </>
-          ) : (
-            <p className="tnum text-[17px] font-extrabold leading-tight text-ink">{buyerPrice}</p>
-          )}
+          <p className="tnum text-[17px] font-extrabold leading-tight text-ink">{buyerPrice}</p>
+          {foreign && <p className="tnum mt-0.5 text-xs font-bold text-ink-soft">{formatPrice(item.price, item.currency)}</p>}
           {item.auction && <p className="mt-1 text-[12px] text-ink-soft">{t(lang, "ext.auctionNote")}</p>}
         </div>
 
-        {/* 대행 진행 안내 — 원칙 1: 안전장치를 결정 지점에서 보인다. 사실만, 수치 없음 */}
-        {est && (
-          <ol className="rounded-card bg-tomo-navy/5 p-3.5 text-[13px] text-ink">
-            <li className="mb-2 font-bold text-tomo-navy">{t(lang, "ext.howItWorks")}</li>
-            {(["ext.step1", "ext.step2", "ext.step3", "ext.step4"] as const).map((k, i) => (
-              <li key={k} className="mt-1 flex gap-2">
-                <span className="tnum flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-tomo-navy text-[11px] font-bold text-white">{i + 1}</span>
-                <span className="leading-snug">{t(lang, k)}</span>
-              </li>
-            ))}
-          </ol>
-        )}
-
-        {/* 예상 금액표 — 구조 틴트 웰 (아이보리는 틴트 3곳 전용) */}
-        {est && (
-          <div className="rounded-card bg-tomo-navy/5 p-3.5 text-[13px]">
-            <p className="mb-2 font-bold text-tomo-navy">{item.auction ? t(lang, "ext.estimateCurrent") : t(lang, "ext.estimateTitle")}</p>
-            <Row label={t(lang, "ext.item")} value={v(est.item)} />
-            <Row label={t(lang, "ext.localShip")} value={v(est.localShipping)} />
-            <Row label={t(lang, "ext.subtotal")} value={v(est.subtotal)} strong />
-            <Row label={t(lang, "ext.shipping")} value={v(est.intlShipping)} />
-            <Row label={t(lang, "ext.serviceFee")} value={v(est.serviceFee)} />
-            <div className="mt-2 flex items-baseline justify-between gap-3 border-t border-tomo-navy/10 pt-2">
-              <span className="font-bold text-ink">{t(lang, "ext.total")}</span>
-              <span className="tnum text-[17px] font-extrabold text-tomo-navy">{totalLabel}</span>
+        {/* 사줘식 상세: 배송 예상 → 총 상품 금액(상품 가격 + 현지 유통비) → 주문 전 확인. 수수료·세금은 주문서에서 */}
+        {foreign && (
+          <>
+            <div className="flex gap-3 text-[13px]">
+              <span className="w-10 shrink-0 font-bold text-ink-soft">{t(lang, "ext.delivery")}</span>
+              <div>
+                <p className="font-bold text-ink">{t(lang, "ext.deliveryEta")}</p>
+                <ul className="mt-1 text-[12px] text-ink-soft">
+                  <li>◉ {t(lang, "ext.stage1")}</li>
+                  <li>○ {t(lang, "ext.stage2")}</li>
+                </ul>
+              </div>
             </div>
-            <p className="mt-1 text-[12px] font-bold text-tomo-navy">{t(lang, "ext.oncePayment")}</p>
-            <p className="mt-1 text-[12px] leading-relaxed text-ink-soft">{t(lang, "ext.estimateNote")}</p>
-          </div>
+            <div className="rounded-card border border-tomo-navy/10 p-3.5 text-[13px]">
+              <div className="mb-2 flex justify-between font-bold text-ink"><span>{t(lang, "ext.subtotal")}</span><span className="tnum">{buyerPrice}</span></div>
+              <Row label={t(lang, "ext.item")} value={buyerPrice} />
+              <Row label={t(lang, "ext.localShip")} value={formatPrice(0, viewer.currency)} />
+              <p className="mt-2 text-[11px] text-ink-soft">{t(lang, "ext.noExtraHint")}</p>
+            </div>
+            <PreorderCheck lang={lang} />
+          </>
         )}
 
         {/* 설명은 본문이다 — 보조색이 아니라 잉크 */}
@@ -279,7 +258,7 @@ export default async function ExternalItemPage(props: {
           ) : (
             <div className="flex items-center gap-3">
               <div className="min-w-0 shrink-0">
-                <p className="text-[11px] font-bold text-ink-soft">{t(lang, "ext.totalLabel")}</p>
+                <p className="text-[11px] font-bold text-ink-soft">{t(lang, "ext.subtotal")}</p>
                 <p className="tnum text-[15px] font-extrabold leading-tight text-ink">{totalLabel}</p>
               </div>
               <div className="min-w-0 flex-1">

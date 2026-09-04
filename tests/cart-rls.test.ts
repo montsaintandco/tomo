@@ -61,7 +61,7 @@ describe("proxy_orders", () => {
     expect(error).toBeNull();
     expect(o.status).toBe("pending_payment");
     expect(o.total).toBe(o.subtotal + o.intl_shipping + o.service_fee);
-    expect(o.service_fee).toBe(Math.floor(o.subtotal * 0.1));
+    expect(o.service_fee).toBe(Math.floor(o.subtotal * 0.1)); // 면세 구간(소계 ≤ 20만원)이면 10%
     const { data: reqs } = await alice.from("proxy_requests").select("id, status").eq("order_id", o.id);
     expect(reqs?.length).toBe(1);
     expect(reqs?.[0].status).toBe("requested");

@@ -27,7 +27,7 @@ export default async function OrderReceiptPage(props: { params: Promise<{ id: st
       <h1 className="mb-1 text-[17px] font-extrabold text-ink md:text-xl">{t(lang, "order.receipt")}</h1>
       <p className={`mb-4 text-[13px] font-bold ${o.status === "paid" ? "text-tomo-navy" : "text-tomo-coral-deep"}`}>{t(lang, statusKey)}</p>
 
-      <div className="mb-4"><OrderSummary lang={lang} totals={{ subtotal: o.subtotal, intlShipping: o.intl_shipping, serviceFee: o.service_fee, total: o.total, currency: o.currency as Currency }} /></div>
+      <div className="mb-4"><OrderSummary lang={lang} totals={{ subtotal: o.subtotal, intlShipping: o.intl_shipping, customs: o.service_fee, total: o.total, currency: o.currency as Currency }} /></div>
 
       <section className="card mb-4 p-4 text-[13px]">
         <h2 className="mb-1 font-extrabold text-ink">{t(lang, "order.address")}</h2>
