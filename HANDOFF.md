@@ -47,7 +47,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzd
 
 코드 전부 반영, **마이그레이션 0017 DB 적용 완료**(Supabase MCP로 적용·검증: 테마 11건 시드, 비공개 버킷+정책 3, 함수 3, FK 제거). 내용: `messages.image_path`, 비공개 버킷 `chat-images` + 참여자 RLS, `conversation_reads`(읽음), `push_subscriptions`, `trending_themes`, `profiles.id → auth.users` FK 제거 + `deleted_at`, 함수 `unread_count / unread_by_conversation / push_targets`.
 
-**남은 직접 작업 1가지 — Vercel 환경변수** — `.env.local`에 있는 `NEXT_PUBLIC_VAPID_PUBLIC_KEY`·`VAPID_PRIVATE_KEY`·`VAPID_SUBJECT`(웹푸시), 그리고 `SUPABASE_SERVICE_ROLE_KEY`(계정 완전 삭제; 대시보드 → Project Settings → API Keys). 로컬 `.env.local`에도 service_role 추가.
+**Vercel 환경변수**: VAPID 3종은 CLI로 넣음(Production+Preview, 2026-09-04). **남은 직접 작업 1가지 — `SUPABASE_SERVICE_ROLE_KEY`** — `.env.local`에 있는 `NEXT_PUBLIC_VAPID_PUBLIC_KEY`·`VAPID_PRIVATE_KEY`·`VAPID_SUBJECT`(웹푸시), 그리고 `SUPABASE_SERVICE_ROLE_KEY`(계정 완전 삭제; 대시보드 → Project Settings → API Keys). 로컬 `.env.local`에도 service_role 추가.
 
 무엇이 어떻게 동작하나:
 - **채팅 이미지**: 첨부 버튼 → 클라이언트가 `chat-images/<대화>/<유저>/<uuid>`에 업로드 → `/api/messages`에 `imagePath` → 말풍선에 서명 URL(1h)로 표시. 5MB·jpeg/png/webp/gif.
