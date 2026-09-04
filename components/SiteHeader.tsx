@@ -6,15 +6,8 @@ import { Wordmark } from "@/components/Brand";
 import LangToggle from "@/components/LangToggle";
 import { t, type Lang } from "@/lib/i18n";
 
-// 사이트 GNB — 사줘(SAZO)식 검색 우선 헤더: [로고 | 검색창(키워드·URL) | KR/JP·카트·로그인/마이·판매] + 데스크톱 2열 텍스트 내비.
+// 사이트 GNB — 사줘(SAZO)식 검색 우선 헤더: [로고 | 검색창(키워드·URL) | KR/JP·카트·로그인/마이·판매] 홈은 로고, 해외직구는 검색창, 채팅·마이는 아이콘 — 2열 내비 없음.
 // 브라우저에서는 모바일·데스크톱 모두 상단 헤더. 홈 화면에 설치한 standalone 앱에서는 모바일에서 숨기고 BottomNav가 대신한다.
-const LINKS = [
-  { href: "/", label: "nav.home" },
-  { href: "/global", label: "nav.global" },
-  { href: "/chat", label: "nav.chat" },
-  { href: "/mypage", label: "nav.mypage" },
-] as const;
-
 const ICONS: Record<string, React.ReactNode> = {
   globe: <><circle cx="12" cy="12" r="8.5" /><path d="M3.5 12h17M12 3.5c2.2 2.4 3.3 5.3 3.3 8.5S14.2 18.1 12 20.5c-2.2-2.4-3.3-5.3-3.3-8.5S9.8 5.9 12 3.5z" /></>,
   chat: <path d="M4 5.5h16a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1h-7.5L8 20v-4.5H4a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1z" />,
@@ -122,23 +115,6 @@ export default function SiteHeader({ lang = "ko", unread = 0, cartCount = 0, log
         </div>
       </div>
 
-      {/* 데스크톱 2열 텍스트 내비 — 사줘의 홈·서비스 소개·카테고리 줄 */}
-      <nav aria-label={t(lang, "nav.main")} className="hidden border-t border-tomo-navy/5 md:block">
-        <ul className="mx-auto flex h-9 max-w-6xl items-stretch gap-6 px-6">
-          {LINKS.map((l) => (
-            <li key={l.href} className="flex">
-              <Link href={l.href} aria-current={isActive(l.href) ? "page" : undefined}
-                className={`flex items-center border-b-2 text-[13px] font-bold transition-colors ${
-                  isActive(l.href) ? "border-tomo-navy text-tomo-navy" : "border-transparent text-ink-soft hover:text-ink"}`}>
-                {t(lang, l.label)}
-                {l.href === "/chat" && unread > 0 && (
-                  <span className="tnum ml-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-tomo-coral-deep px-1 text-[11px] font-bold text-white" aria-label={t(lang, "chat.unread", { n: unread })}>{unread > 9 ? "9+" : unread}</span>
-                )}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </nav>
     </header>
   );
 }
