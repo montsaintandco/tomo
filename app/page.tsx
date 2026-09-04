@@ -6,6 +6,8 @@ import HomeHub from "@/components/HomeHub";
 import LangToggle from "@/components/LangToggle";
 import CategoryChips, { isCategory } from "@/components/CategoryChips";
 import { t } from "@/lib/i18n";
+import { parseMarketUrl } from "@/lib/market/url";
+import { redirect } from "next/navigation";
 import Link from "next/link";
 
 // 구매 루트: 전체 / 내 동네 직거래 / 상대국 여행 중 직거래 (해외 대행구매는 /global)
@@ -19,6 +21,9 @@ export default async function Home(props: { searchParams: Promise<{ tab?: string
   const viewer = await getViewerOrGuest(supabase);
   const tab = searchParams.tab ?? "all";
   const q = searchParams.q?.trim();
+  // SAZO식: 홈 검색창에 상품 URL을 붙여넣어도 바로 외부상품 상세로
+  const pasted = q ? parseMarketUrl(q) : null;
+  if (pasted) redirect(`/global/${pasted.source}/${pasted.id}`);
   const cat = isCategory(searchParams.cat) ? searchParams.cat : undefined;
   const localNeedsLogin = tab === "local" && viewer.guest;
   const lang = viewer.language;

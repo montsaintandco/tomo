@@ -42,6 +42,14 @@ describe("market url paste (SAZO식)", () => {
     expect(parseMarketUrl("https://www.daangn.com/kr/buy-sell/필름카메라-123456789/")).toEqual({ source: "daangn", id: "123456789" });
     expect(parseMarketUrl("https://web.joongna.com/product/987654321")).toEqual({ source: "joongna", id: "987654321" });
   });
+  it("handles current daangn slug ids, yahoo page subdomain, mercari jp path and query strings", () => {
+    expect(parseMarketUrl("https://www.daangn.com/kr/buy-sell/%EC%97%90%EC%8A%A4-25fw-wd1p22fbdiyc/")).toEqual({ source: "daangn", id: "wd1p22fbdiyc" });
+    expect(parseMarketUrl("https://www.daangn.com/kr/buy-sell/필름카메라-123456789/?in=서초4동")).toEqual({ source: "daangn", id: "123456789" });
+    expect(parseMarketUrl("https://www.daangn.com/articles/123456789")).toEqual({ source: "daangn", id: "123456789" });
+    expect(parseMarketUrl("https://page.auctions.yahoo.co.jp/jp/auction/t1243182652?nocache=1")).toEqual({ source: "yahoo_auction", id: "t1243182652" });
+    expect(parseMarketUrl("https://www.mercari.com/jp/items/m62860544566/")).toEqual({ source: "mercari", id: "m62860544566" });
+    expect(parseMarketUrl(" jp.mercari.com/item/m62860544566 ")).toEqual({ source: "mercari", id: "m62860544566" });
+  });
   it("ignores keywords and unsupported urls", () => {
     expect(parseMarketUrl("필름카메라")).toBeNull();
     expect(parseMarketUrl("https://www.amazon.co.jp/dp/B000000")).toBeNull();
