@@ -6,7 +6,7 @@ import { Wordmark } from "@/components/Brand";
 import LangToggle from "@/components/LangToggle";
 import { t, type Lang } from "@/lib/i18n";
 
-// 사이트 GNB — 사줘(SAZO)식 검색 우선 헤더: [로고 | 검색창(키워드·URL) | KR/JP·카트·로그인/마이·판매] 홈은 로고, 해외직구는 검색창, 채팅·마이는 아이콘 — 2열 내비 없음.
+// 사이트 GNB — 사줘(SAZO)식 검색 우선 헤더: [로고 | 검색창(키워드·URL) | KR/JP·카트·로그인/마이·판매] + 2열: 홈·서비스 소개·카테고리·고객센터·공지사항 (사줘와 같은 구성).
 // 브라우저에서는 모바일·데스크톱 모두 상단 헤더. 홈 화면에 설치한 standalone 앱에서는 모바일에서 숨기고 BottomNav가 대신한다.
 const ICONS: Record<string, React.ReactNode> = {
   globe: <><circle cx="12" cy="12" r="8.5" /><path d="M3.5 12h17M12 3.5c2.2 2.4 3.3 5.3 3.3 8.5S14.2 18.1 12 20.5c-2.2-2.4-3.3-5.3-3.3-8.5S9.8 5.9 12 3.5z" /></>,
@@ -15,6 +15,13 @@ const ICONS: Record<string, React.ReactNode> = {
   cart: <><path d="M3.5 4.5h2l2.2 10.5h10.6l1.9-7.5H7" /><circle cx="9.5" cy="19" r="1.3" /><circle cx="17" cy="19" r="1.3" /></>,
   search: <><circle cx="11" cy="11" r="6.5" /><path d="M16 16l4.5 4.5" /></>,
 };
+const LINKS = [
+  { href: "/", label: "nav.home" },
+  { href: "/about", label: "nav.about" },
+  { href: "/categories", label: "nav.categories" },
+  { href: "/help", label: "nav.help" },
+  { href: "/notice", label: "nav.notice" },
+] as const;
 const MOBILE = [
   { href: "/global", label: "nav.global", icon: "globe" },
   { href: "/chat", label: "nav.chat", icon: "chat" },
@@ -115,6 +122,20 @@ export default function SiteHeader({ lang = "ko", unread = 0, cartCount = 0, log
         </div>
       </div>
 
+      {/* 2열 — 정보 페이지 내비 (사줘: 홈·서비스 소개·카테고리·고객센터·공지사항). 모바일은 가로 스크롤 */}
+      <nav aria-label={t(lang, "nav.main")} className="border-t border-tomo-navy/5">
+        <ul className="mx-auto flex h-9 max-w-6xl items-stretch gap-5 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:gap-6 md:px-6">
+          {LINKS.map((l) => (
+            <li key={l.href} className="flex shrink-0">
+              <Link href={l.href} aria-current={isActive(l.href) ? "page" : undefined}
+                className={`flex items-center border-b-2 text-[13px] font-bold transition-colors ${
+                  isActive(l.href) ? "border-tomo-navy text-tomo-navy" : "border-transparent text-ink-soft hover:text-ink"}`}>
+                {t(lang, l.label)}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </nav>
     </header>
   );
 }

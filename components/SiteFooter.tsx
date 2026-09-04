@@ -10,8 +10,8 @@ export default function SiteFooter({ lang = "ko" }: { lang?: Lang }) {
   const path = usePathname();
   if (path.startsWith("/login") || path.startsWith("/onboarding") || /^\/chat\/./.test(path)) return null;
   const LINKS = [
-    ["/", "nav.home"], ["/?tab=travel", "tab.travel"], ["/global", "nav.global"], ["/sell", "nav.sellFull"],
-    ["/chat", "nav.chat"], ["/mypage", "nav.mypage"], ["/profile/me", "footer.profile"],
+    ["/about", "nav.about"], ["/categories", "nav.categories"], ["/help", "nav.help"], ["/notice", "nav.notice"],
+    ["/global", "nav.global"], ["/sell", "nav.sellFull"], ["/chat", "nav.chat"], ["/mypage", "nav.mypage"],
   ] as const;
 
   return (
