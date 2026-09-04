@@ -96,7 +96,7 @@ export default async function ExternalItemPage(props: {
           </svg>
         </Link>
         {images.length > 0 ? (
-          <Gallery images={images} alt={item.title} lang={sourceLang} counter={t(lang, "ext.photos", { n: images.length })}
+          <Gallery key={`${source}:${params.id}`} images={images} alt={item.title} lang={sourceLang} counter={t(lang, "ext.photos", { n: images.length })}
             prevLabel={t(lang, "ext.prevPhoto")} nextLabel={t(lang, "ext.nextPhoto")} />
         ) : (
           <div className="flex aspect-square w-full items-center justify-center bg-tomo-navy/5">
