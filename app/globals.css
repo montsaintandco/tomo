@@ -1,18 +1,13 @@
+@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css");
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* 브랜드 서체: 한국어 Cafe24 써라운드(로고·헤딩), 본문 Pretendard(일본어 글리프 포함) */
+/* 브랜드 서체: 한국어 Cafe24 써라운드(로고), 본문 Pretendard — 다이나믹 서브셋(글리프 범위별 분할 로드, 2MB 통파일 대신 필요한 조각만) */
 @font-face {
   font-family: "Cafe24Ssurround";
   src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2105@1.0/Cafe24Ssurround.woff") format("woff");
   font-weight: 700;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Pretendard";
-  src: url("https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/variable/woff2/PretendardVariable.woff2") format("woff2-variations");
-  font-weight: 300 800;
   font-display: swap;
 }
 

@@ -27,14 +27,18 @@ export async function getViewerOrGuest(supabase: SupabaseClient): Promise<Viewer
 export async function getViewer(supabase: SupabaseClient): Promise<Viewer | null> {
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return null;
-  const { data: p } = await supabase.from("profiles")
-    .select("country, region, language, is_admin").eq("id", auth.user.id).single();
+  // 프로필·환율(2행뿐)·요청 언어를 병렬로 — 직렬 3 RTT → 1 RTT
+  const [{ data: p }, { data: rates }, reqLang] = await Promise.all([
+    supabase.from("profiles").select("country, region, language, is_admin").eq("id", auth.user.id).single(),
+    supabase.from("exchange_rates").select("pair, rate"),
+    getRequestLang(),
+  ]);
   if (!p) return null;
   const currency = p.country === "KR" ? "KRW" : "JPY";
   const pair = currency === "KRW" ? "JPY_KRW" : "KRW_JPY";
-  const { data: r } = await supabase.from("exchange_rates").select("rate").eq("pair", pair).single();
+  const r = rates?.find((x) => x.pair === pair);
   // 로그인 사용자도 토글로 UI 언어만 바꿀 수 있다 (나라·통화는 프로필)
-  const language = (await getRequestLang()) === "ja" && p.language !== "ja" ? "ja" : p.language;
+  const language = reqLang === "ja" && p.language !== "ja" ? "ja" : p.language;
   return { id: auth.user.id, country: p.country, region: p.region, language, currency, rate: Number(r?.rate ?? 0), isAdmin: !!p.is_admin };
 }
 

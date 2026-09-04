@@ -35,8 +35,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     const { data: auth } = await supabase.auth.getUser();
     if (auth.user) {
       loggedIn = true;
-      const { data } = await supabase.rpc("unread_count"); unread = Number(data ?? 0);
-      const { count } = await supabase.from("cart_items").select("*", { count: "exact", head: true }); cartCount = count ?? 0;
+      // 두 쿼리는 서로 무관 — 직렬이면 RTT가 두 배
+      const [u, c] = await Promise.all([
+        supabase.rpc("unread_count"),
+        supabase.from("cart_items").select("*", { count: "exact", head: true }),
+      ]);
+      unread = Number(u.data ?? 0); cartCount = c.count ?? 0;
     }
   } catch { unread = 0; }
   return (
