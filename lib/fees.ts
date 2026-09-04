@@ -1,3 +1,5 @@
+import { convertPrice } from "./currency";
+
 // 플랫폼 수수료·정산 계산 (스펙 §6). DB start_transaction의 floor(price*0.1)과 동일 규칙.
 export const PLATFORM_FEE_RATE = 0.1;
 
@@ -34,4 +36,17 @@ export function proxyEstimate(itemPrice: number, currency: "KRW" | "JPY", localS
   const intlShipping = currency === "JPY" ? PROXY_SHIPPING_ESTIMATE_JPY : PROXY_SHIPPING_ESTIMATE_KRW;
   const serviceFee = Math.floor(itemPrice * PROXY_SERVICE_RATE);
   return { item: itemPrice, localShipping, subtotal, intlShipping, serviceFee, total: subtotal + intlShipping + serviceFee, currency };
+}
+
+export type ProxyOrderTotal = { subtotal: number; intlShipping: number; serviceFee: number; total: number; currency: "KRW" | "JPY" };
+
+// 카트 합산 — DB create_proxy_order와 같은 규칙: 항목별 환산 round 합 → 배송비 주문당 1회 → 수수료 10% 내림
+export function proxyOrderTotal(
+  items: { price: number; currency: "KRW" | "JPY" }[], viewer: "KRW" | "JPY", rate: number,
+): ProxyOrderTotal {
+  const subtotal = items.reduce((s, i) => s + (i.currency === viewer ? i.price : convertPrice(i.price, i.currency, rate)), 0);
+  if (items.length === 0) return { subtotal: 0, intlShipping: 0, serviceFee: 0, total: 0, currency: viewer };
+  const intlShipping = viewer === "JPY" ? PROXY_SHIPPING_ESTIMATE_JPY : PROXY_SHIPPING_ESTIMATE_KRW;
+  const serviceFee = Math.floor(subtotal * PROXY_SERVICE_RATE);
+  return { subtotal, intlShipping, serviceFee, total: subtotal + intlShipping + serviceFee, currency: viewer };
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { platformFee, buyerTotal, sellerPayout, PLATFORM_FEE_RATE } from "../lib/fees";
+import { platformFee, buyerTotal, sellerPayout, PLATFORM_FEE_RATE, proxyOrderTotal } from "../lib/fees";
 import { convertPrice, formatWithConversion } from "../lib/currency";
 
 describe("platform fee", () => {
@@ -32,5 +32,24 @@ describe("currency conversion", () => {
   it("shows converted only across currencies", () => {
     expect(formatWithConversion(48000, "JPY", 9.0, "KRW")).toBe("¥48,000 (약 432,000원)");
     expect(formatWithConversion(25000, "KRW", 1, "KRW")).toBe("25,000원");
+  });
+});
+
+describe("proxy order total (SAZO식 카트 합산)", () => {
+  it("sums converted items, charges intl shipping once, fee 10% floored", () => {
+    const o = proxyOrderTotal([{ price: 1000, currency: "JPY" }, { price: 555, currency: "JPY" }], "KRW", 9.0);
+    expect(o.subtotal).toBe(9000 + 4995);
+    expect(o.intlShipping).toBe(8000);
+    expect(o.serviceFee).toBe(1399); // floor(13995*0.1)
+    expect(o.total).toBe(13995 + 8000 + 1399);
+    expect(o.currency).toBe("KRW");
+  });
+  it("same-currency items are not converted; JPY viewer uses JPY shipping", () => {
+    const o = proxyOrderTotal([{ price: 3000, currency: "JPY" }], "JPY", 0.11);
+    expect(o.subtotal).toBe(3000);
+    expect(o.intlShipping).toBe(900);
+  });
+  it("empty cart is all zeros", () => {
+    expect(proxyOrderTotal([], "KRW", 9).total).toBe(0);
   });
 });

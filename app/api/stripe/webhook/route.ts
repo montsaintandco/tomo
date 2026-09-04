@@ -22,7 +22,7 @@ export async function POST(req: Request) {
   }
 
   if (event.type === "checkout.session.completed") {
-    const s = event.data.object as { metadata?: { transaction_id?: string }; payment_intent?: string | { id: string } | null };
+    const s = event.data.object as { id: string; metadata?: { transaction_id?: string; proxy_order_id?: string }; payment_intent?: string | { id: string } | null };
     const txId = s.metadata?.transaction_id;
     const pi = typeof s.payment_intent === "string" ? s.payment_intent : s.payment_intent?.id;
     if (txId && pi) {
@@ -31,6 +31,12 @@ export async function POST(req: Request) {
       await admin.from("transactions").update({ stripe_payment_intent_id: pi })
         .eq("id", txId).eq("status", "pending_payment");
       await admin.rpc("mark_paid", { p_payment_intent_id: pi });
+    }
+    const orderId = s.metadata?.proxy_order_id;
+    if (orderId && !pi) console.error("[stripe webhook] proxy order session completed without payment_intent", { orderId, session: s.id });
+    if (orderId && pi) {
+      const { data } = await createAdminSupabase().rpc("mark_proxy_order_paid", { p_session_id: s.id, p_payment_intent_id: pi });
+      if (data?.status !== "paid") console.error("[stripe webhook] proxy order not paid after checkout", { orderId, session: s.id, status: data?.status });
     }
   }
   return NextResponse.json({ received: true });

@@ -1,4 +1,5 @@
 "use client";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Wordmark } from "@/components/Brand";
@@ -25,8 +26,15 @@ const MOBILE = [
   { href: "/mypage", label: "nav.my", icon: "user" },
 ] as const;
 
-export default function SiteHeader({ lang = "ko", unread = 0 }: { lang?: Lang; unread?: number }) {
+export default function SiteHeader({ lang = "ko", unread = 0, cartCount = 0 }: { lang?: Lang; unread?: number; cartCount?: number }) {
   const path = usePathname();
+  const [count, setCount] = useState(cartCount);
+  const [prevCartCount, setPrevCartCount] = useState(cartCount);
+  if (cartCount !== prevCartCount) { setPrevCartCount(cartCount); setCount(cartCount); }
+  useEffect(() => {
+    const on = (e: Event) => setCount(Number((e as CustomEvent).detail ?? 0));
+    window.addEventListener("tomo:cart", on); return () => window.removeEventListener("tomo:cart", on);
+  }, []);
   if (path.startsWith("/login") || path.startsWith("/onboarding")) return null;
   const isActive = (href: string) => (href === "/" ? path === "/" : path.startsWith(href));
 
@@ -57,6 +65,16 @@ export default function SiteHeader({ lang = "ko", unread = 0 }: { lang?: Lang; u
 
         <div className="ml-auto flex items-center gap-1 md:gap-4">
           <LangToggle lang={lang} label={t(lang, "lang.toggle")} />
+
+          <Link href="/cart" aria-label={t(lang, "cart.count", { n: count })} aria-current={isActive("/cart") ? "page" : undefined}
+            className={`press relative flex h-11 w-10 items-center justify-center rounded-full ${isActive("/cart") ? "text-tomo-navy" : "text-ink-soft"}`}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="h-[22px] w-[22px]" aria-hidden>
+              <path d="M3.5 4.5h2l2.2 10.5h10.6l1.9-7.5H7" /><circle cx="9.5" cy="19" r="1.3" /><circle cx="17" cy="19" r="1.3" />
+            </svg>
+            {count > 0 && (
+              <span className="tnum absolute -right-0.5 top-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-tomo-coral-deep px-1 text-[11px] font-bold text-white">{count > 9 ? "9+" : count}</span>
+            )}
+          </Link>
 
           {/* 모바일 아이콘 내비 — 44px 히트영역 */}
           <nav aria-label={t(lang, "nav.main")} className="md:hidden">

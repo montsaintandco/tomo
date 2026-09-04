@@ -54,7 +54,7 @@ export default async function MyPage() {
       .select("id, title, price, currency, status, images, hidden, hidden_by_admin")
       .eq("seller_id", me).order("created_at", { ascending: false }).limit(20),
     supabase.from("proxy_requests")
-      .select("id, status, quote_total, external_items(source, title, title_translated, images)")
+      .select("id, status, quote_total, order_id, external_items(source, title, title_translated, images)")
       .eq("user_id", me).order("created_at", { ascending: false }).limit(10),
     supabase.from("wishlists")
       .select(`listing_id, price_at_wish, listings(${LISTING_SEL})`)
@@ -166,15 +166,26 @@ export default async function MyPage() {
       <section className="mt-8" aria-label={t(lang, "my.proxy")}>
         <SectionHeader lang={lang} title={t(lang, "my.proxy")} href="/global" linkLabel={t(lang, "my.proxyMore")} />
         <div className="flex flex-col gap-2">
-          {(proxies ?? []).map((p) => {
-            const it = p.external_items as unknown as { source: string; title: string; title_translated: string | null; images: string[] } | null;
-            return (
-              <Row key={p.id} href={`/proxy/${p.id}`} image={it?.images?.[0]}
-                title={it?.title_translated || it?.title || t(lang, "my.item")}
-                sub={`${it ? t(lang, `source.${it.source as MarketSource}`) : ""} · ${PROXY_STATUS[p.status] ? t(lang, PROXY_STATUS[p.status]) : p.status}`}
-                right={p.quote_total ? formatPrice(p.quote_total, "JPY") : t(lang, "proxy.quoteWait")} />
-            );
-          })}
+          {(() => {
+            const seen = new Set<string>();
+            const rows: typeof proxies = [];
+            for (const p of proxies ?? []) {
+              if (!p.order_id) { rows.push(p); continue; }
+              if (seen.has(p.order_id)) continue;
+              seen.add(p.order_id);
+              rows.push(p);
+            }
+            return rows!.map((p) => {
+              const it = p.external_items as unknown as { source: string; title: string; title_translated: string | null; images: string[] } | null;
+              const n = p.order_id ? (proxies ?? []).filter((q) => q.order_id === p.order_id).length : 0;
+              return (
+                <Row key={p.id} href={p.order_id ? `/order/${p.order_id}` : `/proxy/${p.id}`} image={it?.images?.[0]}
+                  title={it?.title_translated || it?.title || t(lang, "my.item")}
+                  sub={`${it ? t(lang, `source.${it.source as MarketSource}`) : ""} · ${PROXY_STATUS[p.status] ? t(lang, PROXY_STATUS[p.status]) : p.status}`}
+                  right={p.order_id ? t(lang, "order.items", { n }) : p.quote_total ? formatPrice(p.quote_total, "JPY") : t(lang, "proxy.quoteWait")} />
+              );
+            });
+          })()}
           {(proxies ?? []).length === 0 && <Empty text={t(lang, "my.noProxy")} />}
         </div>
       </section>

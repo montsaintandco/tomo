@@ -2,13 +2,11 @@ import { createServerSupabase } from "@/lib/supabase/server";
 import { getViewerOrGuest } from "@/lib/listings";
 import { formatPrice, convertPrice } from "@/lib/currency";
 import { proxyEstimate } from "@/lib/fees";
-import { mercariItem } from "@/lib/market/mercari";
-import { yahooAuctionItem } from "@/lib/market/yahoo-auction";
-import { daangnItem } from "@/lib/market/daangn";
-import { joongnaItem } from "@/lib/market/joongna";
+import { loadItem } from "@/lib/market/item";
 import { SOURCE_LABEL, LIVE_SOURCES, SOURCE_CURRENCY, type MarketSource, type MarketItemDetail } from "@/lib/market/types";
 import { t, type Lang } from "@/lib/i18n";
 import ProxyRequestButton from "@/components/ProxyRequestButton";
+import CartButtons from "@/components/CartButtons";
 import MarketCarousel from "@/components/MarketCarousel";
 import { TomoSymbol, CountryChip } from "@/components/Brand";
 import Link from "next/link";
@@ -16,18 +14,6 @@ import { Fragment } from "react";
 import { notFound } from "next/navigation";
 
 export const dynamic = "force-dynamic"; // 가격·품절은 진입 시점 확인
-
-async function loadItem(source: MarketSource, id: string): Promise<MarketItemDetail | null> {
-  try {
-    if (source === "mercari") return await mercariItem(id);
-    if (source === "yahoo_auction") return await yahooAuctionItem(id);
-    if (source === "daangn") return await daangnItem(id);
-    if (source === "joongna") return await joongnaItem(id);
-  } catch {
-    return null; // 파서 실패·품절·차단 → 캐시 폴백
-  }
-  return null;
-}
 
 // 게시 시각 상대 표기 (ListingRow와 같은 규칙)
 function ago(iso: string, lang: Lang): string {
@@ -303,13 +289,15 @@ export default async function ExternalItemPage(props: {
                     className="btn block bg-tomo-coral-deep py-3 text-center text-sm text-white">
                     {t(lang, "ext.loginCta")}
                   </Link>
-                ) : (
-                  <ProxyRequestButton lang={lang} auction={item.auction} totalLabel={totalLabel}
+                ) : item.auction ? (
+                  <ProxyRequestButton lang={lang} auction totalLabel={totalLabel}
                     source={source} sourceId={params.id}
                     title={item.title} price={item.price} currency={item.currency}
-                    url={item.url} images={images}
-                    sellerName={item.sellerName}
-                  />
+                    url={item.url} images={images} sellerName={item.sellerName} />
+                ) : (
+                  <CartButtons lang={lang} source={source} sourceId={params.id}
+                    title={item.title} price={item.price} currency={item.currency}
+                    url={item.url} images={images} sellerName={item.sellerName} />
                 )}
               </div>
             </div>

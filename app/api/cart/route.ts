@@ -6,34 +6,29 @@ import { SOURCE_LABEL, type MarketSource } from "@/lib/market/types";
 
 export const runtime = "nodejs";
 
-// 구매대행 신청: 외부 상품 스냅샷 저장(upsert) → request_proxy RPC
-// 미들웨어 밖 — 자체 인증 (HANDOFF 규칙)
+// 장바구니 담기: 외부 상품 스냅샷 upsert(service_role) → cart_items insert(본인 RLS). 미들웨어 밖 — 자체 인증
 export async function POST(req: Request) {
   const supabase = await createServerSupabase();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const body = await req.json().catch(() => ({}));
-  const { source, sourceId, note } = body;
+  const { source, sourceId } = body;
   if (!SOURCE_LABEL[source as MarketSource] || typeof sourceId !== "string" || !sourceId)
     return NextResponse.json({ error: "invalid source" }, { status: 400 });
 
-  // external_items 쓰기는 admin RLS — 서버(service_role)로 upsert.
-  // 실파싱 실패·캐시도 없으면 관리자가 가격을 직접 입력한 스냅샷을 허용 (견적 경로라 안전)
   let itemId: string;
   try {
     const admin = createAdminSupabase();
-    const result = await upsertExternalItem(admin, source, sourceId, body, { allowClientSnapshot: true });
+    const result = await upsertExternalItem(admin, source, sourceId, body, { allowClientSnapshot: false });
     if ("error" in result) return NextResponse.json({ error: result.error }, { status: result.status });
     itemId = result.id;
   } catch {
-    return NextResponse.json({ error: "대행 신청 준비 중이에요 (서버 설정 필요)" }, { status: 503 });
+    return NextResponse.json({ error: "장바구니 준비 중이에요 (서버 설정 필요)" }, { status: 503 });
   }
 
-  const { data: request, error } = await supabase.rpc("request_proxy", {
-    p_external_item_id: itemId,
-    p_note: typeof note === "string" ? note.slice(0, 500) : "",
-  });
+  const { error } = await supabase.from("cart_items").upsert({ user_id: auth.user.id, external_item_id: itemId }, { onConflict: "user_id,external_item_id", ignoreDuplicates: true });
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-  return NextResponse.json({ id: request.id }, { status: 201 });
+  const { count } = await supabase.from("cart_items").select("*", { count: "exact", head: true }).eq("user_id", auth.user.id);
+  return NextResponse.json({ itemId, count: count ?? 0 }, { status: 201 });
 }

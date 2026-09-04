@@ -9,7 +9,7 @@ git clone https://github.com/montsaintandco/tomo.git   # 이미 있으면: git p
 cd tomo
 npm install
 npm run dev   # http://localhost:3000
-npm test      # vitest 57개 통과해야 정상 (라이브 Supabase라 첫 실행 JWT 시계 오차로 1~2개 튀면 재실행)
+npm test      # vitest 65개 통과해야 정상 (라이브 Supabase라 첫 실행 JWT 시계 오차로 1~2개 튀면 재실행)
 ```
 
 `.env.local`은 gitignore라 직접 생성 (둘 다 공개값 — anon key는 RLS로 보호됨):
@@ -26,7 +26,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzd
 
 **새 세션 시작 프롬프트 (그대로 붙여넣기)**
 
-> TOMO 프로젝트 이어서. HANDOFF.md 읽고 진행. 최근 상태(2026-09-04): Next 16, v2 재디자인 완료, 하이브리드 PWA(브라우저=상단 GNB 웹사이트, 홈화면 설치=탭바 앱, tailwind `standalone:` 변형), 상세는 메루카리 골격, 당근·메루카리·SAZO 흡수 3팩(가격제안·끌올·카운터·나눔·카테고리·URL 붙여넣기 대행) + 관리 팩(마이페이지 전면 컨트롤·어드민 분쟁/상품/사용자/환율) 배포됨, 마이그레이션 0016까지 DB 적용, vitest 53. 시작 전 `git pull` + `npm test`로 기준 확인. 남은 로드맵: Stripe 키 라이브 테스트·커스텀 도메인·폰트 셀프호스팅·채팅 이미지/알림·auth 계정 완전 삭제(service_role). 결정 원칙: 한국 구매자 우선·브랜드 유지·11px 하한·마이그레이션은 대시보드 SQL(에디터는 전체가 한 트랜잭션).
+> TOMO 프로젝트 이어서. HANDOFF.md 읽고 진행. 최근 상태(2026-09-04): Next 16, v2 재디자인 완료, 하이브리드 PWA(브라우저=상단 GNB 웹사이트, 홈화면 설치=탭바 앱, tailwind `standalone:` 변형), 상세는 메루카리 골격, 당근·메루카리·SAZO 흡수 3팩(가격제안·끌올·카운터·나눔·카테고리·URL 붙여넣기 대행) + 관리 팩(마이페이지 전면 컨트롤·어드민 분쟁/상품/사용자/환율) 배포됨, 마이그레이션 0018까지 DB 적용, vitest 65. 사줘식 장바구니·주문·결제(카트→주문서→Stripe 1회 결제) 반영됨. 시작 전 `git pull` + `npm test`로 기준 확인. 남은 로드맵: Stripe 키 라이브 테스트·커스텀 도메인·폰트 셀프호스팅·채팅 이미지/알림·auth 계정 완전 삭제(service_role). 결정 원칙: 한국 구매자 우선·브랜드 유지·11px 하한·마이그레이션은 대시보드 SQL(에디터는 전체가 한 트랜잭션).
 
 ## 2026-09-03 세션 반영
 
@@ -44,6 +44,9 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzd
 - 시드 상품에 `[test]` 접두 2건 남아 있음(의도적 유지). vitest 53개.
 
 ## 2026-09-04 (회사 컴) — 채팅 이미지·알림 / 계정 완전 삭제 / 큐레이션 DB화
+
+- **사줘식 장바구니·주문·결제(2026-09-04)**: 외부상품 상세 하단 `장바구니 | 바로 구매`(경매는 기존 입찰 대행). `/cart`(체크·삭제·24h 지난/품절 캐시 자동 제외, 주문 개요 하단 고정/우측 sticky) → `/order?items=`(배송지 프로필 저장·프리필, 결제수단 타일 카드/카카오페이/네이버페이 — JPY는 카드만) → `POST /api/order` → `create_proxy_order`(금액 DB 재계산, 국제배송비 주문당 1회, 수수료 10%) → Stripe Checkout(`payment_method_types`, 미활성이면 카드로 1회 재시도, 세션 ID 저장 실패 시 세션 만료+503) → 웹훅 `mark_proxy_order_paid`(주문·하위 요청 `paid`, 카트 비움). `/order/[id]` 영수증(다시 결제 시 이전 세션 만료/취소). 마이페이지 대행 섹션은 주문 단위 행. 마이그레이션 **0018**(`cart_items`·`proxy_orders`·`proxy_requests.order_id`·`profiles.ship_*`). GNB 카트 아이콘+배지(`tomo:cart` 이벤트로 즉시 갱신). 카카오/네이버페이는 Stripe 한국 계정에서만 활성. 로컬에서 `/api/cart`·`/api/order`는 `SUPABASE_SERVICE_ROLE_KEY` 필요(없으면 503). 스펙 `docs/superpowers/specs/2026-09-04-sazo-cart-checkout-design.md`, 계획 `docs/superpowers/plans/2026-09-04-sazo-cart-checkout.md`. vitest 65.
+
 
 코드 전부 반영, **마이그레이션 0017 DB 적용 완료**(Supabase MCP로 적용·검증: 테마 11건 시드, 비공개 버킷+정책 3, 함수 3, FK 제거). 내용: `messages.image_path`, 비공개 버킷 `chat-images` + 참여자 RLS, `conversation_reads`(읽음), `push_subscriptions`, `trending_themes`, `profiles.id → auth.users` FK 제거 + `deleted_at`, 함수 `unread_count / unread_by_conversation / push_targets`.
 
