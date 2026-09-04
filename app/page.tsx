@@ -87,7 +87,8 @@ export default async function Home(props: { searchParams: Promise<{ tab?: string
         </div>
       </div>
       <header className={`z-20 bg-white/95 px-4 pb-3 pt-2 backdrop-blur md:static md:bg-transparent md:px-0 md:pb-4 md:pt-8 md:backdrop-blur-0 ${hub ? "" : "sticky top-0"}`}>
-        <form className="mb-3 md:max-w-xl" role="search">
+        {/* 데스크톱은 GNB 검색창이 담당 — 중복 제거 */}
+        <form className="mb-3 md:hidden" role="search">
           <label htmlFor="feed-q" className="sr-only">{t(lang, "search.label")}</label>
           <div className="relative">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}

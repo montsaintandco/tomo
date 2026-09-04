@@ -11,6 +11,7 @@ const D = {
   "nav.my": ["마이", "マイ"],
   "nav.mypage": ["마이페이지", "マイページ"],
   "nav.login": ["로그인", "ログイン"],
+  "nav.searchPlaceholder": ["키워드 또는 상품 URL을 붙여넣으세요", "キーワードまたは商品URLを貼り付け"],
   "nav.main": ["주요 메뉴", "メインメニュー"],
   "lang.toggle": ["언어·국가", "言語・国"],
 

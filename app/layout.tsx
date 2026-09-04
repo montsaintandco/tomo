@@ -29,10 +29,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // 안읽은 채팅 수 — 로그인 시에만, 실패(미적용 마이그레이션 등)면 0
   let unread = 0;
   let cartCount = 0;
+  let loggedIn = false;
   try {
     const supabase = await createServerSupabase();
     const { data: auth } = await supabase.auth.getUser();
     if (auth.user) {
+      loggedIn = true;
       const { data } = await supabase.rpc("unread_count"); unread = Number(data ?? 0);
       const { count } = await supabase.from("cart_items").select("*", { count: "exact", head: true }); cartCount = count ?? 0;
     }
@@ -53,7 +55,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-full focus:bg-tomo-navy focus:px-4 focus:py-2 focus:text-sm focus:font-bold focus:text-white">
           {t(lang, "skip.main")}
         </a>
-        <SiteHeader lang={lang} unread={unread} cartCount={cartCount} />
+        <SiteHeader lang={lang} unread={unread} cartCount={cartCount} loggedIn={loggedIn} />
         <div id="main">{children}</div>
         <SiteFooter lang={lang} />
         <BottomNav lang={lang} unread={unread} />
