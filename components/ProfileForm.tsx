@@ -5,11 +5,12 @@ import { createBrowserSupabase } from "@/lib/supabase/client";
 import { REGIONS } from "@/lib/regions";
 import { t, type Lang } from "@/lib/i18n";
 
-// 프로필 편집 — 닉네임·지역·언어만 (나라는 통화·마켓과 묶여 있어 고정. 0003 grant와 동일 범위)
+// 프로필 편집 — 닉네임·국가·지역·언어 (0003 + 0019 grant 범위). 국가를 바꾸면 지역은 그 나라 첫 항목으로
 export default function ProfileForm({ lang, initial }: {
   lang: Lang; initial: { nickname: string; country: "KR" | "JP"; region: string; language: Lang };
 }) {
   const [nickname, setNickname] = useState(initial.nickname);
+  const [country, setCountry] = useState<"KR" | "JP">(initial.country);
   const [region, setRegion] = useState(initial.region);
   const [language, setLanguage] = useState<Lang>(initial.language);
   const [busy, setBusy] = useState(false);
@@ -24,7 +25,7 @@ export default function ProfileForm({ lang, initial }: {
     const supabase = createBrowserSupabase();
     const { data } = await supabase.auth.getUser();
     const { error: err } = await supabase.from("profiles")
-      .update({ nickname: nickname.trim(), region, language }).eq("id", data.user!.id);
+      .update({ nickname: nickname.trim(), country, region, language }).eq("id", data.user!.id);
     setBusy(false);
     if (err) { setError(err.message); return; }
     document.cookie = `tomo_lang=${language}; path=/; max-age=31536000; samesite=lax`;
@@ -37,9 +38,24 @@ export default function ProfileForm({ lang, initial }: {
       <label className="text-[13px] font-bold text-ink">{t(lang, "ob.nickname")}
         <input className={`mt-1 w-full ${FIELD}`} value={nickname} onChange={(e) => setNickname(e.target.value)} required maxLength={20} autoComplete="nickname" />
       </label>
+      <div role="group" aria-label={t(lang, "ob.countryAria")}>
+        <p className="text-[13px] font-bold text-ink">{t(lang, "ob.countryAria")}</p>
+        <div className="mt-1 flex gap-2">
+          {(["KR", "JP"] as const).map((c) => (
+            <button type="button" key={c} aria-pressed={country === c}
+              className={`btn flex-1 py-3 text-sm ${country === c
+                ? (c === "KR" ? "bg-tomo-blue/40 text-tomo-navy shadow-soft" : "bg-tomo-pink/45 text-tomo-rose shadow-soft")
+                : "bg-white text-ink-soft shadow-soft"}`}
+              onClick={() => { if (c !== country) { setCountry(c); setRegion(REGIONS[c][0]); } }}>
+              {t(lang, `market.${c}`)}
+            </button>
+          ))}
+        </div>
+        {country !== initial.country && <p className="mt-1.5 text-[12px] leading-relaxed text-ink-soft">{t(lang, "pf.countryNote")}</p>}
+      </div>
       <label className="text-[13px] font-bold text-ink">{t(lang, "ob.region")}
         <select className={`mt-1 w-full ${FIELD}`} value={region} onChange={(e) => setRegion(e.target.value)}>
-          {REGIONS[initial.country].map((r) => <option key={r}>{r}</option>)}
+          {REGIONS[country].map((r) => <option key={r}>{r}</option>)}
         </select>
       </label>
       <label className="text-[13px] font-bold text-ink">{t(lang, "ob.language")}

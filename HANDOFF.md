@@ -9,7 +9,7 @@ git clone https://github.com/montsaintandco/tomo.git   # 이미 있으면: git p
 cd tomo
 npm install
 npm run dev   # http://localhost:3000
-npm test      # vitest 65개 통과해야 정상 (라이브 Supabase라 첫 실행 JWT 시계 오차로 1~2개 튀면 재실행)
+npm test      # vitest 67개 통과해야 정상 (라이브 Supabase라 첫 실행 JWT 시계 오차로 1~2개 튀면 재실행)
 ```
 
 `.env.local`은 gitignore라 직접 생성 (둘 다 공개값 — anon key는 RLS로 보호됨):
@@ -26,7 +26,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzd
 
 **새 세션 시작 프롬프트 (그대로 붙여넣기)**
 
-> TOMO 프로젝트 이어서. HANDOFF.md 읽고 진행. 최근 상태(2026-09-04): Next 16, v2 재디자인 완료, 하이브리드 PWA(브라우저=상단 GNB 웹사이트, 홈화면 설치=탭바 앱, tailwind `standalone:` 변형), 상세는 메루카리 골격, 당근·메루카리·SAZO 흡수 3팩(가격제안·끌올·카운터·나눔·카테고리·URL 붙여넣기 대행) + 관리 팩(마이페이지 전면 컨트롤·어드민 분쟁/상품/사용자/환율) 배포됨, 마이그레이션 0018까지 DB 적용, vitest 65. 사줘식 장바구니·주문·결제(카트→주문서→Stripe 1회 결제) 반영됨. 시작 전 `git pull` + `npm test`로 기준 확인. 남은 로드맵: Stripe 키 라이브 테스트·커스텀 도메인·폰트 셀프호스팅·채팅 이미지/알림·auth 계정 완전 삭제(service_role). 결정 원칙: 한국 구매자 우선·브랜드 유지·11px 하한·마이그레이션은 대시보드 SQL(에디터는 전체가 한 트랜잭션).
+> TOMO 프로젝트 이어서. HANDOFF.md 읽고 진행. 최근 상태(2026-09-04): Next 16, v2 재디자인 완료, 하이브리드 PWA(브라우저=상단 GNB 웹사이트, 홈화면 설치=탭바 앱, tailwind `standalone:` 변형), 상세는 메루카리 골격, 당근·메루카리·SAZO 흡수 3팩(가격제안·끌올·카운터·나눔·카테고리·URL 붙여넣기 대행) + 관리 팩(마이페이지 전면 컨트롤·어드민 분쟁/상품/사용자/환율) 배포됨, 마이그레이션 0019까지 DB 적용, vitest 67. 사줘식 장바구니·주문·결제(카트→주문서→Stripe 1회 결제) 반영됨. 시작 전 `git pull` + `npm test`로 기준 확인. 남은 로드맵: Stripe 키 라이브 테스트·커스텀 도메인·폰트 셀프호스팅·채팅 이미지/알림·auth 계정 완전 삭제(service_role). 결정 원칙: 한국 구매자 우선·브랜드 유지·11px 하한·마이그레이션은 대시보드 SQL(에디터는 전체가 한 트랜잭션).
 
 ## 2026-09-03 세션 반영
 
@@ -139,3 +139,4 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzd
 - 검증: tsc/lint/vitest 58 통과, 375/데스크톱 브라우저 확인.
 - 결제 금액 표기를 사줘(SAZO)식으로 통일: 카드·히어로는 뷰어 통화 단일가("약" 제거), 상세 표는 상품 가격 → 현지 유통비 → 총 상품 금액 → 국제 배송비(첫 건 8,000원/¥900 개략) → 통관·대행 수수료(상품가 10%) → 총 결제 예상, "주문 시 1회 결제 · 2차 결제 없음". `lib/fees.ts` `proxyEstimate`가 유일한 계산처, 어드민 QuoteForm 기본 수수료도 10%. 국제배송비는 무게 데이터 쌓이면 구간표로.
 - 상세 갤러리를 메루카리식으로(`components/Gallery.tsx`: 데스크톱 좌측 세로 썸네일, 모바일 아래 가로 썸네일, 화살표·카운터). "무게에 따라 견적 확정" 문구 삭제(1회 결제 구조와 모순). 상세 하단 "비슷한 상품" = 같은 마켓에서 제목 앞 3단어 검색(`searchSource`, 번역 없음), Suspense 스트리밍. 모바일 GNB는 카트 추가로 꽉 차서 판매 버튼 아이콘화·아이콘 36px.
+- 거주 국가 변경 가능(2026-09-04): 마이페이지 프로필 편집에 KR/JP 토글, 바꾸면 지역은 그 나라 첫 항목으로. 마이그레이션 **0019**(`grant update (country)`) Supabase MCP로 적용 완료. 기존 등록 상품의 country는 유지, 이후 등록·주문 통화만 바뀜. vitest 67.
