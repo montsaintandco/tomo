@@ -1,5 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { Noto_Sans_KR, Noto_Sans_JP } from "next/font/google";
+
+// 서체: Noto Sans KR/JP(가변) 셀프호스팅 — html lang으로 분기. 한글은 KR, 일본어는 JP(가나·한자 자형이 맞는 쪽)
+const notoKR = Noto_Sans_KR({ subsets: ["latin"], variable: "--font-kr", display: "swap" });
+const notoJP = Noto_Sans_JP({ subsets: ["latin"], variable: "--font-jp", display: "swap" });
 import BottomNav from "@/components/BottomNav";
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
@@ -44,11 +49,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     }
   } catch { unread = 0; }
   return (
-    <html lang={lang}>
+    <html lang={lang} className={`${notoKR.variable} ${notoJP.variable}`}>
       <body className="bg-white text-ink standalone:pb-24 md:pb-0">
         {/* impeccable direction contract · v3 정제된 마켓 (2026-09-05): 카와이 브랜드 시그니처 폐기
         THESIS: 사진과 가격이 주인공, 인터페이스는 물러선다 — 흰 바탕·중립 회색·단일 액센트(딥 블루)·텍스트 워드마크·8px. Apple·메루카리급 절제.
-        (아래 v2 서술 중 브랜드 색·하트·써라운드·말풍선 항목은 폐기됨. 나라는 KR/JP 텍스트 칩으로만.)
+        (아래 v2 서술 중 브랜드 색·하트·써라운드·말풍선·Pretendard 항목은 폐기됨. 나라는 KR/JP 텍스트 칩으로만.)
+        서체(2026-09-05): Noto Sans KR/JP 가변, html lang 분기. 굵기 400/600/700 세 단, 800 없음. 한글 keep-all. 헤드라인 자간 -0.015em.
+        홈 히어로: 검색이 히어로 — 큰 검색/URL 폼 + 인기 검색어 + 테마 타일 4장. 신뢰 스트립은 홈에서 제거.
         홈은 한쪽 매장이 아니라 다리: 어느 나라에서 열어도 "사기(상대국 인기)"와 "팔기(상대국이 찾는 것)" 양면이 내 언어·내 통화로 보인다.
         OWN-WORLD: 흰 페이지 + 네이비 잉크 스케일. 아이보리는 신뢰 스트립·푸터·검색 입력의 틴트로만.
         블루/핑크는 국가 칩·채팅 말풍선·KR/JP 토글 전용, 브리지 그라데이션은 여행 직거래 뱃지 하나. 코랄딥은 단일 CTA·FAB.

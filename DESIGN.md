@@ -1,6 +1,6 @@
 ---
 name: TOMO
-description: Korea–Japan secondhand market. v3 "정제된 마켓" — white ground, neutral grays, one accent blue, photos lead, text wordmark. Kawaii brand signature retired 2026-09-05.
+description: Korea–Japan secondhand market. v3 "정제된 마켓" — white ground, neutral grays, one accent blue, photos lead, text wordmark, Noto Sans KR/JP. Kawaii brand signature retired 2026-09-05.
 colors:
   white: "#FFFFFF"
   ink: "#111827"
@@ -14,41 +14,41 @@ colors:
   accent-tint: "#EEF2FF"
 typography:
   wordmark:
-    fontFamily: "Pretendard, sans-serif"
+    fontFamily: "Noto Sans KR, Noto Sans JP, sans-serif"
     fontSize: "1.5rem"
-    fontWeight: 800
+    fontWeight: 700
     letterSpacing: "-0.04em"
   section-title:
-    fontFamily: "Pretendard, -apple-system, sans-serif"
+    fontFamily: "Noto Sans KR, Noto Sans JP, -apple-system, sans-serif"
     fontSize: "17px"
-    fontWeight: 800
+    fontWeight: 600
     lineHeight: 1.25
   row-title:
-    fontFamily: "Pretendard, -apple-system, sans-serif"
+    fontFamily: "Noto Sans KR, Noto Sans JP, -apple-system, sans-serif"
     fontSize: "15px"
     fontWeight: 400
     lineHeight: 1.375
   price:
-    fontFamily: "Pretendard, -apple-system, sans-serif"
+    fontFamily: "Noto Sans KR, Noto Sans JP, -apple-system, sans-serif"
     fontSize: "16px"
-    fontWeight: 800
+    fontWeight: 700
   body:
-    fontFamily: "Pretendard, -apple-system, sans-serif"
+    fontFamily: "Noto Sans KR, Noto Sans JP, -apple-system, sans-serif"
     fontSize: "14px"
     fontWeight: 400
     lineHeight: 1.625
   label:
-    fontFamily: "Pretendard, -apple-system, sans-serif"
+    fontFamily: "Noto Sans KR, Noto Sans JP, -apple-system, sans-serif"
     fontSize: "13px"
-    fontWeight: 700
+    fontWeight: 600
   meta:
-    fontFamily: "Pretendard, -apple-system, sans-serif"
+    fontFamily: "Noto Sans KR, Noto Sans JP, -apple-system, sans-serif"
     fontSize: "12px"
     fontWeight: 400
   micro:
-    fontFamily: "Pretendard, -apple-system, sans-serif"
+    fontFamily: "Noto Sans KR, Noto Sans JP, -apple-system, sans-serif"
     fontSize: "11px"
-    fontWeight: 700
+    fontWeight: 600
 rounded:
   chip: "4px"
   card: "8px"
@@ -96,7 +96,7 @@ components:
 
 ## Overview
 
-**Creative North Star: "사진과 가격이 주인공, 인터페이스는 물러선다."** 2026-09-05에 카와이 브랜드 시그니처(파스텔 블루/핑크 나라색, 하트-O 워드마크, 두 말풍선 심볼, 써라운드 서체, 말풍선 꼬리 칩, 하트 게이지, 스쿼시·하트비트 모션)를 전부 폐기했다. 남은 것은 이름 TOMO와 제품 사실뿐이고, 비주얼은 Apple·메루카리급 절제로 다시 세웠다: 흰 바탕, 중립 회색 잉크, **단 하나의 액센트(딥 블루)**, 8px 라운드, 텍스트 워드마크, Pretendard 하나.
+**Creative North Star: "사진과 가격이 주인공, 인터페이스는 물러선다."** 2026-09-05에 카와이 브랜드 시그니처(파스텔 블루/핑크 나라색, 하트-O 워드마크, 두 말풍선 심볼, 써라운드 서체, 말풍선 꼬리 칩, 하트 게이지, 스쿼시·하트비트 모션)를 전부 폐기했다. 남은 것은 이름 TOMO와 제품 사실뿐이고, 비주얼은 Apple·메루카리급 절제로 다시 세웠다: 흰 바탕, 중립 회색 잉크, **단 하나의 액센트(딥 블루)**, 8px 라운드, 텍스트 워드마크, Noto Sans KR/JP.
 
 토큰 클래스명은 v2를 유지한 채 값만 바꿨다(`tomo-navy`=잉크/구조, `tomo-coral-deep`=액센트, `tomo-rose`=오류, `tomo-ivory`=틴트, `tomo-blue`/`tomo-pink`=중립 필). 코드에 남은 이름은 역사이고, 화면에 보이는 색이 진실이다.
 
@@ -112,7 +112,7 @@ components:
 
 ## Typography
 
-Pretendard variable 하나. 워드마크는 같은 서체 800 + `-0.04em`. 위계는 굵기(400→700→800)와 1–2px 단계로, 본문 최대 17px. 가격은 항상 가장 굵다(800, tabular). 제목은 400. 큰 헤딩은 `-0.02em`, 본문 자간 0.
+Noto Sans KR/JP 가변, `next/font`로 셀프호스팅(CDN 없음). `html[lang]`으로 분기 — 한글은 KR, 일본어는 JP(가나·한자 자형이 맞는 쪽). 워드마크는 같은 서체 700 + `-0.04em`. **굵기는 세 단 400/600/700**: 본문 400, 라벨·섹션 제목·버튼 600, 가격·헤드라인·워드마크 700. 800 이상은 쓰지 않는다 — Tailwind `font-bold`=600, `font-extrabold`=700으로 리매핑되어 클래스명은 역사, 값이 진실. 본문 최대 17px, 히어로 헤드라인 26/34px. 큰 헤딩 자간 `-0.015em`, 본문 0. 한글은 `word-break: keep-all`(단어 단위 줄바꿈), 일본어는 기본.
 
 ## Shapes & Depth
 

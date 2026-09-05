@@ -48,7 +48,7 @@ async function HomeHero({ viewer }: { viewer: ViewerOrGuest }) {
   const sections = await getSections(viewer.country);
   const label = (s: TrendingSection) => (lang === "ja" ? s.theme.labelJa : s.theme.label);
   const tiles = sections.map((s) => {
-    const items = s.items.filter((it) => it.thumb && !it.soldOut && !it.auction);
+    const items = s.items.filter((it) => it.thumb && !it.soldOut && !it.auction && it.price > 0); // 0원(나눔·미정)은 최저가에서 제외
     const min = items.reduce((m, it) => Math.min(m, it.price), Infinity);
     const cover = items[0] ?? s.items.find((it) => it.thumb);
     return cover ? { key: s.theme.key, label: label(s), href: `/global?q=${encodeURIComponent(label(s))}`, thumb: cover.thumb, min: Number.isFinite(min) ? min : null, currency: cover.currency } : null;
@@ -56,7 +56,7 @@ async function HomeHero({ viewer }: { viewer: ViewerOrGuest }) {
   const [line1, line2] = t(lang, "hero.title", { other: otherName }).split("\n");
   return (
     <section className="md:py-4" aria-label={line1}>
-      <h1 className="text-[26px] font-extrabold leading-[1.15] tracking-[-0.03em] text-ink md:text-[36px]">{line1} <br className="md:hidden" />{line2}</h1>
+      <h1 className="text-[26px] font-extrabold leading-[1.25] tracking-[-0.015em] text-ink md:text-[34px]">{line1} <br className="md:hidden" />{line2}</h1>
       <p className="mt-2 text-[14px] text-ink-soft md:text-[15px]">{t(lang, "hero.sub")}</p>
       <form action="/global" role="search" className="relative mt-5 hidden md:block">{/* 모바일은 헤더 검색창이 바로 위에 있어 중복 — 칩·타일만 */}
         <label htmlFor="hero-q" className="sr-only">{t(lang, "search.label")}</label>

@@ -9,6 +9,8 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      // 굵기 3단: 클래스명은 그대로, 값만 — bold=600(라벨·섹션 제목), extrabold=700(가격·헤드라인·워드마크)
+      fontWeight: { semibold: "500", bold: "600", extrabold: "700", black: "700" },
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
