@@ -7,6 +7,8 @@ import type { Currency } from "@/lib/currency";
 import type { MarketSource } from "@/lib/market/types";
 import OrderSummary from "@/components/OrderSummary";
 import OrderActions from "@/components/OrderActions";
+import PayNotice from "@/components/PayNotice";
+import { Suspense } from "react";
 
 export default async function OrderReceiptPage(props: { params: Promise<{ id: string }> }) {
   const { id } = await props.params;
@@ -24,6 +26,7 @@ export default async function OrderReceiptPage(props: { params: Promise<{ id: st
 
   return (
     <main className="mx-auto max-w-md p-4 pb-8 standalone:pb-24 md:max-w-2xl md:px-6 md:pb-16 md:pt-8">
+      <Suspense fallback={null}><PayNotice lang={lang} /></Suspense>
       <h1 className="mb-1 text-[17px] font-extrabold text-ink md:text-xl">{t(lang, "order.receipt")}</h1>
       <p className={`mb-4 text-[13px] font-bold ${o.status === "paid" ? "text-tomo-navy" : "text-tomo-coral-deep"}`}>{t(lang, statusKey)}</p>
 

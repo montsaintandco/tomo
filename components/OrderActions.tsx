@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { t, type Lang } from "@/lib/i18n";
+import { payWithToss } from "@/lib/toss-client";
 
 export default function OrderActions({ id, lang }: { id: string; lang: Lang }) {
   const [busy, setBusy] = useState(false);
@@ -14,7 +15,7 @@ export default function OrderActions({ id, lang }: { id: string; lang: Lang }) {
     const json = await res.json().catch(() => ({}));
     if (res.status === 503) { setMsg(t(lang, "order.pending")); setBusy(false); return; }
     if (!res.ok) { setMsg(json.error || t(lang, "order.fail")); setBusy(false); return; }
-    window.location.href = json.url;
+    try { await payWithToss(json.toss); } catch { setBusy(false); }
   }
   async function cancel() {
     if (!confirm(t(lang, "order.cancelConfirm"))) return;

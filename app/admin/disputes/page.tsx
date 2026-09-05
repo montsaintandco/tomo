@@ -3,7 +3,7 @@ import { PageHeader, Panel, Table, Pill, fmtDate, money } from "@/components/adm
 import TxActions from "@/components/TxActions";
 import Link from "next/link";
 
-// 분쟁 큐 — 사유 확인 → 정산(완료) / 환불(취소). 행을 펼치면 처리 폼. Stripe 환불은 키 투입 후 웹훅에서
+// 분쟁 큐 — 사유 확인 → 정산(완료) / 환불(취소). 행을 펼치면 처리 폼. 카드 환불은 tossCancel(lib/toss.ts)로 — 분쟁 확정 시 연결 예정
 export default async function AdminDisputesPage() {
   const supabase = await createServerSupabase();
   const { data } = await supabase.from("transactions")

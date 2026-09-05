@@ -5,6 +5,7 @@ import type { ProxyOrderTotal } from "@/lib/fees";
 import OrderSummary from "@/components/OrderSummary";
 import type { CartRow } from "@/components/CartList";
 import { formatPrice, convertPrice } from "@/lib/currency";
+import { payWithToss } from "@/lib/toss-client";
 
 type Ship = { name: string; phone: string; postal: string; address: string; note: string };
 const METHODS_KRW = ["card", "kakao_pay", "naver_pay"] as const;
@@ -43,7 +44,9 @@ export default function OrderForm({ lang, rows, totals, rate, initialShip }: {
     if (res.status === 503) { setMsg(t(lang, "order.pending")); setBusy(false); return; }
     if (res.status === 401) { setError(t(lang, "order.fail")); setBusy(false); return; }
     if (!res.ok) { setError(json.error || t(lang, "order.fail")); setBusy(false); return; }
-    window.location.href = json.url;
+    // 주문은 이미 생성됨 — 결제창을 닫으면 주문 페이지에서 다시 결제할 수 있다
+    try { await payWithToss(json.toss); }
+    catch { window.location.href = `/order/${json.orderId}`; }
   }
 
   return (
