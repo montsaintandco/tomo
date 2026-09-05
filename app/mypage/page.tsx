@@ -44,7 +44,7 @@ export default async function MyPage() {
 
   const [
     { data: profile }, { data: buying }, { data: selling }, { data: proxies }, { data: wishes },
-    { data: offersIn }, { data: offersOut }, shipRes, receiveRes,
+    { data: offersIn }, { data: offersOut }, shipRes, receiveRes, { data: tickets },
   ] = await Promise.all([
     supabase.from("profiles").select("nickname, country, region, trust_temp").eq("id", me).single(),
     supabase.from("transactions")
@@ -68,6 +68,7 @@ export default async function MyPage() {
       .eq("buyer_id", me).order("created_at", { ascending: false }).limit(20),
     supabase.from("transactions").select("id", { count: "exact", head: true }).eq("seller_id", me).eq("status", "paid"),
     supabase.from("transactions").select("id", { count: "exact", head: true }).eq("buyer_id", me).in("status", ["shipped", "shipped_international", "delivered"]),
+    supabase.from("support_tickets").select("id, body, status, reply, created_at").eq("user_id", me).order("created_at", { ascending: false }).limit(10),
   ]);
 
   type OfferIn = { id: string; price: number; status: OfferStatus; listings: MiniListing; profiles: { nickname: string } | null };
@@ -163,6 +164,25 @@ export default async function MyPage() {
               right={formatPrice(o.price, o.listings!.currency as Currency)} />
           ))}
           {outRows.length === 0 && <Empty text={t(lang, "my.noOffers")} />}
+        </div>
+      </section>
+
+      <section id="support" className="mt-8" aria-label={t(lang, "my.support")}>
+        <SectionHeader lang={lang} title={t(lang, "my.support")} href="/help" linkLabel={t(lang, "support.cta")} />
+        <div className="flex flex-col gap-2">
+          {(tickets ?? []).map((k) => (
+            <div key={k.id} className="card p-3.5 text-[13px]">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[11px] font-bold text-ink-soft">{new Date(k.created_at).toLocaleDateString(lang === "ja" ? "ja-JP" : "ko-KR")}</span>
+                <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${k.status === "open" ? "bg-tomo-coral-deep/10 text-tomo-coral-deep" : "bg-tomo-navy/5 text-ink-soft"}`}>
+                  {t(lang, k.status === "open" ? "my.supportOpen" : k.status === "answered" ? "my.supportAnswered" : "my.supportClosed")}
+                </span>
+              </div>
+              <p className="mt-1.5 whitespace-pre-wrap text-ink">{k.body}</p>
+              {k.reply && <p className="mt-2 rounded-card bg-tomo-navy/5 p-2.5 whitespace-pre-wrap text-ink"><span className="font-bold">TOMO</span> · {k.reply}</p>}
+            </div>
+          ))}
+          {(tickets ?? []).length === 0 && <Empty text={t(lang, "my.noSupport")} />}
         </div>
       </section>
 

@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { getRequestLang } from "@/lib/locale";
 import SupportBot from "@/components/SupportBot";
+import { createServerSupabase } from "@/lib/supabase/server";
 
 export const metadata = { title: "고객센터 · サポート | TOMO" };
 
@@ -40,6 +40,8 @@ const C = {
 
 export default async function HelpPage() {
   const lang = await getRequestLang();
+  const { data: auth } = await (await createServerSupabase()).auth.getUser();
+  const loggedIn = !!auth.user;
   const c = C[lang];
   return (
     <main className="mx-auto max-w-3xl px-4 py-8 md:px-6 md:py-12">
@@ -47,9 +49,8 @@ export default async function HelpPage() {
       <p className="mt-2 text-sm text-ink-soft">{c.sub}</p>
       {/* 사조식 봇을 고객센터 첫 화면에 — 버튼 트리로 답하고, 특정 주문은 상담원(채팅)으로 */}
       <div className="mt-5 overflow-hidden rounded-card border border-tomo-navy/10 bg-white shadow-soft">
-        <SupportBot lang={lang} />
+        <SupportBot lang={lang} loggedIn={loggedIn} />
       </div>
-      <Link href="/chat" className="btn mt-4 inline-block border border-tomo-navy/15 bg-white px-5 py-2.5 text-sm text-ink">{c.contact}</Link>
 
       <h2 className="mt-10 text-[17px] font-extrabold text-ink">{c.faqTitle}</h2>
       <div className="mt-3 divide-y divide-tomo-navy/10 rounded-card border border-tomo-navy/10">

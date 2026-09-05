@@ -5,7 +5,7 @@ import SupportBot from "@/components/SupportBot";
 import { t, type Lang } from "@/lib/i18n";
 
 // 플로팅 문의 버튼 — 사조처럼 우하단. 열면 모바일 바텀시트 / 데스크톱 우하단 패널. 채팅방·인증·어드민·고객센터(인라인 봇)에서는 숨김
-export default function SupportLauncher({ lang }: { lang: Lang }) {
+export default function SupportLauncher({ lang, loggedIn }: { lang: Lang; loggedIn: boolean }) {
   const path = usePathname();
   const ref = useRef<HTMLDialogElement>(null);
   if (/^\/(login|onboarding|admin|help)/.test(path) || /^\/chat\/./.test(path)) return null;
@@ -27,7 +27,7 @@ export default function SupportLauncher({ lang }: { lang: Lang }) {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" className="h-5 w-5" aria-hidden><path d="M6 6l12 12M18 6L6 18" /></svg>
           </button>
         </div>
-        <SupportBot lang={lang} compact />
+        <SupportBot lang={lang} compact loggedIn={loggedIn} />
       </dialog>
     </>
   );

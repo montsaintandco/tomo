@@ -72,7 +72,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <div id="main">{children}</div>
         <SiteFooter lang={lang} />
         <BottomNav lang={lang} unread={unread} />
-        <SupportLauncher lang={lang} />
+        <SupportLauncher lang={lang} loggedIn={loggedIn} />
       </body>
     </html>
   );

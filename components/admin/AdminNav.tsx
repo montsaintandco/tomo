@@ -3,7 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Wordmark } from "@/components/Brand";
 
-export type NavCounts = { disputes: number; proxy: number; center: number };
+export type NavCounts = { disputes: number; proxy: number; center: number; support: number };
 
 const GROUPS: { label: string; items: { href: string; label: string; count?: keyof NavCounts }[] }[] = [
   { label: "운영", items: [
@@ -13,6 +13,7 @@ const GROUPS: { label: string; items: { href: string; label: string; count?: key
     { href: "/admin/proxy", label: "대행 요청", count: "proxy" },
     { href: "/admin/orders", label: "주문" },
     { href: "/admin/center", label: "센터", count: "center" },
+    { href: "/admin/support", label: "문의", count: "support" },
   ] },
   { label: "카탈로그", items: [
     { href: "/admin/listings", label: "상품" },
