@@ -9,13 +9,14 @@ import { t, type Lang } from "@/lib/i18n";
 export default function SiteFooter({ lang = "ko" }: { lang?: Lang }) {
   const path = usePathname();
   if (path.startsWith("/login") || path.startsWith("/onboarding") || path.startsWith("/admin") || /^\/chat\/./.test(path)) return null;
+  const hasBar = /^\/(listings|global)\/./.test(path); // 상세는 모바일 하단 고정 구매 바 — 푸터가 그 아래 깔리지 않게 여백
   const LINKS = [
     ["/about", "nav.about"], ["/categories", "nav.categories"], ["/help", "nav.help"], ["/notice", "nav.notice"],
     ["/global", "nav.global"], ["/sell", "nav.sellFull"], ["/chat", "nav.chat"], ["/mypage", "nav.mypage"],
   ] as const;
 
   return (
-    <footer className="mt-8 border-t border-tomo-navy/5 bg-tomo-ivory text-ink-soft">
+    <footer className={`mt-8 border-t border-tomo-navy/5 bg-tomo-ivory text-ink-soft ${hasBar ? "pb-20 standalone:pb-36 md:pb-0" : ""}`}>
       <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-5 md:px-6">
         <nav aria-label={t(lang, "footer.menu")}>
           <ul className="flex flex-wrap gap-x-4 gap-y-1 text-[12px] md:text-xs">

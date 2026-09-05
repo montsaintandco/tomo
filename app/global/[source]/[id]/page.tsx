@@ -53,7 +53,7 @@ function translateExternal(source: MarketSource, id: string, to: Lang, texts: st
     const res = texts.slice();
     idx.forEach((i, k) => { res[i] = out[k]; });
     return res;
-  }, ["ext-tr", "v2", source, id, to], { revalidate: 3600 })().catch(() => null);
+  }, ["ext-tr", "v3", source, id, to], { revalidate: 3600 })().catch(() => null);
 }
 
 export default async function ExternalItemPage(props: {
@@ -96,9 +96,11 @@ export default async function ExternalItemPage(props: {
   const sourceLang: Lang = SOURCE_CURRENCY[source] === "JPY" ? "ja" : "ko";
   const sourceCountry = SOURCE_CURRENCY[source] === "JPY" ? "JP" : "KR";
   const needsTranslation = !!live && sourceLang !== lang; // 캐시 폴백은 title_translated를 이미 쓴다
-  const tr = needsTranslation ? await translateExternal(source, params.id, lang, [item.title, item.description, item.condition, item.category ?? "", ...(item.tradeTags ?? [])]) : null;
+  const tr = needsTranslation ? await translateExternal(source, params.id, lang, [item.title, item.description, item.condition, item.category ?? "", ...(item.tradeTags ?? []), ...Object.values(item.extra)]) : null;
   const category = tr?.[3] || item.category;
   const tradeTags = item.tradeTags?.map((tag, i) => tr?.[4 + i] || tag);
+  const extraBase = 4 + (item.tradeTags?.length ?? 0);
+  const extra = Object.entries(item.extra).map(([k, v], i) => [k, tr?.[extraBase + i] || v] as const);
 
   return (
     <main className="mx-auto max-w-md pb-24 standalone:pb-28 md:grid md:max-w-5xl md:grid-cols-2 md:items-start md:gap-10 md:px-6 md:pb-16 md:pt-8">
@@ -193,6 +195,43 @@ export default async function ExternalItemPage(props: {
             <PreorderCheck lang={lang} />
           </>
         )}
+        {/* CTA — 모바일은 하단 고정 바(DOM 위치 무관). 데스크톱은 가격·배송·총액 바로 아래 흐름 배치 — 메루카리·아마존처럼 "가격 옆에 버튼". 떠다니는 카드 없음 */}
+        <div className="fixed bottom-0 standalone:bottom-[62px] left-0 right-0 z-20 mx-auto max-w-md border-t border-tomo-navy/5 bg-white/95 p-3 pb-[max(12px,env(safe-area-inset-bottom))] backdrop-blur md:static md:mx-0 md:max-w-none md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-0">
+          {!foreign ? (
+            <div className="flex flex-col gap-2">
+              <p className="text-[12px] text-ink-soft">{t(lang, "ext.domesticNote")}</p>
+              <a href={item.url} target="_blank" rel="noopener noreferrer" className="btn block bg-tomo-navy py-3 text-center text-sm text-white">
+                {t(lang, "ext.openDirect")} ↗
+              </a>
+            </div>
+          ) : item.soldOut ? (
+            <button disabled className="btn w-full bg-tomo-navy/70 py-3 text-sm text-white">{t(lang, "ext.soldOutCta")}</button>
+          ) : (
+            <div className="flex items-center gap-3">
+              <div className="min-w-0 shrink-0 md:hidden">{/* 데스크톱은 바로 위 총액 표가 있다 */}
+                <p className="text-[11px] font-bold text-ink-soft">{t(lang, "ext.subtotal")}</p>
+                <p className="tnum text-[15px] font-extrabold leading-tight text-ink">{totalLabel}</p>
+              </div>
+              <div className="min-w-0 flex-1">
+                {viewer.guest ? (
+                  <Link href={`/login?next=/global/${source}/${params.id}`}
+                    className="btn block bg-tomo-coral-deep py-3 text-center text-sm text-white">
+                    {t(lang, "ext.loginCta")}
+                  </Link>
+                ) : item.auction ? (
+                  <ProxyRequestButton lang={lang} auction totalLabel={totalLabel}
+                    source={source} sourceId={params.id}
+                    title={item.title} price={item.price} currency={item.currency}
+                    url={item.url} images={images} sellerName={item.sellerName} />
+                ) : (
+                  <CartButtons lang={lang} source={source} sourceId={params.id}
+                    title={item.title} price={item.price} currency={item.currency}
+                    url={item.url} images={images} sellerName={item.sellerName} />
+                )}
+              </div>
+            </div>
+          )}
+        </div>
           </div>} />
 
         {/* 판매자 카드 — 닉네임 · 동네 · 매너온도(원본 마켓 기준) */}
@@ -242,11 +281,11 @@ export default async function ExternalItemPage(props: {
           </Suspense>
         </section>
 
-        {(item.condition || Object.keys(item.extra).length > 0) && (
+        {(item.condition || extra.length > 0) && (
           <dl className="card grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 p-3.5 text-xs text-ink-soft">
             {item.condition && <><dt className="font-bold text-ink">{t(lang, "ext.condition")}</dt><dd lang={tr?.[2] ? lang : sourceLang}>{tr?.[2] || item.condition}</dd></>}
-            {Object.entries(item.extra).filter(([, v]) => v).map(([k, v]) => (
-              <Fragment key={k}><dt className="font-bold text-ink" lang={sourceLang}>{k}</dt><dd lang={sourceLang}>{v}</dd></Fragment>
+            {extra.filter(([, v]) => v).map(([k, v]) => (
+              <Fragment key={k}><dt className="font-bold text-ink" lang={sourceLang}>{k}</dt><dd lang={tr ? lang : sourceLang}>{v}</dd></Fragment>
             ))}
           </dl>
         )}
@@ -260,43 +299,6 @@ export default async function ExternalItemPage(props: {
           {t(lang, "ext.openOriginal")} ↗
         </a>
 
-        {/* CTA — 모바일은 하단 고정 바, 데스크톱은 정보 컬럼 안에서 흐름 배치 */}
-        <div className="fixed bottom-0 standalone:bottom-[62px] left-0 right-0 z-20 mx-auto max-w-md border-t border-tomo-navy/5 bg-white/95 p-3 backdrop-blur md:sticky md:bottom-4 md:mt-2 md:max-w-none md:rounded-card md:border md:p-3 md:shadow-lift">
-          {!foreign ? (
-            <div className="flex flex-col gap-2">
-              <p className="text-[12px] text-ink-soft">{t(lang, "ext.domesticNote")}</p>
-              <a href={item.url} target="_blank" rel="noopener noreferrer" className="btn block bg-tomo-navy py-3 text-center text-sm text-white">
-                {t(lang, "ext.openDirect")} ↗
-              </a>
-            </div>
-          ) : item.soldOut ? (
-            <button disabled className="btn w-full bg-tomo-navy/70 py-3 text-sm text-white">{t(lang, "ext.soldOutCta")}</button>
-          ) : (
-            <div className="flex items-center gap-3">
-              <div className="min-w-0 shrink-0">
-                <p className="text-[11px] font-bold text-ink-soft">{t(lang, "ext.subtotal")}</p>
-                <p className="tnum text-[15px] font-extrabold leading-tight text-ink">{totalLabel}</p>
-              </div>
-              <div className="min-w-0 flex-1">
-                {viewer.guest ? (
-                  <Link href={`/login?next=/global/${source}/${params.id}`}
-                    className="btn block bg-tomo-coral-deep py-3 text-center text-sm text-white">
-                    {t(lang, "ext.loginCta")}
-                  </Link>
-                ) : item.auction ? (
-                  <ProxyRequestButton lang={lang} auction totalLabel={totalLabel}
-                    source={source} sourceId={params.id}
-                    title={item.title} price={item.price} currency={item.currency}
-                    url={item.url} images={images} sellerName={item.sellerName} />
-                ) : (
-                  <CartButtons lang={lang} source={source} sourceId={params.id}
-                    title={item.title} price={item.price} currency={item.currency}
-                    url={item.url} images={images} sellerName={item.sellerName} />
-                )}
-              </div>
-            </div>
-          )}
-        </div>
       </div>
     </main>
   );
