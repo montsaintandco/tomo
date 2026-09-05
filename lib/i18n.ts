@@ -295,6 +295,14 @@ const D = {
   "stats.cross": ["해외 {n}", "海外 {n}"],
   "stats.response": ["응답 {n}%", "返信率 {n}%"],
   "stats.responseNone": ["응답 기록 없음", "返信記録なし"],
+  // ── 판매 마법사·만남 장소 ──
+  "sell.priceCheck": ["4마켓 시세 보기", "4マーケットの相場を見る"],
+  "sell.priceLoading": ["시세 조회 중…", "相場を確認中…"],
+  "sell.priceResult": ["비슷한 상품 {n}개 · 중앙값 {median} ({min}~{max})", "類似商品 {n}件・中央値 {median}（{min}〜{max}）"],
+  "sell.priceSrc": ["{sources} 기준", "{sources}基準"],
+  "sell.priceApply": ["이 가격으로", "この価格にする"],
+  "sell.priceNone": ["비슷한 상품을 못 찾았어요 — 제목을 더 구체적으로 써보세요", "類似商品が見つかりません ― タイトルをもう少し具体的に"],
+  "meet.spots": ["추천 만남 장소 (공공장소)", "おすすめの待ち合わせ場所（公共の場）"],
 
   // ── SP2: 해외직구 ──
   "global.title": ["해외직구", "海外購入"],

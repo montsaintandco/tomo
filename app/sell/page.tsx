@@ -34,5 +34,5 @@ export default async function SellPage(props: { searchParams: Promise<{ hint?: s
       importMsg = t(lang, "sell.importFail");
     }
   }
-  return <SellForm lang={lang} hint={hint?.slice(0, 80) ?? ""} prefill={prefill} importMsg={importMsg} />;
+  return <SellForm lang={lang} hint={hint?.slice(0, 80) ?? ""} prefill={prefill} importMsg={importMsg} currency={viewer.currency} />;
 }

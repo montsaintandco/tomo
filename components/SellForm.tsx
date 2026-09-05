@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 import { t, type Lang } from "@/lib/i18n";
+import PriceHint from "@/components/PriceHint";
 
 const CATEGORIES = ["figure", "camera", "fashion", "kpop", "game", "vintage", "etc"] as const;
 const METHODS = ["direct", "shipping", "both"] as const;
@@ -23,8 +24,8 @@ const pick = <T extends readonly string[]>(list: T, v: string | undefined, d: T[
 // initial이 있으면 수정 모드 (PATCH /api/listings/[id]) — 같은 폼, 같은 검증
 export type SellPrefill = { title: string; description: string; price?: number; images: string[] };
 
-export default function SellForm({ lang, hint, initial, prefill, importMsg }: {
-  lang: Lang; hint: string; initial?: SellInitial; prefill?: SellPrefill; importMsg?: string;
+export default function SellForm({ lang, hint, initial, prefill, importMsg, currency = "KRW" }: {
+  lang: Lang; hint: string; initial?: SellInitial; prefill?: SellPrefill; importMsg?: string; currency?: "KRW" | "JPY";
 }) {
   const editing = !!initial;
   const [title, setTitle] = useState(initial?.title ?? prefill?.title ?? hint);
@@ -112,6 +113,7 @@ export default function SellForm({ lang, hint, initial, prefill, importMsg }: {
         <label className="text-[13px] font-bold text-ink">{t(lang, "sell.price")}
           <input className={`tnum ${FIELD} disabled:opacity-45`} type="number" inputMode="numeric" min={1}
             value={free ? "" : price} onChange={(e) => setPrice(e.target.value)} required={!free} disabled={free} />
+          {!free && <PriceHint title={title} currency={currency} lang={lang} onApply={(p) => setPrice(String(p))} />}
         </label>
         <label className="-mt-2 flex items-center gap-2 text-[13px] font-bold text-ink">
           <input type="checkbox" className="h-4 w-4 accent-[#C14E4C]" checked={free} onChange={(e) => setFree(e.target.checked)} />

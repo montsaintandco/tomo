@@ -13,6 +13,7 @@ import TrustStrip from "@/components/TrustStrip";
 import { CountryChip, TomoSymbol } from "@/components/Brand";
 import HeartGauge from "@/components/HeartGauge";
 import SellerStats, { type SellerStatsData } from "@/components/SellerStats";
+import { meetupSpots } from "@/lib/meetup-spots";
 import ListingCard from "@/components/ListingCard";
 import type { FeedListing } from "@/components/ListingRow";
 import Link from "next/link";
@@ -218,6 +219,11 @@ export default async function ListingDetail(props: { params: Promise<{ id: strin
           <div className="rounded-card bg-tomo-navy/5 p-3.5 text-[13px] leading-relaxed text-ink">
             <p>{t(lang, "detail.travelBody", { market: t(lang, `market.${country}`) })}</p>
             <p className="mt-1 text-[12px] text-ink-soft">{t(lang, "detail.meetupNote")}</p>
+            {meetupSpots(l.region).length > 0 && (
+              <p className="mt-1.5 text-[12px] text-ink">
+                <span className="font-bold text-tomo-navy">{t(lang, "meet.spots")}:</span> {meetupSpots(l.region).join(" · ")}
+              </p>
+            )}
             {myTrip ? (
               <p className="mt-2 font-bold text-tomo-navy">
                 {t(lang, "trip.detailMatch", { start: fmtDay(myTrip.start_date), end: fmtDay(myTrip.end_date), region: myTrip.region })}

@@ -14,5 +14,5 @@ export default async function EditListingPage(props: { params: Promise<{ id: str
     .select("id, seller_id, title, description, price, category, trade_method, cross_border_enabled, condition, shipping_payer, ship_days, allow_offers")
     .eq("id", id).maybeSingle();
   if (!l || l.seller_id !== viewer.id) notFound();
-  return <SellForm lang={viewer.language} hint="" initial={l as SellInitial} />;
+  return <SellForm lang={viewer.language} hint="" initial={l as SellInitial} currency={viewer.currency} />;
 }
