@@ -22,7 +22,7 @@ export default function TrustStrip({ lang }: { lang: Lang }) {
     <ul className="grid grid-cols-3 gap-1 rounded-card bg-tomo-ivory px-2 py-3 md:gap-4 md:px-6 md:py-5">
       {PILLARS.map((p) => (
         <li key={p.key} className="flex flex-col items-center gap-1.5 text-center md:flex-row md:gap-3 md:text-left">
-          <svg viewBox="0 0 24 24" fill="none" stroke="#0C447C" strokeWidth={1.8}
+          <svg viewBox="0 0 24 24" fill="none" stroke="#111827" strokeWidth={1.8}
             strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 shrink-0 md:h-7 md:w-7" aria-hidden>
             {p.icon}
           </svg>

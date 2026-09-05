@@ -35,7 +35,7 @@ export default function ReviewForm({ txId, lang = "ko" }: { txId: string; lang?:
           <button key={n} type="button" onClick={() => setRating(n)} role="radio" aria-checked={n === rating}
             aria-label={t(lang, "review.star", { n })} className="press flex h-11 w-11 items-center justify-center">
             <svg viewBox="0 0 24 24" className="h-7 w-7" aria-hidden>
-              <path d={HEART} fill={n <= rating ? "#E2807F" : "none"} stroke={n <= rating ? "#E2807F" : "#93A0AB"} strokeWidth={1.8} />
+              <path d={HEART} fill={n <= rating ? "#1D4ED8" : "none"} stroke={n <= rating ? "#1D4ED8" : "#93A0AB"} strokeWidth={1.8} />
             </svg>
           </button>
         ))}

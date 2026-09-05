@@ -33,7 +33,7 @@ function Bubble({ m, mine, viewerLanguage }: {
   const showingTranslation = foreign && !!m.body_translated && !showOriginal;
   const text = showingTranslation ? m.body_translated! : m.body;
   // 발화 언어가 색을 정한다 — 블루=한국어, 핑크=일본어 (나라 색의 유일한 채팅 표면)
-  const tone = m.source_language === "ko" ? "bg-tomo-blue/40" : "bg-tomo-pink/45";
+  const tone = mine ? "bg-tomo-coral-deep/10" : "bg-tomo-navy/5";
   const accent = m.source_language === "ko" ? "text-tomo-navy" : "text-tomo-rose";
   return (
     <div className={`flex ${mine ? "justify-end" : "justify-start"}`}>

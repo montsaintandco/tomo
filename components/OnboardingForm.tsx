@@ -55,7 +55,7 @@ export default function OnboardingForm({ lang }: { lang: Lang }) {
           {(["KR", "JP"] as const).map((c) => (
             <button type="button" key={c} aria-pressed={country === c}
               className={`btn flex-1 py-3 text-sm ${country === c
-                ? (c === "KR" ? "bg-tomo-blue/40 text-tomo-navy shadow-soft" : "bg-tomo-pink/45 text-tomo-rose shadow-soft")
+                ? "bg-tomo-navy text-white shadow-soft"
                 : "bg-white text-ink-soft shadow-soft"}`}
               onClick={() => { setCountry(c); setRegion(REGIONS[c][0]); setLanguage(c === "KR" ? "ko" : "ja"); }}>
               {t(lang, `market.${c}`)}

@@ -3,21 +3,16 @@
 @tailwind components;
 @tailwind utilities;
 
-/* 브랜드 서체: 한국어 Cafe24 써라운드(로고), 본문 Pretendard — 다이나믹 서브셋(글리프 범위별 분할 로드, 2MB 통파일 대신 필요한 조각만) */
-@font-face {
-  font-family: "Cafe24Ssurround";
-  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2105@1.0/Cafe24Ssurround.woff") format("woff");
-  font-weight: 700;
-  font-display: swap;
-}
+/* 서체: Pretendard 하나 — 다이나믹 서브셋(글리프 범위별 분할 로드). 디스플레이 서체 없음, 위계는 굵기·자간으로 */
 
 :root {
   color-scheme: light;
-  --ink: #26333f;
-  /* 네이비 틴트 섀도우 — 순수 검정 대신 배경 색조를 머금게 */
-  --shadow-soft: 0 1px 2px rgba(12, 68, 124, 0.05), 0 4px 16px rgba(12, 68, 124, 0.07);
-  --shadow-lift: 0 2px 6px rgba(12, 68, 124, 0.09), 0 12px 28px rgba(12, 68, 124, 0.11);
-  --shadow-float: 0 3px 8px rgba(193, 78, 76, 0.16), 0 8px 20px rgba(12, 68, 124, 0.10);
+  --ink: #111827;
+  --accent: #1d4ed8;
+  /* 중립 섀도우 — 얕고 부드럽게 */
+  --shadow-soft: 0 1px 2px rgba(17, 24, 39, 0.04), 0 4px 14px rgba(17, 24, 39, 0.06);
+  --shadow-lift: 0 2px 6px rgba(17, 24, 39, 0.06), 0 12px 28px rgba(17, 24, 39, 0.10);
+  --shadow-float: 0 4px 12px rgba(29, 78, 216, 0.22), 0 8px 20px rgba(17, 24, 39, 0.10);
   /* 모션 토큰 (Emil Kowalski / Apple 기준): UI는 강한 ease-out, 화면 위 이동은 ease-in-out, 시트는 iOS 드로어 커브. 오버슈트 없음 */
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
@@ -37,35 +32,36 @@ body {
 }
 
 /* 브라우저 기본면도 브랜드가 칠한다 */
-::selection { background: rgba(156, 197, 236, 0.45); color: #0c447c; }
-input, textarea { caret-color: #c14e4c; }
+::selection { background: rgba(29, 78, 216, 0.18); color: #111827; }
+input, textarea { caret-color: #1d4ed8; }
 input[type="search"]::-webkit-search-cancel-button { display: none; } /* 커스텀 × 사용 */
-* { scrollbar-width: thin; scrollbar-color: rgba(12, 68, 124, 0.18) transparent; }
+* { scrollbar-width: thin; scrollbar-color: rgba(17, 24, 39, 0.18) transparent; }
 *::-webkit-scrollbar { width: 6px; height: 6px; }
-*::-webkit-scrollbar-thumb { background: rgba(12, 68, 124, 0.18); border-radius: 999px; }
+*::-webkit-scrollbar-thumb { background: rgba(17, 24, 39, 0.18); border-radius: 999px; }
 *::-webkit-scrollbar-track { background: transparent; }
 
 @layer base {
   h1, h2 { letter-spacing: -0.02em; text-wrap: balance; }
   p { text-wrap: pretty; }
   :focus-visible {
-    outline: 2px solid #c14e4c;
+    outline: 2px solid #1d4ed8;
     outline-offset: 2px;
     border-radius: 6px;
   }
 }
 
 @layer components {
-  /* 로고·주요 헤딩 전용 라운드 서체 */
+  /* 워드마크 — 같은 서체, 무게 800과 좁은 자간으로만 구분 */
   .font-brand {
-    font-family: "Cafe24Ssurround", "Pretendard", sans-serif;
-    letter-spacing: 0;
+    font-family: "Pretendard", sans-serif;
+    font-weight: 800;
+    letter-spacing: -0.04em;
   }
 
   /* 카드: border+shadow 조합 대신 틴트 섀도우 하나로 */
   .card {
     background: #fff;
-    border-radius: 12px;
+    border-radius: 8px;
     box-shadow: var(--shadow-soft);
     transition: box-shadow 150ms ease, transform var(--dur-fast) var(--ease-out);
   }
@@ -76,7 +72,7 @@ input[type="search"]::-webkit-search-cancel-button { display: none; } /* 커스�
   a.card:active, button.card:active { transform: scale(0.98); }
 
   .btn {
-    border-radius: 9999px;
+    border-radius: 8px;
     font-weight: 700;
     transition: transform var(--dur-fast) var(--ease-out), opacity 150ms ease, background-color 150ms ease, box-shadow 150ms ease;
   }
@@ -114,24 +110,19 @@ input[type="search"]::-webkit-search-cancel-button { display: none; } /* 커스�
     @starting-style { dialog.sheet[open] { transform: scale(0.97); } }
   }
 
-  /* 한일이 만나는 순간에만 쓰는 그라데이션 필드 (블루→핑크) */
-  .grad-bridge { background: linear-gradient(115deg, #9cc5ec 0%, #c9bcd9 52%, #f2afaf 100%); }
-  .grad-bridge-soft { background: linear-gradient(115deg, rgba(156, 197, 236, 0.28) 0%, rgba(242, 175, 175, 0.28) 100%); }
+  /* 크로스보더 강조 필드 — 액센트 틴트 (그라데이션 없음) */
+  .grad-bridge { background: #eef2ff; }
+  .grad-bridge-soft { background: #eef2ff; }
 
-  /* 말풍선 칩 — 꼬리 한 귀퉁이만 각지게. KR=블루, JP=핑크 */
-  .bubble-kr {
-    background: rgba(156, 197, 236, 0.35);
-    color: #0c447c;
-    border-radius: 9px 9px 9px 2px;
-  }
-  .bubble-jp {
-    background: rgba(242, 175, 175, 0.38);
-    color: #a34543;
-    border-radius: 9px 9px 2px 9px;
+  /* 국가 칩 — 색이 아니라 글자. 중립 필, 4px */
+  .bubble-kr, .bubble-jp {
+    background: #f3f4f6;
+    color: #374151;
+    border-radius: 4px;
   }
 
-  /* 채팅 말풍선 — 발화 언어가 색을 정한다 (블루=한국어, 핑크=일본어) */
-  .chat-bubble { border-radius: 18px; }
+  /* 채팅 말풍선 — 내 것은 액센트 틴트, 상대는 중립 (언어색 없음) */
+  .chat-bubble { border-radius: 14px; }
   .chat-bubble-mine { border-bottom-right-radius: 4px; }
   .chat-bubble-theirs { border-bottom-left-radius: 4px; }
 
@@ -140,13 +131,11 @@ input[type="search"]::-webkit-search-cancel-button { display: none; } /* 커스�
 
   /* 이미지 자리 (로딩 전) */
   .skeleton {
-    background: linear-gradient(100deg, #f1ede4 30%, #f8f5ee 50%, #f1ede4 70%);
+    background: linear-gradient(100deg, #f3f4f6 30%, #f9fafb 50%, #f3f4f6 70%);
     background-size: 200% 100%;
     animation: shimmer 1.4s infinite linear;
   }
 
-  /* 워드마크 하트 — 로드 후 두 박만 뛰고 멈춘다 (무한 진동은 전정 부담·빈도 위반) */
-  .heartbeat { animation: heartbeat 2.6s ease-in-out 2; transform-origin: center; }
 }
 
 @keyframes shimmer {
@@ -160,13 +149,6 @@ input[type="search"]::-webkit-search-cancel-button { display: none; } /* 커스�
   100% { transform: scale(1); }
 }
 
-@keyframes heartbeat {
-  0%, 100% { transform: scale(1); }
-  12% { transform: scale(1.12); }
-  24% { transform: scale(1); }
-  36% { transform: scale(1.08); }
-  48% { transform: scale(1); }
-}
 
 @layer utilities {
   .text-balance { text-wrap: balance; }
@@ -199,7 +181,7 @@ input[type="search"]::-webkit-search-cancel-button { display: none; } /* 커스�
 .a-muted { color: var(--a-muted); }
 .a-faint { color: var(--a-faint); }
 .a-panel { background: var(--a-panel); border: 1px solid var(--a-border); border-radius: 8px; }
-.a-link { color: #0c447c; font-weight: 600; }
+.a-link { color: #1d4ed8; font-weight: 600; }
 .a-link:hover { text-decoration: underline; text-underline-offset: 2px; }
 .admin table { width: 100%; border-collapse: separate; border-spacing: 0; }
 .admin th { position: sticky; top: 0; z-index: 1; background: var(--a-panel); font-size: 11px; font-weight: 600; color: var(--a-muted); text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--a-border); white-space: nowrap; }
@@ -212,14 +194,14 @@ input[type="search"]::-webkit-search-cancel-button { display: none; } /* 커스�
 .a-pill[data-tone="amber"]::before { background: #f59e0b; }
 .a-pill[data-tone="green"]::before { background: #16a34a; }
 .a-pill[data-tone="red"]::before { background: #dc2626; }
-.a-pill[data-tone="navy"]::before { background: #0c447c; }
+.a-pill[data-tone="navy"]::before { background: #111827; }
 /* 재사용 클라이언트 폼(견적·환율·큐레이션·토글)을 도구 문법으로: 필 대신 6px, 섀도우 대신 헤어라인 */
 .admin .card { border: 1px solid var(--a-border); border-radius: 8px; box-shadow: none; }
 .admin .card:hover { box-shadow: none; transform: none; }
 .admin .btn { border-radius: 6px; font-weight: 600; }
 .admin .rounded-full:not(.a-round) { border-radius: 6px; }
 .admin input, .admin select, .admin textarea { border-radius: 6px; box-shadow: none; border: 1px solid var(--a-border); background: #fff; }
-.admin input:focus, .admin select:focus, .admin textarea:focus { outline: 2px solid #0c447c; outline-offset: 0; }
+.admin input:focus, .admin select:focus, .admin textarea:focus { outline: 2px solid #1d4ed8; outline-offset: 0; }
 .admin .shadow-soft { box-shadow: none; }
 .admin details > summary { list-style: none; cursor: pointer; }
 .admin details > summary::-webkit-details-marker { display: none; }

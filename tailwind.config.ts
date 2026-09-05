@@ -12,21 +12,19 @@ const config: Config = {
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
-        "tomo-blue": "#9CC5EC",
-        "tomo-pink": "#F2AFAF",
-        "tomo-coral": "#E2807F",
-        // 흰 글자를 얹는 코랄 — 파스텔 코랄은 AA 대비가 안 나옴
-        "tomo-coral-deep": "#C14E4C",
-        "tomo-ivory": "#FBF9F4",
-        "tomo-navy": "#0C447C",
-        // JP 텍스트용 딥 로즈 (핑크 틴트 배경 위 4.5:1 확보)
-        "tomo-rose": "#A34543",
-        // 네이비 틴트 잉크 스케일 — 무채색 회색 대신
-        ink: "#26333F",
-        "ink-soft": "#5C6B77",
-        "ink-faint": "#93A0AB",
+        // v3 정제된 마켓 — 클래스명은 v2를 유지하고 값만 바꿨다 (역할: navy=구조/잉크, coral-deep=단일 액센트, rose=오류)
+        "tomo-blue": "#E5E7EB",       // (구 한국색) 중립 필
+        "tomo-pink": "#E5E7EB",       // (구 일본색) 중립 필
+        "tomo-coral": "#1D4ED8",      // 액센트 (장식 하트 자리 → 액센트)
+        "tomo-coral-deep": "#1D4ED8", // 단일 액센트: CTA·링크·활성. 흰 글자 5.9:1
+        "tomo-ivory": "#F5F5F7",      // 틴트 필드 (검색·신뢰 스트립·푸터)
+        "tomo-navy": "#111827",       // 구조·잉크·활성 탭 (near-black)
+        "tomo-rose": "#DC2626",       // 오류·파괴적
+        ink: "#111827",
+        "ink-soft": "#6B7280",
+        "ink-faint": "#9CA3AF",
       },
-      borderRadius: { card: "12px", thumb: "10px" },
+      borderRadius: { card: "8px", thumb: "8px" },
       // 네이비 틴트 섀도우 토큰 — shadow-[var(...)] 임의값은 box-shadow로 생성되지 않음
       boxShadow: {
         soft: "var(--shadow-soft)",

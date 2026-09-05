@@ -46,8 +46,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang={lang}>
       <body className="bg-white text-ink standalone:pb-24 md:pb-0">
-        {/* impeccable direction contract · v2: brand-pinned, applied like a mature marketplace
-        THESIS: 두 말풍선이 만나면 하트가 된다 — 브랜드(블루/핑크/코랄, 하트-O, 써라운드)는 그대로, 적용은 당근·메루카리급 프로덕트로.
+        {/* impeccable direction contract · v3 정제된 마켓 (2026-09-05): 카와이 브랜드 시그니처 폐기
+        THESIS: 사진과 가격이 주인공, 인터페이스는 물러선다 — 흰 바탕·중립 회색·단일 액센트(딥 블루)·텍스트 워드마크·8px. Apple·메루카리급 절제.
+        (아래 v2 서술 중 브랜드 색·하트·써라운드·말풍선 항목은 폐기됨. 나라는 KR/JP 텍스트 칩으로만.)
         홈은 한쪽 매장이 아니라 다리: 어느 나라에서 열어도 "사기(상대국 인기)"와 "팔기(상대국이 찾는 것)" 양면이 내 언어·내 통화로 보인다.
         OWN-WORLD: 흰 페이지 + 네이비 잉크 스케일. 아이보리는 신뢰 스트립·푸터·검색 입력의 틴트로만.
         블루/핑크는 국가 칩·채팅 말풍선·KR/JP 토글 전용, 브리지 그라데이션은 여행 직거래 뱃지 하나. 코랄딥은 단일 CTA·FAB.

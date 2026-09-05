@@ -197,7 +197,6 @@ export default async function ListingDetail(props: { params: Promise<{ id: strin
             </span>
             {travelDeal && (
               <span className="grad-bridge-soft inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold text-tomo-navy">
-                <svg viewBox="0 0 24 24" className="h-2.5 w-2.5" aria-hidden><path d={HEART} fill="#C14E4C" /></svg>
                 {t(lang, "detail.travelLead")}
               </span>
             )}
@@ -275,7 +274,6 @@ export default async function ListingDetail(props: { params: Promise<{ id: strin
               </span>
               <span className="flex shrink-0 items-center gap-2">
                 <span className="tnum flex items-center gap-1 rounded-full bg-tomo-navy/5 px-2.5 py-1 text-[11px] font-bold text-tomo-navy md:hidden">
-                  <svg viewBox="0 0 24 24" className="h-3 w-3" aria-hidden><path d={HEART} fill="#C14E4C" /></svg>
                   {Number(seller.trust_temp).toFixed(1)}°
                 </span>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}

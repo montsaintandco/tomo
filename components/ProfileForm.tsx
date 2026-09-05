@@ -44,7 +44,7 @@ export default function ProfileForm({ lang, initial }: {
           {(["KR", "JP"] as const).map((c) => (
             <button type="button" key={c} aria-pressed={country === c}
               className={`btn flex-1 py-3 text-sm ${country === c
-                ? (c === "KR" ? "bg-tomo-blue/40 text-tomo-navy shadow-soft" : "bg-tomo-pink/45 text-tomo-rose shadow-soft")
+                ? "bg-tomo-navy text-white shadow-soft"
                 : "bg-white text-ink-soft shadow-soft"}`}
               onClick={() => { if (c !== country) { setCountry(c); setRegion(REGIONS[c][0]); } }}>
               {t(lang, `market.${c}`)}

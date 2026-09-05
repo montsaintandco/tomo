@@ -27,7 +27,7 @@ export default async function AdminReviewsPage() {
               <td>
                 <span className="flex gap-0.5">
                   {[1, 2, 3, 4, 5].map((n) => (
-                    <svg key={n} viewBox="0 0 24 24" className="h-3.5 w-3.5" aria-hidden><path d={HEART} fill={n <= r.rating ? "#E2807F" : "none"} stroke={n <= r.rating ? "#E2807F" : "#9CA3AF"} strokeWidth={1.8} /></svg>
+                    <svg key={n} viewBox="0 0 24 24" className="h-3.5 w-3.5" aria-hidden><path d={HEART} fill={n <= r.rating ? "#1D4ED8" : "none"} stroke={n <= r.rating ? "#1D4ED8" : "#9CA3AF"} strokeWidth={1.8} /></svg>
                   ))}
                 </span>
               </td>

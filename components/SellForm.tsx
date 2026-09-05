@@ -116,7 +116,7 @@ export default function SellForm({ lang, hint, initial, prefill, importMsg, curr
           {!free && <PriceHint title={title} currency={currency} lang={lang} onApply={(p) => setPrice(String(p))} />}
         </label>
         <label className="-mt-2 flex items-center gap-2 text-[13px] font-bold text-ink">
-          <input type="checkbox" className="h-4 w-4 accent-[#C14E4C]" checked={free} onChange={(e) => setFree(e.target.checked)} />
+          <input type="checkbox" className="h-4 w-4 accent-[#1D4ED8]" checked={free} onChange={(e) => setFree(e.target.checked)} />
           {t(lang, "sell.free")}
         </label>
         <label className="text-[13px] font-bold text-ink">{t(lang, "sell.condition")}
@@ -162,12 +162,12 @@ export default function SellForm({ lang, hint, initial, prefill, importMsg, curr
           </>
         )}
         <label className="flex items-center gap-2 text-[13px] font-bold text-ink">
-          <input type="checkbox" className="h-4 w-4 accent-[#C14E4C]" checked={crossBorder} onChange={(e) => setCrossBorder(e.target.checked)} />
+          <input type="checkbox" className="h-4 w-4 accent-[#1D4ED8]" checked={crossBorder} onChange={(e) => setCrossBorder(e.target.checked)} />
           {t(lang, "sell.crossBorder")}
         </label>
         {!free && (
           <label className="flex items-center gap-2 text-[13px] font-bold text-ink">
-            <input type="checkbox" className="h-4 w-4 accent-[#C14E4C]" checked={allowOffers} onChange={(e) => setAllowOffers(e.target.checked)} />
+            <input type="checkbox" className="h-4 w-4 accent-[#1D4ED8]" checked={allowOffers} onChange={(e) => setAllowOffers(e.target.checked)} />
             {t(lang, "sell.allowOffers")}
           </label>
         )}

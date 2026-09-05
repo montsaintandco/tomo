@@ -109,7 +109,7 @@ export default async function ProfilePage(props: { params: Promise<{ id: string 
                   <span className="flex gap-0.5" aria-label={t(lang, "review.star", { n: r.rating })}>
                     {[1, 2, 3, 4, 5].map((n) => (
                       <svg key={n} viewBox="0 0 24 24" className="h-4 w-4" aria-hidden>
-                        <path d={HEART} fill={n <= r.rating ? "#E2807F" : "none"} stroke={n <= r.rating ? "#E2807F" : "#93A0AB"} strokeWidth={1.8} />
+                        <path d={HEART} fill={n <= r.rating ? "#1D4ED8" : "none"} stroke={n <= r.rating ? "#1D4ED8" : "#93A0AB"} strokeWidth={1.8} />
                       </svg>
                     ))}
                   </span>
