@@ -5,7 +5,6 @@ import { getTrendingSections, type TrendingSection } from "@/lib/market/trending
 import { getThemes } from "@/lib/market/themes";
 import { t, otherCountry, type Lang } from "@/lib/i18n";
 import type { FeedListing } from "@/components/ListingRow";
-import TrustStrip from "@/components/TrustStrip";
 import SectionHeader from "@/components/SectionHeader";
 import MarketCarousel, { CarouselSkeleton } from "@/components/MarketCarousel";
 import ListingCard from "@/components/ListingCard";
@@ -35,6 +34,53 @@ function ThemeSkeleton({ rows }: { rows: number }) {
           <CarouselSkeleton />
         </div>
       ))}
+    </div>
+  );
+}
+
+// 히어로 (게스트만) — 경쟁사 종합: 메루카리처럼 사진이 히어로, 당근 웹처럼 한 줄 헤드라인+CTA, 사조처럼 한 줄 신뢰. 배너·박스 없음.
+// 사진은 상대국 인기 테마의 실제 상품 4장 (탭하면 그 상품으로). 로그인 사용자는 이 블록 없이 바로 상품
+async function HomeHero({ viewer }: { viewer: ViewerOrGuest }) {
+  const lang = viewer.language;
+  const other = otherCountry(viewer.country);
+  const otherName = t(lang, `market.${other}`);
+  const sections = await getSections(viewer.country);
+  const photos = sections.flatMap((s) => s.items).filter((it) => it.thumb && !it.soldOut).slice(0, 3); // 3장: 세로 1 + 정사각 2 (4장이면 한 장이 아래로 밀려 히어로가 길어진다)
+  const [line1, line2] = t(lang, "hero.title", { other: otherName }).split("\n");
+  return (
+    <section className="grid gap-6 md:grid-cols-[1fr_minmax(0,28rem)] md:items-center md:gap-10 md:py-6" aria-label={line1}>
+      <div>
+        <h1 className="text-[28px] font-extrabold leading-[1.15] tracking-[-0.03em] text-ink md:text-[40px]">
+          {line1}<br />{line2}
+        </h1>
+        <p className="mt-3 max-w-[38ch] text-[14px] leading-relaxed text-ink-soft md:text-[15px]">{t(lang, "hero.sub")}</p>
+        <div className="mt-5 flex flex-wrap gap-2">
+          <Link href="/global" className="btn bg-tomo-coral-deep px-5 py-3 text-sm text-white">{t(lang, "hero.ctaBuy", { other: otherName })}</Link>
+          <Link href="/sell" className="btn border border-tomo-navy/15 bg-white px-5 py-3 text-sm text-ink">{t(lang, "hero.ctaSell")}</Link>
+        </div>
+      </div>
+      {photos.length >= 2 && (
+        <ul className="grid grid-cols-2 gap-2" aria-label={t(lang, "hero.photosAria", { other: otherName })}>
+          {photos.map((it, i) => (
+            <li key={`${it.source}:${it.sourceId}`} className={i === 0 && photos.length >= 3 ? "row-span-2" : ""}>
+              <Link href={`/global/${it.source}/${it.sourceId}`} className="press group block h-full overflow-hidden rounded-card bg-tomo-navy/5">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={it.thumb} alt="" loading={i === 0 ? "eager" : "lazy"}
+                  className={`h-full w-full object-cover transition-transform duration-200 ease-out fine:group-hover:scale-[1.03] ${i === 0 && photos.length >= 3 ? "aspect-[3/4] md:aspect-auto" : "aspect-square"}`} />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+function HeroSkeleton() {
+  return (
+    <div className="grid gap-6 md:grid-cols-[1fr_minmax(0,28rem)] md:items-center md:py-6" aria-hidden>
+      <div><div className="skeleton h-8 w-3/4 rounded" /><div className="skeleton mt-2 h-8 w-1/2 rounded" /><div className="skeleton mt-4 h-4 w-2/3 rounded" /></div>
+      <div className="grid grid-cols-2 gap-2"><div className="skeleton row-span-2 aspect-[3/4] rounded-card" /><div className="skeleton aspect-square rounded-card" /><div className="skeleton aspect-square rounded-card" /></div>
     </div>
   );
 }
@@ -102,9 +148,14 @@ export default function HomeHub({ viewer, listings, travel }: {
   const otherName = t(lang, `market.${other}`);
   return (
     <div className="px-4 pb-6 pt-1 md:px-0 md:pb-16">
-      <TrustStrip lang={lang} />
+      {/* 게스트 = 히어로(헤드라인·CTA·상품 사진). 로그인 = 메루카리처럼 바로 상품 — 신뢰 3항목은 상세의 "안심 거래"가 맡는다 */}
+      {viewer.guest && (
+        <div className="mb-6 md:mb-8">
+          <Suspense fallback={<HeroSkeleton />}><HomeHero viewer={viewer} /></Suspense>
+        </div>
+      )}
 
-      <div className="mt-4">
+      <div className={viewer.guest ? "" : "mt-2"}>
         <CategoryChips lang={lang} />
       </div>
 

@@ -40,6 +40,12 @@ const D = {
   "trust.translate": ["채팅 자동번역", "チャット自動翻訳"],
   "trust.translateSub": ["한국어·일본어 그대로", "韓国語・日本語そのまま"],
 
+  // 홈 히어로 (게스트만) — 헤드라인·한 줄 신뢰·CTA 2개, 오른쪽은 실제 상품 사진
+  "hero.title": ["{other} 물건을\n내 나라에서 사고 팔기", "{other}のものを\n自分の国で買う・売る"],
+  "hero.sub": ["구매대행부터 여행 직거래까지. 에스크로 안전결제 · 센터 검수 · 자동번역 채팅.", "購入代行から旅行直接取引まで。エスクロー安心決済・センター検品・自動翻訳チャット。"],
+  "hero.ctaBuy": ["{other} 마켓 둘러보기", "{other}のマーケットを見る"],
+  "hero.ctaSell": ["판매하기", "出品する"],
+  "hero.photosAria": ["{other}에서 지금 인기 상품", "{other}で今人気の商品"],
   "hub.trending": ["{market}에서 지금 인기", "{market}で今人気"],
   "hub.trendingSub": ["{sources}에서 많이 찾는 것 · 구매대행으로 받아요", "{sources}で人気のもの・購入代行でお届け"],
   "hub.trendingMore": ["{market} 인기 테마 더보기", "{market}の人気テーマをもっと"],
