@@ -4,6 +4,7 @@ import type { ViewerOrGuest } from "@/lib/listings";
 import { getTrendingSections, type TrendingSection } from "@/lib/market/trending";
 import { getThemes } from "@/lib/market/themes";
 import { t, otherCountry, type Lang } from "@/lib/i18n";
+import { convertPrice, formatPrice } from "@/lib/currency";
 import type { FeedListing } from "@/components/ListingRow";
 import SectionHeader from "@/components/SectionHeader";
 import MarketCarousel, { CarouselSkeleton } from "@/components/MarketCarousel";
@@ -38,35 +39,51 @@ function ThemeSkeleton({ rows }: { rows: number }) {
   );
 }
 
-// 히어로 (게스트만) — 경쟁사 종합: 메루카리처럼 사진이 히어로, 당근 웹처럼 한 줄 헤드라인+CTA, 사조처럼 한 줄 신뢰. 배너·박스 없음.
-// 사진은 상대국 인기 테마의 실제 상품 4장 (탭하면 그 상품으로). 로그인 사용자는 이 블록 없이 바로 상품
+// 히어로 — 검색이 히어로(에어비앤비식): 키워드든 상대국 마켓 URL이든 여기 한 칸. 밑에 인기 검색어 칩 + 테마 타일 4장(대표 사진·테마명·최저가, 탭하면 그 테마 검색).
+// 사진이 랜덤 상품이 아니라 "여기서 살 수 있는 것"의 지도. 로그인·게스트 공통
 async function HomeHero({ viewer }: { viewer: ViewerOrGuest }) {
   const lang = viewer.language;
   const other = otherCountry(viewer.country);
   const otherName = t(lang, `market.${other}`);
   const sections = await getSections(viewer.country);
-  const photos = sections.flatMap((s) => s.items).filter((it) => it.thumb && !it.soldOut).slice(0, 3); // 3장: 세로 1 + 정사각 2 (4장이면 한 장이 아래로 밀려 히어로가 길어진다)
+  const label = (s: TrendingSection) => (lang === "ja" ? s.theme.labelJa : s.theme.label);
+  const tiles = sections.map((s) => {
+    const items = s.items.filter((it) => it.thumb && !it.soldOut && !it.auction);
+    const min = items.reduce((m, it) => Math.min(m, it.price), Infinity);
+    const cover = items[0] ?? s.items.find((it) => it.thumb);
+    return cover ? { key: s.theme.key, label: label(s), href: `/global?q=${encodeURIComponent(label(s))}`, thumb: cover.thumb, min: Number.isFinite(min) ? min : null, currency: cover.currency } : null;
+  }).filter((x): x is NonNullable<typeof x> => !!x).slice(0, 4);
   const [line1, line2] = t(lang, "hero.title", { other: otherName }).split("\n");
   return (
-    <section className="grid gap-6 md:grid-cols-[1fr_minmax(0,28rem)] md:items-center md:gap-10 md:py-6" aria-label={line1}>
-      <div>
-        <h1 className="text-[28px] font-extrabold leading-[1.15] tracking-[-0.03em] text-ink md:text-[40px]">
-          {line1}<br />{line2}
-        </h1>
-        <p className="mt-3 max-w-[38ch] text-[14px] leading-relaxed text-ink-soft md:text-[15px]">{t(lang, "hero.sub")}</p>
-        <div className="mt-5 flex flex-wrap gap-2">
-          <Link href="/global" className="btn bg-tomo-coral-deep px-5 py-3 text-sm text-white">{t(lang, "hero.ctaBuy", { other: otherName })}</Link>
-          <Link href="/sell" className="btn border border-tomo-navy/15 bg-white px-5 py-3 text-sm text-ink">{t(lang, "hero.ctaSell")}</Link>
-        </div>
-      </div>
-      {photos.length >= 2 && (
-        <ul className="grid grid-cols-2 gap-2" aria-label={t(lang, "hero.photosAria", { other: otherName })}>
-          {photos.map((it, i) => (
-            <li key={`${it.source}:${it.sourceId}`} className={i === 0 && photos.length >= 3 ? "row-span-2" : ""}>
-              <Link href={`/global/${it.source}/${it.sourceId}`} className="press group block h-full overflow-hidden rounded-card bg-tomo-navy/5">
+    <section className="md:py-4" aria-label={line1}>
+      <h1 className="text-[26px] font-extrabold leading-[1.15] tracking-[-0.03em] text-ink md:text-[36px]">{line1} <br className="md:hidden" />{line2}</h1>
+      <p className="mt-2 text-[14px] text-ink-soft md:text-[15px]">{t(lang, "hero.sub")}</p>
+      <form action="/global" role="search" className="relative mt-5 hidden md:block">{/* 모바일은 헤더 검색창이 바로 위에 있어 중복 — 칩·타일만 */}
+        <label htmlFor="hero-q" className="sr-only">{t(lang, "search.label")}</label>
+        <svg aria-hidden viewBox="0 0 24 24" className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-ink-soft" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+        <input id="hero-q" name="q" type="search" enterKeyHint="search" autoComplete="off" placeholder={t(lang, "hero.searchPlaceholder", { other: otherName })}
+          className="w-full rounded-card border border-tomo-navy/15 bg-white py-3.5 pl-12 pr-28 text-[15px] shadow-soft placeholder:text-ink-soft focus:border-tomo-coral-deep focus:outline-none focus:ring-2 focus:ring-tomo-coral-deep/25 md:py-4 md:text-base" />
+        <button type="submit" className="btn absolute right-1.5 top-1/2 -translate-y-1/2 bg-tomo-coral-deep px-4 py-2 text-sm text-white md:px-5">{t(lang, "hero.search")}</button>
+      </form>
+      {sections.length > 0 && (
+        <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-ink-soft">
+          <span>{t(lang, "hero.trendingKw")}</span>
+          {sections.map((s) => (
+            <Link key={s.theme.key} href={`/global?q=${encodeURIComponent(label(s))}`} className="font-bold text-ink underline-offset-2 fine:hover:underline">{label(s)}</Link>
+          ))}
+        </p>
+      )}
+      {tiles.length >= 2 && (
+        <ul className="mt-5 grid grid-cols-2 gap-2 md:grid-cols-4 md:gap-3" aria-label={t(lang, "hero.photosAria", { other: otherName })}>
+          {tiles.map((tile, i) => (
+            <li key={tile.key}>
+              <Link href={tile.href} className="press group relative block aspect-[4/3] overflow-hidden rounded-card bg-tomo-navy/5 md:aspect-square">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={it.thumb} alt="" loading={i === 0 ? "eager" : "lazy"}
-                  className={`h-full w-full object-cover transition-transform duration-200 ease-out fine:group-hover:scale-[1.03] ${i === 0 && photos.length >= 3 ? "aspect-[3/4] md:aspect-auto" : "aspect-square"}`} />
+                <img src={tile.thumb} alt="" loading={i < 2 ? "eager" : "lazy"} className="h-full w-full object-cover transition-transform duration-200 ease-out fine:group-hover:scale-[1.03]" />
+                <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/65 to-transparent px-3 pb-2.5 pt-8 text-white">
+                  <span className="block text-[15px] font-extrabold leading-tight">{tile.label}</span>
+                  {tile.min !== null && <span className="block text-[12px] opacity-90">{t(lang, "hero.from", { price: formatPrice(tile.currency === viewer.currency ? tile.min : convertPrice(tile.min, tile.currency, viewer.rate), viewer.currency) })}</span>}
+                </span>
               </Link>
             </li>
           ))}
@@ -78,9 +95,10 @@ async function HomeHero({ viewer }: { viewer: ViewerOrGuest }) {
 
 function HeroSkeleton() {
   return (
-    <div className="grid gap-6 md:grid-cols-[1fr_minmax(0,28rem)] md:items-center md:py-6" aria-hidden>
-      <div><div className="skeleton h-8 w-3/4 rounded" /><div className="skeleton mt-2 h-8 w-1/2 rounded" /><div className="skeleton mt-4 h-4 w-2/3 rounded" /></div>
-      <div className="grid grid-cols-2 gap-2"><div className="skeleton row-span-2 aspect-[3/4] rounded-card" /><div className="skeleton aspect-square rounded-card" /><div className="skeleton aspect-square rounded-card" /></div>
+    <div className="md:py-4" aria-hidden>
+      <div className="skeleton h-8 w-3/4 rounded md:h-10" /><div className="skeleton mt-3 h-4 w-1/2 rounded" />
+      <div className="skeleton mt-5 hidden h-[52px] w-full rounded-card md:block" />
+      <div className="mt-5 grid grid-cols-2 gap-2 md:grid-cols-4 md:gap-3">{[0,1,2,3].map((i) => <div key={i} className="skeleton aspect-[4/3] rounded-card md:aspect-square" />)}</div>
     </div>
   );
 }
@@ -148,16 +166,10 @@ export default function HomeHub({ viewer, listings, travel }: {
   const otherName = t(lang, `market.${other}`);
   return (
     <div className="px-4 pb-6 pt-1 md:px-0 md:pb-16">
-      {/* 게스트 = 히어로(헤드라인·CTA·상품 사진). 로그인 = 메루카리처럼 바로 상품 — 신뢰 3항목은 상세의 "안심 거래"가 맡는다 */}
-      {viewer.guest && (
-        <div className="mb-6 md:mb-8">
-          <Suspense fallback={<HeroSkeleton />}><HomeHero viewer={viewer} /></Suspense>
-        </div>
-      )}
-
-      <div className={viewer.guest ? "" : "mt-2"}>
-        <CategoryChips lang={lang} />
+      <div className="mb-6 md:mb-8">
+        <Suspense fallback={<HeroSkeleton />}><HomeHero viewer={viewer} /></Suspense>
       </div>
+      <CategoryChips lang={lang} />
 
       <Suspense fallback={
         <section className="mt-8" aria-hidden>
