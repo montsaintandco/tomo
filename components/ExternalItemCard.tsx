@@ -3,6 +3,7 @@ import { convertPrice, formatPrice, type Currency } from "@/lib/currency";
 import type { MarketSource } from "@/lib/market/types";
 import { t, type Lang } from "@/lib/i18n";
 import { TomoSymbol } from "@/components/Brand";
+import SourceLogo from "@/components/SourceLogo";
 
 export type ExternalCardItem = {
   source: MarketSource; sourceId: string; title: string; titleTranslated?: string;
@@ -30,8 +31,8 @@ export default function ExternalItemCard({ item, rate, viewerCurrency, lang = "k
             <TomoSymbol className="h-10 w-[3.75rem] opacity-60" />
           </div>
         )}
-        <span className="absolute left-1.5 top-1.5 rounded-full bg-tomo-navy/75 px-2 py-0.5 text-[11px] font-bold text-white backdrop-blur-sm">
-          {t(lang, `source.${item.source}`)}
+        <span className="absolute left-1.5 top-1.5 rounded-full bg-white/95 p-[3px] shadow-soft">
+          <SourceLogo source={item.source} lang={lang} size={18} className="block" />
         </span>
         {item.auction && (
           <span className="absolute bottom-1.5 left-1.5 rounded-full bg-tomo-coral-deep px-2 py-0.5 text-[11px] font-bold text-white">

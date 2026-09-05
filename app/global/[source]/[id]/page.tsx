@@ -16,6 +16,7 @@ import { TomoSymbol, CountryChip } from "@/components/Brand";
 import Link from "next/link";
 import { Fragment } from "react";
 import { notFound } from "next/navigation";
+import SourceLogo from "@/components/SourceLogo";
 
 export const dynamic = "force-dynamic"; // 가격·품절은 진입 시점 확인
 
@@ -104,8 +105,8 @@ export default async function ExternalItemPage(props: {
       <div className="flex flex-col gap-4 p-4 md:p-0">
         {/* 뱃지 행 — 소스는 네이비, 경매는 코랄딥(행동 신호), 품절은 스크림 톤 */}
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="rounded-full bg-tomo-navy px-2.5 py-1 text-[11px] font-bold text-white">
-            {t(lang, `source.${source}`)}
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-tomo-navy/10 bg-white py-0.5 pl-1 pr-2.5 text-[11px] font-bold text-ink">
+            <SourceLogo source={source} lang={lang} size={16} />{t(lang, `source.${source}`)}
           </span>
           {item.auction && (
             <span className="rounded-full bg-tomo-coral-deep px-2.5 py-1 text-[11px] font-bold text-white">{t(lang, "badge.auction")}</span>

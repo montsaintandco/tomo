@@ -8,6 +8,7 @@ import { t, type Lang } from "@/lib/i18n";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { parseMarketUrl } from "@/lib/market/url";
+import SourceLogo from "@/components/SourceLogo";
 
 export const dynamic = "force-dynamic"; // 외부 검색은 요청 시점 조회
 
@@ -101,8 +102,9 @@ export default async function GlobalPage(props: {
             const live = s === "all" || LIVE_SOURCES.includes(s as MarketSource);
             return (
               <Link key={s} href={qs ? `/global?${qs}` : "/global"} aria-current={source === s ? "page" : undefined}
-                className={`press shrink-0 rounded-full px-3.5 py-3 text-[13px] font-bold transition-colors md:px-5 md:py-2 md:text-sm ${
+                className={`press inline-flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-3 text-[13px] font-bold transition-colors md:px-4 md:py-2 md:text-sm ${
                   source === s ? "bg-tomo-navy text-white shadow-soft" : "bg-white text-ink-soft hover:text-ink"}`}>
+                {s !== "all" && live && <SourceLogo source={s as MarketSource} lang={lang} size={16} />}
                 {s === "all" ? t(lang, "global.all") : t(lang, `source.${s}`)}
                 {!live && <span className="ml-1 font-normal opacity-60">{t(lang, "global.comingSoon")}</span>}
               </Link>
