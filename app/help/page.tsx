@@ -54,7 +54,7 @@ export default async function HelpPage() {
               {q}
               <span className="text-ink-soft transition-transform group-open:rotate-45" aria-hidden>+</span>
             </summary>
-            <p className="mt-2 text-[13px] leading-relaxed text-ink-soft">{a}</p>
+            <p className="reveal mt-2 text-[13px] leading-relaxed text-ink-soft">{a}</p>
           </details>
         ))}
       </div>

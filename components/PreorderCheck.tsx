@@ -14,7 +14,7 @@ export default function PreorderCheck({ lang }: { lang: Lang }) {
         <span className="shrink-0 text-[12px] text-tomo-navy underline">{t(lang, "ext.checkMore")}</span>
       </button>
       <dialog ref={ref} aria-labelledby="check-title"
-        className="m-0 mt-auto w-full max-w-md rounded-t-card bg-white p-0 shadow-lift backdrop:bg-tomo-navy/40 md:m-auto md:rounded-card">
+        className="sheet m-0 mt-auto w-full max-w-md rounded-t-card bg-white p-0 shadow-lift backdrop:bg-tomo-navy/40 md:m-auto md:rounded-card">
         <div className="flex flex-col gap-4 p-5">
           <div className="flex items-center justify-between">
             <h2 id="check-title" className="text-[17px] font-extrabold text-ink">{t(lang, "ext.checkTitle")}</h2>

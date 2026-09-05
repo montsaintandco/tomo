@@ -36,7 +36,7 @@ export default async function AdminDisputesPage() {
         {expandable && (
           <details>
             <summary className="a-link text-[12px]">처리 ▾</summary>
-            <div className="mt-2"><TxActions txId={r.id} status={r.status} isCrossBorder={r.is_cross_border} meetup={r.meetup} role="admin" lang="ko" /></div>
+            <div className="reveal mt-2"><TxActions txId={r.id} status={r.status} isCrossBorder={r.is_cross_border} meetup={r.meetup} role="admin" lang="ko" /></div>
           </details>
         )}
       </td>

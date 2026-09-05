@@ -10,7 +10,7 @@ export default function CostInfo({ lang }: { lang: Lang }) {
       <button type="button" onClick={() => ref.current?.showModal()} aria-label={t(lang, "order.costTitle")}
         className="press ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full border border-ink-soft/50 text-[11px] font-bold text-ink-soft align-middle">?</button>
       <dialog ref={ref} aria-labelledby="cost-title"
-        className="m-0 mt-auto w-full max-w-md rounded-t-card bg-white p-0 shadow-lift backdrop:bg-tomo-navy/40 md:m-auto md:rounded-card">
+        className="sheet m-0 mt-auto w-full max-w-md rounded-t-card bg-white p-0 shadow-lift backdrop:bg-tomo-navy/40 md:m-auto md:rounded-card">
         <div className="flex flex-col gap-4 p-5 text-left">
           <div className="flex items-center justify-between">
             <h2 id="cost-title" className="text-[17px] font-extrabold text-ink">{t(lang, "order.costTitle")}</h2>

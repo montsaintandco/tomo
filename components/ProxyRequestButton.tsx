@@ -54,7 +54,7 @@ export default function ProxyRequestButton({ lang = "ko", auction = false, total
       </button>
 
       <dialog ref={dialogRef} aria-labelledby="proxy-confirm-title"
-        className="m-0 mt-auto w-full max-w-md rounded-t-card bg-white p-0 shadow-lift backdrop:bg-tomo-navy/40 md:m-auto md:rounded-card">
+        className="sheet m-0 mt-auto w-full max-w-md rounded-t-card bg-white p-0 shadow-lift backdrop:bg-tomo-navy/40 md:m-auto md:rounded-card">
         <form onSubmit={submit} className="flex flex-col gap-3 p-5">
           <h2 id="proxy-confirm-title" className="text-[17px] font-extrabold text-ink">{t(lang, "ext.confirmTitle")}</h2>
           <div className="rounded-card bg-tomo-navy/5 p-3.5">

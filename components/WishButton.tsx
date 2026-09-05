@@ -41,7 +41,7 @@ export default function WishButton({ listingId, price, initialLiked, initialCoun
       aria-label={liked ? t(lang, "detail.unwishAria") : t(lang, "detail.wishAria")}
       className={`press inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-bold ${
         liked ? "bg-tomo-coral-deep/10 text-tomo-coral-deep" : "bg-tomo-navy/5 text-tomo-navy"}`}>
-      <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden
+      <svg key={String(liked)} viewBox="0 0 24 24" className={`h-4 w-4 ${liked ? "pop" : ""}`} aria-hidden
         fill={liked ? "#C14E4C" : "none"} stroke="currentColor" strokeWidth={1.9} strokeLinejoin="round">
         <path d={HEART} />
       </svg>

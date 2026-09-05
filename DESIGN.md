@@ -282,8 +282,8 @@ ListingCard와 같은 뼈대. 오버레이 뱃지: 좌상단 소스 라벨 `bg-t
 ### Brand Primitives (signature, unchanged)
 `Wordmark`(TOM + 코랄 하트 SVG, `.heartbeat` 2.6s — 페이지의 유일한 상시 모션), `TomoSymbol`(블루+핑크 말풍선 겹침에 코랄 하트 — 빈 상태·이미지 없는 썸·피드 엔드캡), `CountryChip`. 모든 하트는 동일 SVG 패스.
 
-### Motion
-`--squish: cubic-bezier(0.34, 1.56, 0.64, 1)`. `.press:active` **0.98**, `.card:active` **0.98**, `.btn:active` 0.95, 180–200ms. 카드 hover는 `--shadow-lift` + `translateY(-1px)`; 외부 카드 이미지 hover `scale(1.03)`. 상시 모션은 워드마크 하트비트 하나. 스켈레톤 시머(1.4s)는 로딩 중에만. 캐러셀은 네이티브 scroll-snap이라 모션 코드가 없다. `prefers-reduced-motion`은 전부 0.01ms로 접는다.
+### Motion (v2.1 — Emil Kowalski·Apple 기준으로 절제)
+토큰 `--ease-out: cubic-bezier(0.23,1,0.32,1)`(UI 기본) · `--ease-in-out: cubic-bezier(0.77,0,0.175,1)`(화면 위 이동) · `--ease-drawer: cubic-bezier(0.32,0.72,0,1)`(시트) · `--dur-fast 160ms` · `--dur-base 220ms` · `--dur-sheet 320ms`. **오버슈트 없음** — 프레스는 `:active scale(0.97)`(카드 0.98) 160ms ease-out, pointer-down 즉시. hover 리프트·썸네일 확대는 `(hover: hover) and (pointer: fine)`에서만(Tailwind `fine:`), 200ms 이하. 바텀시트 `<dialog class="sheet">`는 모바일 `translateY(100%)→0` 320ms 드로어 커브, 데스크톱 `scale(.97)+opacity` 220ms, 퇴장은 같은 경로, 백드롭 페이드(`@starting-style` + `allow-discrete`). 펼침 패널은 `.reveal`(opacity+4px, 160ms). 찜 하트는 `.pop` 220ms(드문 딜라이트). 워드마크 하트비트는 로드 후 **2박만** 뛰고 멈춘다 — 상시 모션 없음. 스켈레톤 시머는 로딩 중만. `prefers-reduced-motion`은 이동·변형만 제거하고 색·불투명도 150ms는 유지, 시트는 200ms 크로스페이드. `prefers-reduced-transparency`면 반투명 크롬을 불투명으로.
 
 ## Do's and Don'ts
 
@@ -302,5 +302,5 @@ ListingCard와 같은 뼈대. 오버레이 뱃지: 좌상단 소스 라벨 `bg-t
 - **Don't** 무채색 회색, 검정 섀도우, 카드 보더, 국기, 직각을 들이지 않는다.
 - **Don't** Cafe24 Ssurround를 섹션 제목·가격·본문에 쓰지 않는다. 워드마크만.
 - **Don't** 17px보다 큰 Pretendard 헤딩, 11px보다 작은 텍스트를 만들지 않는다.
-- **Don't** 워드마크 하트비트 외의 상시 애니메이션을 추가하지 않는다.
+- **Don't** 상시(무한 반복) 애니메이션을 두지 않는다 — 하트비트도 2박 뒤 멈춘다. 프레스·hover에 바운스/오버슈트 커브를 쓰지 않는다.
 - **Don't** 신뢰 수치·후기·거래 실적·사업자 정보를 지어내지 않는다.

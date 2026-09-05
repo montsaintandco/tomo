@@ -63,7 +63,7 @@ export default async function AdminProxyPage(props: { searchParams: Promise<{ f?
                   {(editable || PROXY_META[r.status]?.action || r.status === "delivered") && (
                     <details>
                       <summary className="a-link text-[12px]">{editable ? "견적 ▾" : "처리 ▾"}</summary>
-                      <div className="mt-2">
+                      <div className="reveal mt-2">
                         {editable
                           ? <QuoteForm id={r.id} defaultItemPrice={r.quote_item_price ?? it?.price ?? 0} quoted={r.status === "quoted"} total={r.quote_total} />
                           : <ProxyActions id={r.id} status={r.status} isOwner={false} isAdmin />}

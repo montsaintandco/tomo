@@ -85,7 +85,7 @@ export default function TxActions({
             {t(lang, "dispute.open")}
           </button>
           {disputeOpen && (
-            <div className="mt-1 flex flex-col gap-2 rounded-card bg-tomo-navy/5 p-3">
+            <div className="reveal mt-1 flex flex-col gap-2 rounded-card bg-tomo-navy/5 p-3">
               <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={3} maxLength={1000}
                 placeholder={t(lang, "dispute.reason")}
                 className="w-full rounded-card bg-white px-3 py-2.5 text-base placeholder:text-ink-soft" />
@@ -101,7 +101,7 @@ export default function TxActions({
 
       {/* 운영자 분쟁 처리 — 정산(완료) 또는 환불(취소) */}
       {canResolve && (
-        <div className="flex flex-col gap-2 rounded-card bg-tomo-navy/5 p-3">
+        <div className="reveal flex flex-col gap-2 rounded-card bg-tomo-navy/5 p-3">
           <input value={note} onChange={(e) => setNote(e.target.value)} maxLength={1000}
             placeholder={t(lang, "dispute.note")}
             className="rounded-full bg-white px-4 py-2.5 text-base placeholder:text-ink-soft" />

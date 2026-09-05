@@ -40,6 +40,8 @@ const config: Config = {
     plugin(({ addVariant }) => {
       addVariant("standalone", "@media (display-mode: standalone)");
       addVariant("browser", "@media not all and (display-mode: standalone)");
+      // hover 모션은 정밀 포인터에서만 (터치의 가짜 hover 차단)
+      addVariant("fine", "@media (hover: hover) and (pointer: fine)");
     }),
   ],
 };

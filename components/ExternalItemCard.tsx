@@ -24,7 +24,7 @@ export default function ExternalItemCard({ item, rate, viewerCurrency, lang = "k
         {item.thumb ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={item.thumb} alt="" loading="lazy"
-            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]" />
+            className="h-full w-full object-cover transition-transform duration-200 ease-out fine:group-hover:scale-[1.03]" />
         ) : (
           <div className="flex h-full w-full items-center justify-center">
             <TomoSymbol className="h-10 w-[3.75rem] opacity-60" />

@@ -80,7 +80,7 @@ export default function OfferButton({ listingId, price, currency, initial, guest
       )}
 
       {open && !offer && (
-        <div className="mt-3 rounded-card bg-tomo-navy/5 p-3.5">
+        <div className="reveal mt-3 rounded-card bg-tomo-navy/5 p-3.5">
           <p className="text-[13px] font-bold text-ink">{t(lang, "offer.title")}</p>
           <p className="mt-0.5 text-[12px] text-ink-soft">{t(lang, "offer.sub")}</p>
           <div className="mt-3 flex gap-2">
