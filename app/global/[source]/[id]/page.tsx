@@ -20,6 +20,7 @@ import SourceLogo from "@/components/SourceLogo";
 import OriginalToggle from "@/components/OriginalToggle";
 import { translateTexts } from "@/lib/translate";
 import { unstable_cache } from "next/cache";
+import { withTranslatedTitles } from "@/lib/market/translate-items";
 
 export const dynamic = "force-dynamic"; // 가격·품절은 진입 시점 확인
 
@@ -100,6 +101,7 @@ export default async function ExternalItemPage(props: {
   const category = tr?.[3] || item.category;
   const tradeTags = item.tradeTags?.map((tag, i) => tr?.[4 + i] || tag);
   const extraBase = 4 + (item.tradeTags?.length ?? 0);
+  const sellerItems = item.sellerItems?.length ? await withTranslatedTitles(item.sellerItems, lang) : [];
   const extra = Object.entries(item.extra).map(([k, v], i) => [k, tr?.[extraBase + i] || v] as const);
 
   return (
@@ -267,8 +269,8 @@ export default async function ExternalItemPage(props: {
                 </a>
               )}
             </div>
-            {item.sellerItems && item.sellerItems.length > 0 && (
-              <MarketCarousel items={item.sellerItems} rate={viewer.rate} viewerCurrency={viewer.currency} lang={lang} label={t(lang, "ext.sellerItems")} />
+            {sellerItems.length > 0 && (
+              <MarketCarousel items={sellerItems} rate={viewer.rate} viewerCurrency={viewer.currency} lang={lang} label={t(lang, "ext.sellerItems")} />
             )}
           </section>
         )}
@@ -313,7 +315,7 @@ async function Similar({ source, id, title, rate, viewerCurrency, lang }: {
   source: MarketSource; id: string; title: string; rate: number; viewerCurrency: "KRW" | "JPY"; lang: Lang;
 }) {
   const q = similarQuery(title);
-  const items = q ? (await searchSource(source, q)).filter((i) => i.sourceId !== id && !i.soldOut).slice(0, 8) : [];
+  const items = q ? await withTranslatedTitles((await searchSource(source, q)).filter((i) => i.sourceId !== id && !i.soldOut).slice(0, 8), lang) : [];
   if (items.length === 0) return <p className="text-[13px] text-ink-soft">{t(lang, "ext.similarNone")}</p>;
   return (
     <ul className="grid grid-cols-2 gap-3 md:grid-cols-4">

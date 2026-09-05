@@ -9,6 +9,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { parseMarketUrl } from "@/lib/market/url";
 import SourceLogo from "@/components/SourceLogo";
+import { withTranslatedTitles } from "@/lib/market/translate-items";
 
 export const dynamic = "force-dynamic"; // 외부 검색은 요청 시점 조회
 
@@ -35,7 +36,7 @@ export default async function GlobalPage(props: {
   if (q && liveSource && !looksLikeUrl) {
     // 실시간 검색 — 소스별 언어로 번역해 조회
     const { items: found, queries } = await searchMarkets(q, source);
-    items = found as ExternalCardItem[];
+    items = (await withTranslatedTitles(found, lang)) as ExternalCardItem[]; // 상대국 소스 제목은 뷰어 언어로
     usedQueries = Array.from(new Set(Object.values(queries).filter((s): s is string => !!s && s !== q)));
   } else if (!looksLikeUrl) {
     // 검색어 없거나 한국 소스: 캐시된 상품 (어드민 수동 등록 포함). 미지원 URL은 빈 상태로 안내
