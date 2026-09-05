@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { getRequestLang } from "@/lib/locale";
+import SupportBot from "@/components/SupportBot";
 
 export const metadata = { title: "고객센터 · サポート | TOMO" };
 
 // 고객센터 — 사줘의 "고객센터"에 해당. FAQ는 네이티브 <details>, 문의는 채팅. 운영시간 등 미확정 정보는 적지 않는다
 const C = {
   ko: {
-    h1: "고객센터", sub: "자주 묻는 질문을 먼저 확인해 주세요. 해결되지 않으면 채팅으로 문의하세요.",
+    h1: "고객센터", sub: "궁금한 걸 아래에서 고르면 바로 답해 드려요. 특정 주문·상품은 상담원 연결로.",
     contact: "채팅으로 문의", faqTitle: "자주 묻는 질문",
     faq: [
       ["결제는 몇 번 하나요?", "주문 시 1회입니다. 상품 소계, 국제 배송비, 통관·관세가 모두 포함된 금액을 한 번에 결제하고, 받으실 때 추가 청구는 없어요."],
@@ -21,7 +22,7 @@ const C = {
     ],
   },
   ja: {
-    h1: "サポート", sub: "まずよくある質問をご確認ください。解決しない場合はチャットでお問い合わせください。",
+    h1: "サポート", sub: "知りたいことを下から選ぶとすぐお答えします。特定の注文・商品は担当者へ。",
     contact: "チャットで問い合わせ", faqTitle: "よくある質問",
     faq: [
       ["決済は何回ですか？", "注文時の1回だけです。商品小計・国際配送費・通関・関税をまとめて決済し、お受け取り時の追加請求はありません。"],
@@ -44,7 +45,11 @@ export default async function HelpPage() {
     <main className="mx-auto max-w-3xl px-4 py-8 md:px-6 md:py-12">
       <h1 className="text-[22px] font-extrabold text-ink md:text-3xl">{c.h1}</h1>
       <p className="mt-2 text-sm text-ink-soft">{c.sub}</p>
-      <Link href="/chat" className="btn mt-4 inline-block bg-tomo-navy px-5 py-2.5 text-sm text-white">{c.contact}</Link>
+      {/* 사조식 봇을 고객센터 첫 화면에 — 버튼 트리로 답하고, 특정 주문은 상담원(채팅)으로 */}
+      <div className="mt-5 overflow-hidden rounded-card border border-tomo-navy/10 bg-white shadow-soft">
+        <SupportBot lang={lang} />
+      </div>
+      <Link href="/chat" className="btn mt-4 inline-block border border-tomo-navy/15 bg-white px-5 py-2.5 text-sm text-ink">{c.contact}</Link>
 
       <h2 className="mt-10 text-[17px] font-extrabold text-ink">{c.faqTitle}</h2>
       <div className="mt-3 divide-y divide-tomo-navy/10 rounded-card border border-tomo-navy/10">

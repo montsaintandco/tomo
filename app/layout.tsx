@@ -8,6 +8,7 @@ const notoJP = Noto_Sans_JP({ subsets: ["latin"], variable: "--font-jp", display
 import BottomNav from "@/components/BottomNav";
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
+import SupportLauncher from "@/components/SupportLauncher";
 import { getRequestLang } from "@/lib/locale";
 import { t } from "@/lib/i18n";
 import { createServerSupabase } from "@/lib/supabase/server";
@@ -71,6 +72,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <div id="main">{children}</div>
         <SiteFooter lang={lang} />
         <BottomNav lang={lang} unread={unread} />
+        <SupportLauncher lang={lang} />
       </body>
     </html>
   );
