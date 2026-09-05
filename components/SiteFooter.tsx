@@ -8,7 +8,7 @@ import { t, type Lang } from "@/lib/i18n";
 // 회사/법적 정보 값은 사용자가 제공할 때까지 "준비 중". 날조 금지
 export default function SiteFooter({ lang = "ko" }: { lang?: Lang }) {
   const path = usePathname();
-  if (path.startsWith("/login") || path.startsWith("/onboarding") || /^\/chat\/./.test(path)) return null;
+  if (path.startsWith("/login") || path.startsWith("/onboarding") || path.startsWith("/admin") || /^\/chat\/./.test(path)) return null;
   const LINKS = [
     ["/about", "nav.about"], ["/categories", "nav.categories"], ["/help", "nav.help"], ["/notice", "nav.notice"],
     ["/global", "nav.global"], ["/sell", "nav.sellFull"], ["/chat", "nav.chat"], ["/mypage", "nav.mypage"],

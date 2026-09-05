@@ -139,3 +139,38 @@ input[type="search"]::-webkit-search-cancel-button { display: none; } /* 커스�
     scroll-behavior: auto !important;
   }
 }
+
+/* ── 어드민 세계 (Linear 참조): 중립 회색 면·1px 헤어라인·13px 밀도·상태 필. 사용자 앱과 다른 도구의 문법 ── */
+.admin {
+  --a-bg: #fafafa; --a-panel: #ffffff; --a-border: #e6e8eb; --a-text: #1f2328;
+  --a-muted: #6b7280; --a-faint: #9ca3af; --a-hover: #f3f4f6; --a-active: #edeef0;
+  background: var(--a-bg); color: var(--a-text); font-size: 13px; min-height: 100dvh;
+}
+.admin a { color: inherit; }
+.a-muted { color: var(--a-muted); }
+.a-faint { color: var(--a-faint); }
+.a-panel { background: var(--a-panel); border: 1px solid var(--a-border); border-radius: 8px; }
+.a-link { color: #0c447c; font-weight: 600; }
+.a-link:hover { text-decoration: underline; text-underline-offset: 2px; }
+.admin table { width: 100%; border-collapse: separate; border-spacing: 0; }
+.admin th { position: sticky; top: 0; z-index: 1; background: var(--a-panel); font-size: 11px; font-weight: 600; color: var(--a-muted); text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--a-border); white-space: nowrap; }
+.admin td { padding: 8px 12px; border-bottom: 1px solid var(--a-border); vertical-align: middle; }
+.admin tbody tr:last-child td { border-bottom: 0; }
+.admin tbody tr:hover { background: var(--a-hover); }
+.a-pill { display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; border: 1px solid var(--a-border); background: #fff; white-space: nowrap; }
+.a-pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--a-faint); }
+.a-pill[data-tone="blue"]::before { background: #3b82f6; }
+.a-pill[data-tone="amber"]::before { background: #f59e0b; }
+.a-pill[data-tone="green"]::before { background: #16a34a; }
+.a-pill[data-tone="red"]::before { background: #dc2626; }
+.a-pill[data-tone="navy"]::before { background: #0c447c; }
+/* 재사용 클라이언트 폼(견적·환율·큐레이션·토글)을 도구 문법으로: 필 대신 6px, 섀도우 대신 헤어라인 */
+.admin .card { border: 1px solid var(--a-border); border-radius: 8px; box-shadow: none; }
+.admin .card:hover { box-shadow: none; transform: none; }
+.admin .btn { border-radius: 6px; font-weight: 600; }
+.admin .rounded-full:not(.a-round) { border-radius: 6px; }
+.admin input, .admin select, .admin textarea { border-radius: 6px; box-shadow: none; border: 1px solid var(--a-border); background: #fff; }
+.admin input:focus, .admin select:focus, .admin textarea:focus { outline: 2px solid #0c447c; outline-offset: 0; }
+.admin .shadow-soft { box-shadow: none; }
+.admin details > summary { list-style: none; cursor: pointer; }
+.admin details > summary::-webkit-details-marker { display: none; }

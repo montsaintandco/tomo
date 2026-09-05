@@ -21,7 +21,7 @@ const items = [
 
 export default function BottomNav({ lang = "ko", unread = 0 }: { lang?: Lang; unread?: number }) {
   const path = usePathname();
-  if (path.startsWith("/login") || path.startsWith("/onboarding")) return null;
+  if (path.startsWith("/login") || path.startsWith("/onboarding") || path.startsWith("/admin")) return null;
 
   return (
     // 설치된 앱(standalone)에서만 — 브라우저에서는 SiteHeader가 내비다. 노치 기기 안전영역만큼 아래 여백

@@ -48,7 +48,7 @@ export default function SiteHeader({ lang = "ko", unread = 0, cartCount = 0, log
     const on = (e: Event) => setCount(Number((e as CustomEvent).detail ?? 0));
     window.addEventListener("tomo:cart", on); return () => window.removeEventListener("tomo:cart", on);
   }, []);
-  if (path.startsWith("/login") || path.startsWith("/onboarding")) return null;
+  if (path.startsWith("/login") || path.startsWith("/onboarding") || path.startsWith("/admin")) return null;
   const isActive = (href: string) => (href === "/" ? path === "/" : path.startsWith(href));
   const iconBtn = (active: boolean) =>
     `press relative flex h-11 w-9 items-center justify-center rounded-full md:w-10 ${active ? "text-tomo-navy" : "text-ink-soft hover:text-ink"}`;
