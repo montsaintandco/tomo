@@ -4,15 +4,14 @@ import { usePathname } from "next/navigation";
 import { Wordmark } from "@/components/Brand";
 import { t, type Lang } from "@/lib/i18n";
 
-// 전역 푸터 — 한 줄 메뉴 + 회사 정보, 낮게. 채팅방(h-dvh 고정)과 인증 화면에서는 숨김
+// 전역 푸터 — 정보성 링크만(소개·카테고리·고객센터·공지·해외직구). 판매·채팅·마이페이지는 헤더/탭바가 맡는다. 채팅방(h-dvh 고정)과 인증 화면에서는 숨김
 // 회사/법적 정보 값은 사용자가 제공할 때까지 "준비 중". 날조 금지
 export default function SiteFooter({ lang = "ko" }: { lang?: Lang }) {
   const path = usePathname();
   if (path.startsWith("/login") || path.startsWith("/onboarding") || path.startsWith("/admin") || /^\/chat\/./.test(path)) return null;
   const hasBar = /^\/(listings|global)\/./.test(path); // 상세는 모바일 하단 고정 구매 바 — 푸터가 그 아래 깔리지 않게 여백
   const LINKS = [
-    ["/about", "nav.about"], ["/categories", "nav.categories"], ["/help", "nav.help"], ["/notice", "nav.notice"],
-    ["/global", "nav.global"], ["/sell", "nav.sellFull"], ["/chat", "nav.chat"], ["/mypage", "nav.mypage"],
+    ["/about", "nav.about"], ["/categories", "nav.categories"], ["/help", "nav.help"], ["/notice", "nav.notice"], ["/global", "nav.global"],
   ] as const;
 
   return (
