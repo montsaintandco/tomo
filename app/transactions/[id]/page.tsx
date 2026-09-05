@@ -5,6 +5,7 @@ import { platformFee, buyerTotal, sellerPayout } from "@/lib/fees";
 import { t, type Lang } from "@/lib/i18n";
 import EscrowTimeline from "@/components/EscrowTimeline";
 import TxActions from "@/components/TxActions";
+import PayTxButton from "@/components/PayTxButton";
 import ReviewForm from "@/components/ReviewForm";
 import { TomoSymbol } from "@/components/Brand";
 import Link from "next/link";
@@ -135,6 +136,7 @@ export default async function TransactionPage(props: { params: Promise<{ id: str
         </dl>
       )}
 
+      {role === "buyer" && tx.status === "pending_payment" && <div className="mb-2"><PayTxButton txId={tx.id} lang={lang} /></div>}
       <TxActions txId={tx.id} status={tx.status} isCrossBorder={tx.is_cross_border} meetup={tx.meetup} role={role} lang={lang} />
 
       {tx.status === "completed" && isParty && (

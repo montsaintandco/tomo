@@ -426,6 +426,7 @@ const D = {
   "act.centerIn": ["입고 확인", "入荷確認"],
   "act.intlShip": ["국제 발송", "国際発送"],
   "act.cancelPay": ["결제 취소", "支払いキャンセル"],
+  "act.pay": ["결제하기", "支払う"],
   "act.tracking": ["운송장 번호 (선택)", "追跡番号（任意）"],
   "act.working": ["처리 중…", "処理中…"],
   "review.title": ["후기 남기기", "レビューを書く"],
