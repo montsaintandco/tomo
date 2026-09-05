@@ -4,7 +4,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { fetchWithRetry } from "./http";
-import type { MarketItem, MarketItemDetail } from "./types";
+import type { SearchFilters, MarketItem, MarketItemDetail } from "./types";
 
 const API_BASE = "https://api.mercari.jp";
 
@@ -56,7 +56,10 @@ export async function mercariFetch(method: "GET" | "POST", path: string, body?: 
   return res.json();
 }
 
-export async function mercariSearch(keyword: string, page = 1): Promise<MarketItem[]> {
+// 메루카리 상태 id: 1 新品未使用 2 未使用に近い 3 目立った傷なし 4 やや傷あり 5 傷あり 6 状態が悪い
+const MERCARI_SORT = { rec: ["SORT_SCORE", "ORDER_DESC"], new: ["SORT_CREATED_TIME", "ORDER_DESC"], price_asc: ["SORT_PRICE", "ORDER_ASC"], price_desc: ["SORT_PRICE", "ORDER_DESC"] } as const;
+export async function mercariSearch(keyword: string, f: SearchFilters = {}, page = 1): Promise<MarketItem[]> {
+  const [sort, order] = MERCARI_SORT[f.sort ?? "rec"];
   // pageToken 기반이지만 단순 오프셋 페이지 흉내: v2 검색은 pageToken "v1:{page}" 포맷 미보장 → 첫 페이지만 사용
   // ponytail: 페이지네이션은 첫 페이지 36건으로 충분, 무한스크롤 필요 시 pageToken 배선
   void page;
@@ -65,8 +68,10 @@ export async function mercariSearch(keyword: string, page = 1): Promise<MarketIt
     searchSessionId: crypto.randomUUID().replace(/-/g, ""),
     indexRouting: "INDEX_ROUTING_UNSPECIFIED", thumbnailTypes: [],
     searchCondition: {
-      keyword, excludeKeyword: "", sort: "SORT_SCORE", order: "ORDER_DESC",
-      status: ["STATUS_ON_SALE"], categoryId: [], priceMin: 0, priceMax: 0,
+      keyword, excludeKeyword: "", sort, order,
+      status: f.sold ? ["STATUS_ON_SALE", "STATUS_TRADING", "STATUS_SOLD_OUT"] : ["STATUS_ON_SALE"],
+      categoryId: [], priceMin: f.min ?? 0, priceMax: f.max ?? 0,
+      itemConditionId: f.cond === "new" ? [1] : f.cond === "used" ? [2, 3, 4, 5, 6] : [],
     },
     defaultDatasets: ["DATASET_TYPE_MERCARI"], serviceFrom: "suruga",
   });

@@ -1,6 +1,14 @@
 // 외부 마켓 공통 타입 — 소스별 파서가 이 형태로 정규화해 반환
 export type MarketSource = "mercari" | "yahoo_auction" | "daangn" | "joongna";
 
+// 공통 검색 필터 (메루카리 필터 참조) — 가격은 소스 통화. 소스가 지원하면 서버에서, 아니면 결과를 받은 뒤 거른다
+export type SearchFilters = {
+  min?: number; max?: number;
+  sort?: "rec" | "new" | "price_asc" | "price_desc";
+  cond?: "new" | "used";
+  sold?: boolean; // true = 판매완료 포함
+};
+
 export type MarketItem = {
   source: MarketSource;
   sourceId: string;

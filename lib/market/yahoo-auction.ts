@@ -4,7 +4,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { fetchWithRetry } from "./http";
-import type { MarketItem, MarketItemDetail } from "./types";
+import type { SearchFilters, MarketItem, MarketItemDetail } from "./types";
 
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36";
 
@@ -42,11 +42,13 @@ function attr(block: string, name: string): string {
   return m ? m[1] : "";
 }
 
-export async function yahooAuctionSearch(keyword: string, page = 1): Promise<MarketItem[]> {
+// 야후옥션 검색 파라미터: s1/o1 정렬(score2 추천, new 신착, cbids 현재가), min/max 가격, istatus 1 新品 2 中古
+const YAHOO_SORT = { rec: "s1=score2&o1=d", new: "s1=new&o1=d", price_asc: "s1=cbids&o1=a", price_desc: "s1=cbids&o1=d" } as const;
+export async function yahooAuctionSearch(keyword: string, f: SearchFilters = {}, page = 1): Promise<MarketItem[]> {
   const b = page > 1 ? `&b=${(page - 1) * 50 + 1}` : "";
-  // 정액(즉구·플리마) 위주 노출을 위해 추천 정렬
+  const extra = (f.min ? `&min=${f.min}` : "") + (f.max ? `&max=${f.max}` : "") + (f.cond === "new" ? "&istatus=1" : f.cond === "used" ? "&istatus=2" : "");
   const html = await fetchHtml(
-    `https://auctions.yahoo.co.jp/search/search?p=${encodeURIComponent(keyword)}&n=50&s1=score2&o1=d${b}`);
+    `https://auctions.yahoo.co.jp/search/search?p=${encodeURIComponent(keyword)}&n=50&${YAHOO_SORT[f.sort ?? "rec"]}${extra}${b}`);
   const items: MarketItem[] = [];
   const seen = new Set<string>();
   const blocks = html.split('<li class="Product"');

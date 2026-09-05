@@ -101,7 +101,9 @@ export default async function ExternalItemPage(props: {
   const category = tr?.[3] || item.category;
   const tradeTags = item.tradeTags?.map((tag, i) => tr?.[4 + i] || tag);
   const extraBase = 4 + (item.tradeTags?.length ?? 0);
-  const sellerItems = item.sellerItems?.length ? await withTranslatedTitles(item.sellerItems, lang) : [];
+  const seen = new Set<string>([params.id, `${item.title}|${item.price}`]); // 당근은 URL id와 내부 id가 달라 제목·가격으로도 거른다
+  const sellerRaw = (item.sellerItems ?? []).filter((it) => { const k = it.sourceId; if (seen.has(k) || seen.has(`${it.title}|${it.price}`)) return false; seen.add(k); seen.add(`${it.title}|${it.price}`); return true; }); // 현재 상품·중복 제거
+  const sellerItems = sellerRaw.length ? await withTranslatedTitles(sellerRaw, lang) : [];
   const extra = Object.entries(item.extra).map(([k, v], i) => [k, tr?.[extraBase + i] || v] as const);
 
   return (
@@ -200,9 +202,10 @@ export default async function ExternalItemPage(props: {
         {/* CTA — 모바일은 하단 고정 바(DOM 위치 무관). 데스크톱은 가격·배송·총액 바로 아래 흐름 배치 — 메루카리·아마존처럼 "가격 옆에 버튼". 떠다니는 카드 없음 */}
         <div className="fixed bottom-0 standalone:bottom-[62px] left-0 right-0 z-20 mx-auto max-w-md border-t border-tomo-navy/5 bg-white/95 p-3 pb-[max(12px,env(safe-area-inset-bottom))] backdrop-blur md:static md:mx-0 md:max-w-none md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-0">
           {!foreign ? (
-            <div className="flex flex-col gap-2">
-              <p className="text-[12px] text-ink-soft">{t(lang, "ext.domesticNote")}</p>
-              <a href={item.url} target="_blank" rel="noopener noreferrer" className="btn block bg-tomo-navy py-3 text-center text-sm text-white">
+            <div className="flex items-center gap-3 rounded-card bg-tomo-navy/5 p-3 text-[12px] text-ink-soft md:bg-transparent md:p-0">
+              {/* 같은 나라 상품: TOMO가 더해줄 게 없다 — 참고용 페이지. 떠나보내는 버튼을 크게 만들지 않는다 */}
+              <p className="min-w-0 flex-1">{t(lang, "ext.domesticNote")}</p>
+              <a href={item.url} target="_blank" rel="noopener noreferrer" className="btn shrink-0 border border-tomo-navy/15 bg-white px-3 py-2 text-[13px] text-ink">
                 {t(lang, "ext.openDirect")} ↗
               </a>
             </div>
@@ -236,6 +239,15 @@ export default async function ExternalItemPage(props: {
         </div>
           </div>} />
 
+        {(item.condition || extra.length > 0) && (
+          <dl className="card grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 p-3.5 text-xs text-ink-soft">
+            {item.condition && <><dt className="font-bold text-ink">{t(lang, "ext.condition")}</dt><dd lang={tr?.[2] ? lang : sourceLang}>{tr?.[2] || item.condition}</dd></>}
+            {extra.filter(([, v]) => v).map(([k, v]) => (
+              <Fragment key={k}><dt className="font-bold text-ink" lang={sourceLang}>{k}</dt><dd lang={tr ? lang : sourceLang}>{v}</dd></Fragment>
+            ))}
+          </dl>
+        )}
+
         {/* 판매자 카드 — 닉네임 · 동네 · 매너온도(원본 마켓 기준) */}
         {(item.sellerName || item.region || item.sellerTemp != null) && (
           <div className="card flex items-center gap-3 p-3.5">
@@ -258,16 +270,10 @@ export default async function ExternalItemPage(props: {
         )}
 
         {/* 판매자의 다른 상품 — 같은 마켓 카드로, 원본 판매자 페이지 링크 */}
-        {((item.sellerItems && item.sellerItems.length > 0) || item.sellerUrl) && (
+        {sellerItems.length > 0 && (
           <section aria-label={t(lang, "ext.sellerItems")} className="pt-1">
             <div className="mb-2 flex items-end justify-between gap-3">
               <h2 className="text-[15px] font-extrabold text-ink">{t(lang, "ext.sellerItems")}</h2>
-              {item.sellerUrl && (
-                <a href={item.sellerUrl} target="_blank" rel="noopener noreferrer"
-                  className="press -my-2 -mr-2 shrink-0 py-2 pl-2 pr-2 text-[13px] font-bold text-tomo-navy">
-                  {t(lang, "ext.sellerItemsMore")} ↗
-                </a>
-              )}
             </div>
             {sellerItems.length > 0 && (
               <MarketCarousel items={sellerItems} rate={viewer.rate} viewerCurrency={viewer.currency} lang={lang} label={t(lang, "ext.sellerItems")} />
@@ -283,23 +289,15 @@ export default async function ExternalItemPage(props: {
           </Suspense>
         </section>
 
-        {(item.condition || extra.length > 0) && (
-          <dl className="card grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 p-3.5 text-xs text-ink-soft">
-            {item.condition && <><dt className="font-bold text-ink">{t(lang, "ext.condition")}</dt><dd lang={tr?.[2] ? lang : sourceLang}>{tr?.[2] || item.condition}</dd></>}
-            {extra.filter(([, v]) => v).map(([k, v]) => (
-              <Fragment key={k}><dt className="font-bold text-ink" lang={sourceLang}>{k}</dt><dd lang={tr ? lang : sourceLang}>{v}</dd></Fragment>
-            ))}
-          </dl>
-        )}
 
         {stale && (
           <p className="rounded-card bg-tomo-navy/5 p-3 text-xs leading-relaxed text-ink-soft">{t(lang, "ext.stale")}</p>
         )}
 
-        <a href={item.url} target="_blank" rel="noopener noreferrer"
+        {foreign && <a href={item.url} target="_blank" rel="noopener noreferrer"
           className="press self-center py-2 text-xs text-ink-soft underline underline-offset-2 hover:text-ink">
           {t(lang, "ext.openOriginal")} ↗
-        </a>
+        </a>}
 
       </div>
     </main>
