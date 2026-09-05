@@ -26,7 +26,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzd
 
 **새 세션 시작 프롬프트 (그대로 붙여넣기)**
 
-> TOMO 프로젝트 이어서. HANDOFF.md 읽고 진행. 최근 상태(2026-09-04): Next 16, v2 재디자인 완료, 하이브리드 PWA(브라우저=상단 GNB 웹사이트, 홈화면 설치=탭바 앱, tailwind `standalone:` 변형), 상세는 메루카리 골격, 당근·메루카리·SAZO 흡수 3팩(가격제안·끌올·카운터·나눔·카테고리·URL 붙여넣기 대행) + 관리 팩(마이페이지 전면 컨트롤·어드민 분쟁/상품/사용자/환율) 배포됨, 마이그레이션 0020까지 DB 적용, vitest 70. 사줘식 장바구니·주문·결제(카트→주문서→Stripe 1회 결제) 반영됨. 시작 전 `git pull` + `npm test`로 기준 확인. 남은 로드맵: Stripe 키 라이브 테스트·커스텀 도메인·폰트 셀프호스팅·채팅 이미지/알림·auth 계정 완전 삭제(service_role). 결정 원칙: 한국 구매자 우선·브랜드 유지·11px 하한·마이그레이션은 대시보드 SQL(에디터는 전체가 한 트랜잭션).
+> TOMO 프로젝트 이어서. HANDOFF.md 읽고 진행. 최근 상태(2026-09-04): Next 16, v2 재디자인 완료, 하이브리드 PWA(브라우저=상단 GNB 웹사이트, 홈화면 설치=탭바 앱, tailwind `standalone:` 변형), 상세는 메루카리 골격, 당근·메루카리·SAZO 흡수 3팩(가격제안·끌올·카운터·나눔·카테고리·URL 붙여넣기 대행) + 관리 팩(마이페이지 전면 컨트롤·어드민 분쟁/상품/사용자/환율) 배포됨, 마이그레이션 0021까지 DB 적용, vitest 71. 사줘식 장바구니·주문·결제(카트→주문서→Stripe 1회 결제) 반영됨. 시작 전 `git pull` + `npm test`로 기준 확인. 남은 로드맵: Stripe 키 라이브 테스트·커스텀 도메인·폰트 셀프호스팅·채팅 이미지/알림·auth 계정 완전 삭제(service_role). 결정 원칙: 한국 구매자 우선·브랜드 유지·11px 하한·마이그레이션은 대시보드 SQL(에디터는 전체가 한 트랜잭션).
 
 ## 2026-09-03 세션 반영
 
@@ -38,7 +38,8 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzd
 - **SP2 완료(2026-09-03)**: 상품 상세·/global·외부상품 상세를 v2 토큰 + `t(lang, key)`로 재디자인 (스펙 `docs/superpowers/specs/2026-09-03-sp2-commerce-v2-design.md`, 계획 `docs/superpowers/plans/2026-09-03-sp2-commerce-v2.md`). 가격은 구매자 통화 17px/800, 안내는 navy/5 웰, 브리지는 여행 뱃지만, 써라운드는 워드마크만(HeartGauge 숫자도 Pretendard). 공유 버튼(`ChatButton`·`CheckoutButton`·`ProxyRequestButton`·`OriginalToggle`·`HeartGauge`)은 `lang` 프롭. i18n 키 `detail.*`/`global.*`/`source.*`/`ext.*`/`center.*` 추가(vitest 47).
 - **SP3·SP4 완료(2026-09-03)**: 채팅·거래·대행·프로필·마이페이지(SP3), 로그인·온보딩·판매 폼·어드민(SP4)까지 v2 토큰 + 사전 적용 완료 — **앱 전체 재디자인 4개 스프린트 종료**. 스펙 `docs/superpowers/specs/2026-09-03-sp3-sp4-v2-design.md`. 운영자 화면은 한국어 고정(결정). 폼은 `LoginForm`/`OnboardingForm`/`SellForm` 클라이언트 + 서버 래퍼(`lang`, `/sell?hint=` 프리필). 온보딩 기본 나라·언어는 뷰어 언어, 완료 시 `tomo_lang` 쿠키 동기화. 타임라인 `StepList` 공유(네이비 완료/코랄딥 현재).
 - **하이브리드 PWA(2026-09-04)**: 브라우저=웹사이트 문법(모든 페이지 상단 GNB `SiteHeader`, 탭바 없음, 브라우저 뒤로가기), 홈 화면 설치=standalone 앱 문법(하단 `BottomNav`, 가짜 뒤로가기, 2단 바). 분기는 tailwind `standalone:`/`browser:` 변형(`display-mode` 미디어쿼리) 한 곳. `app/manifest.ts` + `public/icon-*.png`(스펙 아이콘: 투톤 대각+흰 하트, `public/icon.svg`에서 렌더). 페이지별 `<title>`/OG는 `metadata`·`generateMetadata`.
-- 다음 후보: 커스텀 도메인, Stripe 키 투입 라이브 테스트, 폰트 셀프호스팅, 채팅 이미지 전송/알림, auth 계정 완전 삭제(service_role), 인기 큐레이션 DB화.
+- **우리만의 무기 3종(2026-09-05, 0021)**: ① 크로스리스팅 — `/sell?from=<메루카리·야후·당근·중고나라 URL>`이 기존 파서(`lib/market/item.ts` loadItem)로 제목·설명·가격·사진을 프리필(사진은 원본 링크 핫링크, 통화 다르면 가격 비움). ② 여행 직거래 심화 — `trips` 테이블(본인만 읽기, 판매자는 `travelers_to` 개수만), `/travel`(일정 등록→그 동네 직거래 상품), 상세에 내 여행 매칭 문구, **만남 거래**(`transactions.meetup`, `start_transaction(p_listing_id, p_intl_shipping_fee, p_meetup)`, 상태머신 paid→delivered(구매자 만나서 수령)→completed, 센터·국제배송 없음), 직거래 상품은 "만나서 거래(선결제)"가 기본 버튼. ③ 신뢰 지표 — `seller_stats(uid)`(완료 거래·해외/만남 거래·최근 90일 응답률) 상세 판매자 카드·프로필 칩. vitest 71(캐시 24h 넘으면 cart 주문 테스트 1건 skip — /global에서 상품 열어 갱신).
+- 다음 후보: 커스텀 도메인, Stripe 키 투입 라이브 테스트, 폰트 셀프호스팅, 만남 장소 추천, 판매 마법사(시세 제안).
 - 운영자 계정: `tomo.test.center@gmail.com`이 admin. 실계정(mellowdazzle@gmail.com)은 온보딩 후 대시보드 SQL로 `profiles.is_admin=true` 1회 — 이후엔 `/admin/users` 버튼으로 부여. Supabase MCP 커넥터는 다른 조직 계정에 붙는 일이 잦아 DB 작업은 대시보드 SQL이 확실.
 - 주의: 저장소 안에 `tomo/`(중복 clone)가 생기면 `tsc`가 같이 컴파일해 실패한다. 2026-09-03에 `C:/dev/tomo-clone-duplicate`로 옮겨 둠 — 필요 없으면 삭제.
 - 시드 상품에 `[test]` 접두 2건 남아 있음(의도적 유지). vitest 53개.

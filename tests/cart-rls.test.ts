@@ -10,6 +10,7 @@ const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 let alice: SupabaseClient, bob: SupabaseClient;
 let aliceId: string;
 let itemId: string;
+let itemFetchedAt = "";
 
 async function signIn(tag: string): Promise<[SupabaseClient, string]> {
   const c = createClient(url, anonKey, { auth: { persistSession: false } });
@@ -22,9 +23,12 @@ beforeAll(async () => {
   [alice, aliceId] = await signIn("alice");
   [bob] = await signIn("bob");
   // external_items는 admin/service_role만 쓴다 — 기존 시드된 아무 항목을 빌린다
-  const { data } = await alice.from("external_items").select("id").limit(1).maybeSingle();
+  // create_proxy_order는 24h 지난 캐시를 거부(stale guard) — 가장 최근 항목을 빌리고, 그마저 오래됐으면 주문 테스트만 건너뛴다
+  const { data } = await alice.from("external_items").select("id, fetched_at").eq("status", "active")
+    .order("fetched_at", { ascending: false }).limit(1).maybeSingle();
   if (!data) throw new Error("external_items가 비어 있음 — /global에서 상품 하나 열어 캐시를 만들고 재실행");
   itemId = data.id;
+  itemFetchedAt = data.fetched_at;
   await alice.from("cart_items").delete().eq("user_id", aliceId);
 });
 
@@ -53,7 +57,11 @@ describe("proxy_orders", () => {
     });
     expect(error).not.toBeNull();
   });
-  it("create_proxy_order builds an order with per-item requests and saves address", async () => {
+  it("create_proxy_order builds an order with per-item requests and saves address", async (ctx) => {
+    if (Date.now() - new Date(itemFetchedAt).getTime() > 23 * 3600 * 1000) {
+      console.warn("cart test: 캐시가 24h 넘게 오래됨 — /global에서 상품 하나 열어 갱신 후 재실행하면 주문 테스트도 돈다");
+      ctx.skip();
+    }
     const { data: o, error } = await alice.rpc("create_proxy_order", {
       p_item_ids: [itemId], p_method: "card",
       p_ship_name: "앨리스", p_ship_phone: "01000000000", p_ship_postal: "04000", p_ship_address: "서울 마포구 1", p_ship_note: "",
