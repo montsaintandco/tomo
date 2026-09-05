@@ -17,6 +17,9 @@ import Link from "next/link";
 import { Fragment } from "react";
 import { notFound } from "next/navigation";
 import SourceLogo from "@/components/SourceLogo";
+import OriginalToggle from "@/components/OriginalToggle";
+import { translateTexts } from "@/lib/translate";
+import { unstable_cache } from "next/cache";
 
 export const dynamic = "force-dynamic"; // 가격·품절은 진입 시점 확인
 
@@ -39,6 +42,18 @@ function Row({ label, value, strong = false }: { label: string; value: string; s
       <span className="tnum">{value}</span>
     </div>
   );
+}
+
+// 원칙 2 "번역은 투명하게": 제목·설명·상태를 뷰어 언어로 한 번에 번역하고 1h 캐시 (같은 상품을 볼 때마다 재번역하지 않는다). 실패하면 null → 원문 + "번역 준비 중"
+function translateExternal(source: MarketSource, id: string, to: Lang, texts: string[]) {
+  return unstable_cache(async () => {
+    const idx = texts.map((x, i) => (x.trim() ? i : -1)).filter((i) => i >= 0);
+    const out = await translateTexts(idx.map((i) => texts[i]), to === "ko" ? "ja" : "ko", to);
+    if (!out) return null;
+    const res = texts.slice();
+    idx.forEach((i, k) => { res[i] = out[k]; });
+    return res;
+  }, ["ext-tr", "v2", source, id, to], { revalidate: 3600 })().catch(() => null);
 }
 
 export default async function ExternalItemPage(props: {
@@ -80,6 +95,10 @@ export default async function ExternalItemPage(props: {
   const totalLabel = buyerPrice;
   const sourceLang: Lang = SOURCE_CURRENCY[source] === "JPY" ? "ja" : "ko";
   const sourceCountry = SOURCE_CURRENCY[source] === "JPY" ? "JP" : "KR";
+  const needsTranslation = !!live && sourceLang !== lang; // 캐시 폴백은 title_translated를 이미 쓴다
+  const tr = needsTranslation ? await translateExternal(source, params.id, lang, [item.title, item.description, item.condition, item.category ?? "", ...(item.tradeTags ?? [])]) : null;
+  const category = tr?.[3] || item.category;
+  const tradeTags = item.tradeTags?.map((tag, i) => tr?.[4 + i] || tag);
 
   return (
     <main className="mx-auto max-w-md pb-24 standalone:pb-28 md:grid md:max-w-5xl md:grid-cols-2 md:items-start md:gap-10 md:px-6 md:pb-16 md:pt-8">
@@ -116,12 +135,14 @@ export default async function ExternalItemPage(props: {
           )}
         </div>
 
-        <h1 lang={sourceLang} className="text-[17px] font-bold leading-snug text-ink">{item.title}</h1>
-
+        <OriginalToggle lang={lang} originalLang={sourceLang} needsTranslation={needsTranslation} hasTranslation={!!tr}
+          originalTitle={item.title} originalDesc={item.description || t(lang, "ext.noDescription")}
+          translatedTitle={tr?.[0] ?? item.title} translatedDesc={tr?.[1] || item.description || t(lang, "ext.noDescription")}
+          between={<div className="mt-4 flex flex-col gap-4">
         {/* 원본 맥락 한 줄 — 카테고리 · 게시 시각 · 조회/관심/채팅 (당근·메루카리가 보여주는 것을 그대로) */}
         {(item.category || item.postedAt || item.counts) && (
           <p className="-mt-2 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[12px] text-ink-soft">
-            {item.category && <span lang={sourceLang}>{item.category}</span>}
+            {category && <span lang={tr?.[3] ? lang : sourceLang}>{category}</span>}
             {item.category && item.postedAt && <span aria-hidden>·</span>}
             {item.postedAt && <time dateTime={item.postedAt} className="tnum">{ago(item.postedAt, lang)}</time>}
             {item.counts && Object.values(item.counts).some((v) => v != null) && (
@@ -136,10 +157,10 @@ export default async function ExternalItemPage(props: {
             )}
           </p>
         )}
-        {item.tradeTags && item.tradeTags.length > 0 && (
+        {tradeTags && tradeTags.length > 0 && (
           <div className="-mt-2 flex flex-wrap gap-1">
-            {item.tradeTags.map((tag) => (
-              <span key={tag} lang={sourceLang} className="rounded-full bg-tomo-navy/5 px-2 py-0.5 text-[11px] font-bold text-tomo-navy">{tag}</span>
+            {tradeTags.map((tag) => (
+              <span key={tag} lang={tr ? lang : sourceLang} className="rounded-full bg-tomo-navy/5 px-2 py-0.5 text-[11px] font-bold text-tomo-navy">{tag}</span>
             ))}
           </div>
         )}
@@ -172,13 +193,7 @@ export default async function ExternalItemPage(props: {
             <PreorderCheck lang={lang} />
           </>
         )}
-
-        {/* 설명은 본문이다 — 보조색이 아니라 잉크 */}
-        {item.description ? (
-          <p lang={sourceLang} className="whitespace-pre-wrap text-sm leading-relaxed text-ink">{item.description}</p>
-        ) : (
-          <p className="text-sm text-ink-soft">{t(lang, "ext.noDescription")}</p>
-        )}
+          </div>} />
 
         {/* 판매자 카드 — 닉네임 · 동네 · 매너온도(원본 마켓 기준) */}
         {(item.sellerName || item.region || item.sellerTemp != null) && (
@@ -229,7 +244,7 @@ export default async function ExternalItemPage(props: {
 
         {(item.condition || Object.keys(item.extra).length > 0) && (
           <dl className="card grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 p-3.5 text-xs text-ink-soft">
-            {item.condition && <><dt className="font-bold text-ink">{t(lang, "ext.condition")}</dt><dd lang={sourceLang}>{item.condition}</dd></>}
+            {item.condition && <><dt className="font-bold text-ink">{t(lang, "ext.condition")}</dt><dd lang={tr?.[2] ? lang : sourceLang}>{tr?.[2] || item.condition}</dd></>}
             {Object.entries(item.extra).filter(([, v]) => v).map(([k, v]) => (
               <Fragment key={k}><dt className="font-bold text-ink" lang={sourceLang}>{k}</dt><dd lang={sourceLang}>{v}</dd></Fragment>
             ))}
