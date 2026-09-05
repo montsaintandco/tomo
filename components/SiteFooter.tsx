@@ -15,7 +15,7 @@ export default function SiteFooter({ lang = "ko" }: { lang?: Lang }) {
   ] as const;
 
   return (
-    <footer className={`mt-8 border-t border-tomo-navy/5 bg-tomo-ivory text-ink-soft ${hasBar ? "pb-20 standalone:pb-36 md:pb-0" : ""}`}>
+    <footer className={`mt-auto border-t border-tomo-navy/5 bg-tomo-ivory text-ink-soft ${hasBar ? "pb-20 standalone:pb-36 md:pb-0" : ""}`}>
       <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-5 md:px-6">
         <nav aria-label={t(lang, "footer.menu")}>
           <ul className="flex flex-wrap gap-x-4 gap-y-1 text-[12px] md:text-xs">

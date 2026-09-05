@@ -50,7 +50,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   } catch { unread = 0; }
   return (
     <html lang={lang} className={`${notoKR.variable} ${notoJP.variable}`}>
-      <body className="bg-white text-ink standalone:pb-24 md:pb-0">
+      <body className="flex min-h-dvh flex-col bg-white text-ink standalone:pb-24 md:pb-0">{/* 세로 플렉스 + 푸터 mt-auto: 짧은 페이지에서도 푸터가 바닥에 */}
         {/* impeccable direction contract · v3 정제된 마켓 (2026-09-05): 카와이 브랜드 시그니처 폐기
         THESIS: 사진과 가격이 주인공, 인터페이스는 물러선다 — 흰 바탕·중립 회색·단일 액센트(딥 블루)·텍스트 워드마크·8px. Apple·메루카리급 절제.
         (아래 v2 서술 중 브랜드 색·하트·써라운드·말풍선·Pretendard 항목은 폐기됨. 나라는 KR/JP 텍스트 칩으로만.)
