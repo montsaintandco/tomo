@@ -22,6 +22,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzd
 - Node 20+ 필요 (Next 16). `.env.local` 없으면 `next build`가 /onboarding 프리렌더에서 실패한다.
 - 푸시 권한: 레포 소유자는 `montsaintandco`. `gh auth status`로 활성 계정 확인, 아니면 `gh auth switch --user montsaintandco`. master 푸시 = Vercel 자동 배포(https://tomo-montsaintandcos-projects.vercel.app).
 - 여러 세션을 병행하면 시작 전 반드시 `git pull` — 2026-09-03에 두 세션이 갈라져 10개 파일 충돌을 수동 병합했다.
+- 스킬(Emil Kowalski `emilkowalski/skills` 12종: animate·review-animations·improve-animations·apple-design 등)은 `.agents/skills/`에 커밋돼 있고 `skills-lock.json`이 버전을 고정. 새 머신에서 `npx skills@latest add emilkowalski/skills`로 `.claude/skills` 심링크를 다시 만든다(gitignore). 모션 감사 결과와 적용 상태는 `plans/001-motion-audit.md`.
 - Claude Code 플러그인(impeccable·superpowers·ponytail·claude-seo)은 머신별 설치라 새 컴퓨터엔 없을 수 있음. 없어도 코드 작업엔 지장 없고, 디자인 라운드를 돌릴 때만 impeccable을 다시 설치하면 된다. `.impeccable/`(config·크리틱 스냅샷·라이브 설정)은 레포에 포함돼 있다.
 
 **새 세션 시작 프롬프트 (그대로 붙여넣기)**

@@ -39,3 +39,6 @@ next-env.d.ts
 # impeccable review captures
 /.impeccable/review/
 .env*
+
+# Claude Code skill symlinks (machine-local; source of truth is .agents/skills + skills-lock.json)
+/.claude/skills/
