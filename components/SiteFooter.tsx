@@ -22,7 +22,7 @@ export default function SiteFooter({ lang = "ko", company }: { lang?: Lang; comp
   const row: [string, string | null][] = [
     [t(lang, "footer.name"), company.name], [t(lang, "footer.ceo"), company.ceo],
     [t(lang, "footer.bizNo"), company.bizNo], [t(lang, "footer.mailOrderNo"), company.mailOrderNo],
-    [t(lang, "footer.address"), company.address], [t(lang, "footer.phone"), company.phone],
+    [t(lang, "footer.address"), company.address], [t(lang, "footer.phone"), company.phone ?? t(lang, "footer.oneToOne")], // 전화가 없으면 1:1 문의 경로를 적는다
     [t(lang, "footer.email"), company.email], [t(lang, "footer.hours"), company.hours], [t(lang, "footer.hosting"), company.hosting],
   ];
 

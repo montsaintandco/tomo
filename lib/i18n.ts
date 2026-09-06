@@ -110,6 +110,7 @@ const D = {
   "footer.email": ["이메일", "メール"],
   "footer.hours": ["운영시간", "営業時間"],
   "footer.hosting": ["호스팅", "ホスティング"],
+  "footer.oneToOne": ["1:1 문의 (문의 패널·채팅 상담)", "1:1お問い合わせ（お問い合わせパネル・チャット）"],
   "footer.bizLookup": ["사업자정보확인", "事業者情報確認"],
   "footer.terms": ["이용약관", "利用規約"],
   "footer.privacy": ["개인정보처리방침", "プライバシーポリシー"],
