@@ -21,6 +21,7 @@ import OriginalToggle from "@/components/OriginalToggle";
 import { translateTexts } from "@/lib/translate";
 import { unstable_cache } from "next/cache";
 import { withTranslatedTitles } from "@/lib/market/translate-items";
+import PolicyNote from "@/components/PolicyNote";
 
 export const dynamic = "force-dynamic"; // 가격·품절은 진입 시점 확인
 
@@ -197,6 +198,7 @@ export default async function ExternalItemPage(props: {
               <p className="mt-2 text-[11px] text-ink-soft">{t(lang, "ext.noExtraHint")}</p>
             </div>
             <PreorderCheck lang={lang} />
+            <PolicyNote lang={lang} kind="proxy" />
           </>
         )}
         {/* CTA — 모바일은 하단 고정 바(DOM 위치 무관). 데스크톱은 가격·배송·총액 바로 아래 흐름 배치 — 메루카리·아마존처럼 "가격 옆에 버튼". 떠다니는 카드 없음 */}

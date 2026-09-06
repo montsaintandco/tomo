@@ -6,6 +6,8 @@ import OrderSummary from "@/components/OrderSummary";
 import type { CartRow } from "@/components/CartList";
 import { formatPrice, convertPrice } from "@/lib/currency";
 import { payWithToss } from "@/lib/toss-client";
+import Link from "next/link";
+import PolicyNote from "@/components/PolicyNote";
 
 type Ship = { name: string; phone: string; postal: string; address: string; note: string };
 const METHODS_KRW = ["card", "kakao_pay", "naver_pay"] as const;
@@ -32,11 +34,13 @@ export default function OrderForm({ lang, rows, totals, rate, initialShip }: {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
+  const [consent, setConsent] = useState(false);
   const methods = totals.currency === "KRW" ? METHODS_KRW : METHODS_JPY;
   const set = (k: keyof Ship) => (e: React.ChangeEvent<HTMLInputElement>) => setShip((s) => ({ ...s, [k]: e.target.value }));
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (!consent) { setError(t(lang, "order.consentNeeded")); return; }
     setBusy(true); setMsg(""); setError("");
     const res = await fetch("/api/order", { method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ itemIds: rows.map((r) => r.id), method, ship }) });
@@ -105,7 +109,13 @@ export default function OrderForm({ lang, rows, totals, rate, initialShip }: {
 
         {msg && <p className="text-center text-xs text-ink-soft">{msg}</p>}
         {error && <p role="alert" className="text-center text-xs text-tomo-rose">{error}</p>}
+        <PolicyNote lang={lang} kind="proxy" />
         <p className="text-[11px] text-ink-soft">{t(lang, "order.agree")}</p>
+        {/* 필수 동의 — 심사 항목: 결제 전 약관·개인정보·환불정책 동의 */}
+        <label className="flex items-start gap-2 rounded-card border border-tomo-navy/10 p-3 text-[12px] leading-relaxed text-ink">
+          <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} required className="mt-0.5 h-4 w-4 shrink-0 accent-[#1d4ed8]" />
+          <span>{t(lang, "order.consent")} <Link href="/terms" className="underline" target="_blank">{t(lang, "footer.terms")}</Link> · <Link href="/privacy" className="underline" target="_blank">{t(lang, "footer.privacy")}</Link> · <Link href="/refund" className="underline" target="_blank">{t(lang, "footer.refund")}</Link></span>
+        </label>
       </div>
 
       <div className="fixed inset-x-0 bottom-0 z-20 border-t border-tomo-navy/5 bg-white p-3 standalone:bottom-16 md:static md:border-0 md:bg-transparent md:p-0 md:sticky md:top-24">

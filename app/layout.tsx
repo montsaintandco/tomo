@@ -9,6 +9,7 @@ import BottomNav from "@/components/BottomNav";
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
 import SupportLauncher from "@/components/SupportLauncher";
+import { company, bizLookupUrl } from "@/lib/company";
 import { getRequestLang } from "@/lib/locale";
 import { t } from "@/lib/i18n";
 import { createServerSupabase } from "@/lib/supabase/server";
@@ -70,7 +71,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         </a>
         <SiteHeader lang={lang} unread={unread} cartCount={cartCount} loggedIn={loggedIn} />
         <div id="main">{children}</div>
-        <SiteFooter lang={lang} />
+        <SiteFooter lang={lang} company={{ name: company.name, ceo: company.ceo, bizNo: company.bizNo, mailOrderNo: company.mailOrderNo, address: company.address, phone: company.phone, email: company.email, hours: company.hours, hosting: company.hosting, bizLookupUrl }} />
         <BottomNav lang={lang} unread={unread} />
         <SupportLauncher lang={lang} loggedIn={loggedIn} />
       </body>

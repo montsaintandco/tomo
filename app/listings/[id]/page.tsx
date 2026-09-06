@@ -18,6 +18,7 @@ import ListingCard from "@/components/ListingCard";
 import type { FeedListing } from "@/components/ListingRow";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import PolicyNote from "@/components/PolicyNote";
 
 const HEART = "M12 21C7.2 17.2 2.5 13.6 2.5 8.9 2.5 5.6 5 3.5 7.8 3.5c1.7 0 3.3.9 4.2 2.3.9-1.4 2.5-2.3 4.2-2.3 2.8 0 5.3 2.1 5.3 5.4 0 4.7-4.7 8.3-9.5 12.1z";
 const CATEGORIES = ["figure", "camera", "fashion", "kpop", "game", "vintage", "etc"] as const;
@@ -294,6 +295,8 @@ export default async function ListingDetail(props: { params: Promise<{ id: strin
           <h2 className="mb-2 text-[15px] font-extrabold text-ink">{t(lang, "detail.safeTitle")}</h2>
           <TrustStrip lang={lang} />
         </section>
+
+        <PolicyNote lang={lang} kind={meetupPrimary ? "meetup" : "domestic"} />
 
         {!canAct && (
           <p className="rounded-card bg-tomo-navy/5 p-3 text-center text-sm font-bold text-ink-soft">

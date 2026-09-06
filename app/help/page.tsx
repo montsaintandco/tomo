@@ -1,6 +1,8 @@
 import { getRequestLang } from "@/lib/locale";
 import SupportBot from "@/components/SupportBot";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { company } from "@/lib/company";
+import { t } from "@/lib/i18n";
 
 export const metadata = { title: "고객센터 · サポート | TOMO" };
 
@@ -51,6 +53,13 @@ export default async function HelpPage() {
       <div className="mt-5 overflow-hidden rounded-card border border-tomo-navy/10 bg-white shadow-soft">
         <SupportBot lang={lang} loggedIn={loggedIn} />
       </div>
+
+      {/* 연락처 — 심사 항목: CS 전화·이메일·운영시간이 사이트에 보여야 한다 */}
+      <section aria-label={t(lang, "help.contact")} className="mt-6 grid gap-2 rounded-card border border-tomo-navy/10 p-4 text-[13px] sm:grid-cols-3">
+        <div><p className="text-[11px] font-bold text-ink-soft">{t(lang, "footer.phone")}</p>{company.phone ? <a href={`tel:${company.phone.replace(/[^0-9+]/g, "")}`} className="font-bold text-ink">{company.phone}</a> : <p className="text-ink-soft">{t(lang, "footer.pending")}</p>}</div>
+        <div><p className="text-[11px] font-bold text-ink-soft">{t(lang, "footer.email")}</p>{company.email ? <a href={`mailto:${company.email}`} className="font-bold text-ink">{company.email}</a> : <p className="text-ink-soft">{t(lang, "footer.pending")}</p>}</div>
+        <div><p className="text-[11px] font-bold text-ink-soft">{t(lang, "footer.hours")}</p><p className="text-ink">{company.hours ?? t(lang, "footer.pending")}</p></div>
+      </section>
 
       <h2 className="mt-10 text-[17px] font-extrabold text-ink">{c.faqTitle}</h2>
       <div className="mt-3 divide-y divide-tomo-navy/10 rounded-card border border-tomo-navy/10">
