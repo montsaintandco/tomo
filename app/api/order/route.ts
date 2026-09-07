@@ -49,7 +49,7 @@ export async function POST(req: Request) {
   const { count } = await supabase.from("proxy_requests").select("*", { count: "exact", head: true }).eq("order_id", order.id);
   const { data: profile } = await supabase.from("profiles").select("language").eq("id", auth.user.id).single();
   const lang = profile?.language === "ja" ? "ja" : "ko";
-  const origin = req.headers.get("origin") ?? new URL(req.url).origin;
+  const origin = process.env.NEXT_PUBLIC_SITE_URL ?? req.headers.get("origin") ?? new URL(req.url).origin;
   const toss: TossParams = {
     clientKey: keys.clientKey, orderId, amount, customerKey: auth.user.id,
     method: METHODS.includes(order.payment_method as Method) ? (order.payment_method as Method) : "card",

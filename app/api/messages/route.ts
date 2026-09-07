@@ -3,12 +3,14 @@ import { createServerSupabase } from "@/lib/supabase/server";
 import { translateMessage } from "@/lib/translate";
 import { pushToCounterpart } from "@/lib/push";
 import { t } from "@/lib/i18n";
+import { allow } from "@/lib/ratelimit";
 
 // API 라우트는 미들웨어 보호 밖 — 자체 인증 필수 (HANDOFF 주의사항)
 export async function POST(req: Request) {
   const supabase = await createServerSupabase();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!allow(`messages:${auth.user.id}`, 60)) return NextResponse.json({ error: "too many requests" }, { status: 429 });
 
   const { conversationId, body, imagePath } = await req.json().catch(() => ({}));
   if (typeof conversationId !== "string" || (body !== undefined && typeof body !== "string"))

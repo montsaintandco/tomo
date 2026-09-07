@@ -9,6 +9,8 @@ const PAYERS = ["seller","buyer"];
 const SHIP_DAYS = ["1_2","2_3","4_7"];
 
 // 내 상품 수정 — RLS(update own listing)가 소유권을 지키고, 여기선 검증 + 번역 갱신만
+const imageOk = (s: unknown): s is string => typeof s === "string" && s.startsWith(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/listing-images/`); // 외부 픽셀·이미지 바꿔치기 차단
+
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
   const supabase = await createServerSupabase();
@@ -33,7 +35,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     title, description, price, category, trade_method: tradeMethod, cross_border_enabled: !!crossBorder,
     condition, shipping_payer: shippingPayer, ship_days: shipDays, allow_offers: price > 0 && !!allowOffers,
   };
-  if (Array.isArray(images) && images.length > 0) patch.images = images.slice(0, 5);
+  if (Array.isArray(images) && images.length > 0) patch.images = images.filter(imageOk).slice(0, 5);
 
   const { error } = await supabase.from("listings").update(patch).eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });

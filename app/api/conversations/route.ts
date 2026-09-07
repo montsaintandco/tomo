@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { allow } from "@/lib/ratelimit";
 
 // API 라우트는 미들웨어 보호 밖 — 자체 인증 필수 (HANDOFF 주의사항)
 export async function POST(req: Request) {
   const supabase = await createServerSupabase();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!allow(`conversations:${auth.user.id}`, 20)) return NextResponse.json({ error: "too many requests" }, { status: 429 });
 
   const { listingId } = await req.json().catch(() => ({}));
   if (typeof listingId !== "string")

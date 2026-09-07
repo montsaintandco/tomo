@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 // 메루카리 비공식 API 클라이언트 (서버 전용) — tokyobuy lib/mercari-server.ts 이식
 // DPoP(ES256) 토큰을 WebCrypto로 생성해 api.mercari.jp 호출
 // 주의: 비공식 API — 스키마/차단 정책이 언제든 바뀔 수 있음. 실패는 호출부에서 빈 결과로 처리
@@ -40,7 +41,12 @@ async function makeDpop(method: string, htu: string): Promise<string> {
   return `${input}.${b64url(sig)}`;
 }
 
-export async function mercariFetch(method: "GET" | "POST", path: string, body?: unknown): Promise<any> {
+// DPoP 헤더(jti·iat)가 호출마다 달라 Next fetch 캐시 키가 매번 바뀌므로 fetch 캐시 대신 unstable_cache(키 = method+path+body). 실패는 throw → 캐시 안 됨
+export function mercariFetch(method: "GET" | "POST", path: string, body?: unknown): Promise<any> {
+  return unstable_cache(() => mercariFetchLive(method, path, body), ["mercari", "v1", method, path, JSON.stringify(body ?? null)], { revalidate: 60 })();
+}
+
+async function mercariFetchLive(method: "GET" | "POST", path: string, body?: unknown): Promise<any> {
   const url = `${API_BASE}${path}`;
   const dpop = await makeDpop(method, url.split("?")[0]);
   const res = await fetchWithRetry(url, {
@@ -50,7 +56,7 @@ export async function mercariFetch(method: "GET" | "POST", path: string, body?: 
       "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
     },
     body: body ? JSON.stringify(body) : undefined,
-    next: { revalidate: 60 },
+    cache: "no-store",
   });
   if (!res.ok) throw new Error(`Mercari API ${res.status}`);
   return res.json();

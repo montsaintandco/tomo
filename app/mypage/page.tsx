@@ -14,7 +14,7 @@ import { type MarketSource } from "@/lib/market/types";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-export const metadata = { title: "마이페이지 · マイページ | TOMO" };
+export const metadata = { title: "마이페이지 · マイページ | TOMO", robots: { index: false } };
 
 const TX_STATUS: Record<string, I18nKey> = {
   pending_payment: "status.pending_payment", paid: "status.paid", shipped: "status.shipped",

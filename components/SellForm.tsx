@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 import { t, type Lang } from "@/lib/i18n";
 import PriceHint from "@/components/PriceHint";
+import { resizeImage } from "@/lib/image-resize";
 
 const CATEGORIES = ["figure", "camera", "fashion", "kpop", "game", "vintage", "etc"] as const;
 const METHODS = ["direct", "shipping", "both"] as const;
@@ -54,10 +55,10 @@ export default function SellForm({ lang, hint, initial, prefill, importMsg, curr
       const images: string[] = [];
       for (const f of files.slice(0, 5)) {
         const path = `${auth.user!.id}/${Date.now()}-${Math.random().toString(36).slice(2)}`;
-        const { error: upErr } = await supabase.storage.from("listing-images").upload(path, f);
+        const { error: upErr } = await supabase.storage.from("listing-images").upload(`${path}.jpg`, await resizeImage(f), { contentType: "image/jpeg" });
         if (upErr) throw upErr;
-        uploadedPaths.push(path);
-        images.push(supabase.storage.from("listing-images").getPublicUrl(path).data.publicUrl);
+        uploadedPaths.push(`${path}.jpg`);
+        images.push(supabase.storage.from("listing-images").getPublicUrl(`${path}.jpg`).data.publicUrl);
       }
       // 크로스리스팅: 새 사진이 없으면 가져온 원본 링크를 그대로 (핫링크 — 원본이 지워지면 사진도 사라짐)
       if (images.length === 0 && prefill?.images?.length) images.push(...prefill.images.slice(0, 5));

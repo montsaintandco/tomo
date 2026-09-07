@@ -8,7 +8,7 @@ import CartList, { type CartRow } from "@/components/CartList";
 import type { MarketSource } from "@/lib/market/types";
 import type { Currency } from "@/lib/currency";
 
-export const metadata: Metadata = { title: "장바구니 · TOMO" };
+export const metadata: Metadata = { title: "장바구니 · TOMO", robots: { index: false } };
 
 function isStale(status: string, fetchedAt: string): boolean {
   return status === "sold" || new Date(fetchedAt).getTime() < Date.now() - 24 * 3600 * 1000;

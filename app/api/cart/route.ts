@@ -3,6 +3,7 @@ import { createServerSupabase } from "@/lib/supabase/server";
 import { createAdminSupabase } from "@/lib/supabase/admin";
 import { upsertExternalItem } from "@/lib/market/item";
 import { SOURCE_LABEL, type MarketSource } from "@/lib/market/types";
+import { allow } from "@/lib/ratelimit";
 
 export const runtime = "nodejs";
 
@@ -11,6 +12,7 @@ export async function POST(req: Request) {
   const supabase = await createServerSupabase();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!allow(`cart:${auth.user.id}`, 40)) return NextResponse.json({ error: "too many requests" }, { status: 429 });
 
   const body = await req.json().catch(() => ({}));
   const { source, sourceId } = body;

@@ -24,7 +24,7 @@ export default function ExternalItemCard({ item, rate, viewerCurrency, lang = "k
       <div className="relative aspect-square overflow-hidden rounded-thumb bg-tomo-navy/5">
         {item.thumb ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={item.thumb} alt="" loading="lazy"
+          <img src={item.thumb} alt="" loading="lazy" decoding="async"
             className="h-full w-full object-cover transition-transform duration-200 ease-out fine:group-hover:scale-[1.03]" />
         ) : (
           <div className="flex h-full w-full items-center justify-center">

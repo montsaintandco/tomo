@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 // 번역: 구글 무료 엔드포인트(clients5, dict-chrome-ex 클라이언트) 사용 — API 키 불필요.
 // 실패 시 null 반환으로 graceful (발송·등록은 항상 성공, 스펙 §9). 검색어는 MyMemory 2차 폴백.
 
@@ -76,8 +77,10 @@ export async function translateQueryTo(q: string, to: Lang): Promise<string> {
   const sourceScript = from === "ko" ? HANGUL : JAPANESE;
   if (!sourceScript.test(q)) return q; // 번역할 원문 문자가 없으면 그대로 (영어 등)
 
-  const g = await googleTranslate([q], from, to);
-  if (g) return g[0];
+  // 같은 인기 검색어는 하루 한 번만 번역 — 검색 요청의 직렬 홉 하나를 없앤다. 실패는 throw로 캐시하지 않음
+  const g = await unstable_cache(async () => { const r = await googleTranslate([q], from, to); if (!r) throw new Error("translate"); return r[0]; },
+    ["tq", "v1", to, q], { revalidate: 86400 })().catch(() => null);
+  if (g) return g;
   return (await translateQueryFallback(q, to)) ?? q;
 }
 

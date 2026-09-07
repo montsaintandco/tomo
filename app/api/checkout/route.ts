@@ -36,7 +36,7 @@ export async function POST(req: Request) {
   const amount = await krwAmount(supabase, tx.item_price + (tx.is_cross_border ? tx.intl_shipping_fee : 0), tx.currency);
   if (amount == null) return NextResponse.json({ error: "결제 준비 중" }, { status: 503 });
 
-  const origin = req.headers.get("origin") ?? new URL(req.url).origin;
+  const origin = process.env.NEXT_PUBLIC_SITE_URL ?? req.headers.get("origin") ?? new URL(req.url).origin;
   const toss: TossParams = {
     clientKey: keys.clientKey, orderId: tossOrderId.tx(tx.id), amount, customerKey: auth.user.id, method: "card",
     orderName: tx.meetup ? "TOMO 안전결제 (만남 거래)" : "TOMO 안전결제",

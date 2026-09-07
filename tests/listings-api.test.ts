@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { config } from "dotenv";
 config({ path: ".env.local" });
+const TEST_PASSWORD = process.env.TEST_PASSWORD ?? "test-pass-1234"; // 운영 테스트 계정 비번은 .env.local (git 밖)
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -11,7 +12,7 @@ let aliceId: string;
 beforeAll(async () => {
   alice = createClient(url, anonKey, { auth: { persistSession: false } });
   const { data, error } = await alice.auth.signInWithPassword({
-    email: "tomo.test.alice@gmail.com", password: "test-pass-1234",
+    email: "tomo.test.alice@gmail.com", password: TEST_PASSWORD,
   });
   if (error) throw error;
   aliceId = data.user!.id;
@@ -37,7 +38,7 @@ describe("listings", () => {
 
   it("seller cannot write translations for others' listings", async () => {
     const bob = createClient(url, anonKey, { auth: { persistSession: false } });
-    await bob.auth.signInWithPassword({ email: "tomo.test.bob@gmail.com", password: "test-pass-1234" });
+    await bob.auth.signInWithPassword({ email: "tomo.test.bob@gmail.com", password: TEST_PASSWORD });
     const { data: mine } = await alice.from("listings").select("id").eq("seller_id", aliceId).limit(1).single();
     const { error } = await bob.from("listing_translations").insert({
       listing_id: mine!.id, language: "ja", title: "x", description: "x",

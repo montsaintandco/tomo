@@ -10,7 +10,7 @@ export default function PreorderCheck({ lang }: { lang: Lang }) {
     <>
       <button type="button" onClick={() => ref.current?.showModal()}
         className="press flex w-full items-center justify-between gap-3 rounded-card bg-tomo-ivory px-3.5 py-3 text-left text-[13px] font-bold text-ink">
-        <span>⚠️ {t(lang, "ext.checkTitle")}</span>
+        <span>{t(lang, "ext.checkTitle")}</span>
         <span className="shrink-0 text-[12px] text-tomo-navy underline">{t(lang, "ext.checkMore")}</span>
       </button>
       <dialog ref={ref} aria-labelledby="check-title"

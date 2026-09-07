@@ -5,7 +5,7 @@ import ProfileForm from "@/components/ProfileForm";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-export const metadata = { title: "프로필 편집 · プロフィール編集 | TOMO" };
+export const metadata = { title: "프로필 편집 · プロフィール編集 | TOMO", robots: { index: false } };
 
 export default async function ProfileEditPage() {
   const supabase = await createServerSupabase();

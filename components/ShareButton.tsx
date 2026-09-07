@@ -9,7 +9,7 @@ export default function ShareButton({ title, lang }: { title: string; lang: Lang
   async function share() {
     const url = window.location.href;
     if (navigator.share) {
-      await navigator.share({ title, url }).catch(() => {});
+      await navigator.share({ title, text: `${title} — TOMO`, url }).catch(() => {});
       return;
     }
     await navigator.clipboard.writeText(url).catch(() => {});

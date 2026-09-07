@@ -41,18 +41,10 @@ function ThemeSkeleton({ rows }: { rows: number }) {
 
 // 히어로 — 검색이 히어로(에어비앤비식): 키워드든 상대국 마켓 URL이든 여기 한 칸. 밑에 인기 검색어 칩 + 테마 타일 4장(대표 사진·테마명·최저가, 탭하면 그 테마 검색).
 // 사진이 랜덤 상품이 아니라 "여기서 살 수 있는 것"의 지도. 로그인·게스트 공통
-async function HomeHero({ viewer }: { viewer: ViewerOrGuest }) {
+function HomeHero({ viewer }: { viewer: ViewerOrGuest }) {
   const lang = viewer.language;
   const other = otherCountry(viewer.country);
   const otherName = t(lang, `market.${other}`);
-  const sections = await getSections(viewer.country);
-  const label = (s: TrendingSection) => (lang === "ja" ? s.theme.labelJa : s.theme.label);
-  const tiles = sections.map((s) => {
-    const items = s.items.filter((it) => it.thumb && !it.soldOut && !it.auction && it.price > 0); // 0원(나눔·미정)은 최저가에서 제외
-    const min = items.reduce((m, it) => Math.min(m, it.price), Infinity);
-    const cover = items[0] ?? s.items.find((it) => it.thumb);
-    return cover ? { key: s.theme.key, label: label(s), href: `/global?q=${encodeURIComponent(label(s))}`, thumb: cover.thumb, min: Number.isFinite(min) ? min : null, currency: cover.currency } : null;
-  }).filter((x): x is NonNullable<typeof x> => !!x).slice(0, 4);
   const [line1, line2] = t(lang, "hero.title", { other: otherName }).split("\n");
   return (
     <section className="md:py-4" aria-label={line1}>
@@ -65,6 +57,28 @@ async function HomeHero({ viewer }: { viewer: ViewerOrGuest }) {
           className="w-full rounded-card border border-tomo-navy/15 bg-white py-3.5 pl-12 pr-28 text-[15px] shadow-soft placeholder:text-ink-soft focus:border-tomo-coral-deep focus:outline-none focus:ring-2 focus:ring-tomo-coral-deep/25 md:py-4 md:text-base" />
         <button type="submit" className="btn absolute right-1.5 top-1/2 -translate-y-1/2 bg-tomo-coral-deep px-4 py-2 text-sm text-white md:px-5">{t(lang, "hero.search")}</button>
       </form>
+      {/* 인기 검색어·테마 타일만 외부 마켓 캐시를 기다린다 — 콜드 스타트에서도 헤드라인·검색은 즉시 */}
+      <Suspense fallback={<div className="mt-5 grid grid-cols-2 gap-2 md:grid-cols-4 md:gap-3" aria-hidden>{[0,1,2,3].map((i) => <div key={i} className="skeleton aspect-[4/3] rounded-card md:aspect-square" />)}</div>}>
+        <HeroTiles viewer={viewer} />
+      </Suspense>
+    </section>
+  );
+}
+
+async function HeroTiles({ viewer }: { viewer: ViewerOrGuest }) {
+  const lang = viewer.language;
+  const other = otherCountry(viewer.country);
+  const otherName = t(lang, `market.${other}`);
+  const sections = await getSections(viewer.country);
+  const label = (s: TrendingSection) => (lang === "ja" ? s.theme.labelJa : s.theme.label);
+  const tiles = sections.map((s) => {
+    const items = s.items.filter((it) => it.thumb && !it.soldOut && !it.auction && it.price > 0); // 0원(나눔·미정)은 최저가에서 제외
+    const min = items.reduce((m, it) => Math.min(m, it.price), Infinity);
+    const cover = items[0] ?? s.items.find((it) => it.thumb);
+    return cover ? { key: s.theme.key, label: label(s), href: `/global?q=${encodeURIComponent(label(s))}`, thumb: cover.thumb, min: Number.isFinite(min) ? min : null, currency: cover.currency } : null;
+  }).filter((x): x is NonNullable<typeof x> => !!x).slice(0, 4);
+  return (
+    <>
       {sections.length > 0 && (
         <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-ink-soft">
           <span>{t(lang, "hero.trendingKw")}</span>
@@ -79,7 +93,7 @@ async function HomeHero({ viewer }: { viewer: ViewerOrGuest }) {
             <li key={tile.key}>
               <Link href={tile.href} className="press group relative block aspect-[4/3] overflow-hidden rounded-card bg-tomo-navy/5 md:aspect-square">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={tile.thumb} alt="" loading={i < 2 ? "eager" : "lazy"} className="h-full w-full object-cover transition-transform duration-200 ease-out fine:group-hover:scale-[1.03]" />
+                <img src={tile.thumb} alt="" loading={i < 2 ? "eager" : "lazy"} fetchPriority={i < 2 ? "high" : "auto"} decoding="async" className="h-full w-full object-cover transition-transform duration-200 ease-out fine:group-hover:scale-[1.03]" />
                 <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/65 to-transparent px-3 pb-2.5 pt-8 text-white">
                   <span className="block text-[15px] font-extrabold leading-tight">{tile.label}</span>
                   {tile.min !== null && <span className="block text-[12px] opacity-90">{t(lang, "hero.from", { price: formatPrice(tile.currency === viewer.currency ? tile.min : convertPrice(tile.min, tile.currency, viewer.rate), viewer.currency) })}</span>}
@@ -89,7 +103,7 @@ async function HomeHero({ viewer }: { viewer: ViewerOrGuest }) {
           ))}
         </ul>
       )}
-    </section>
+    </>
   );
 }
 

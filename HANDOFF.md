@@ -16,7 +16,7 @@ npm test      # vitest 70개 통과해야 정상 (라이브 Supabase라 첫 실�
 
 ```
 NEXT_PUBLIC_SUPABASE_URL=https://zftztnkczlblnkgaijzc.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpmdHp0bmtjemxibG5rZ2FpanpjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ1ODc3ODMsImV4cCI6MjEwMDE2Mzc4M30.uRRfCrw71ZqA8mkjH9UJ0OW55aeQ362xX3N2Xo17GPI
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<Supabase 대시보드 → Project Settings → API>
 ```
 
 - Node 20+ 필요 (Next 16). `.env.local` 없으면 `next build`가 /onboarding 프리렌더에서 실패한다.
@@ -57,6 +57,12 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzd
 - **상담원 연결 = 문의 티켓(2026-09-05)**: 사조를 눌러 보니 "상담원 연결"은 바로 사람이 아니라 폼(상품 URL*·옵션·수량·문의 내용*) → 접수. 같은 구조로 `support_tickets`(**마이그레이션 0022, 적용 필요**), `/api/support`(POST, RLS user_id=auth.uid()), 봇 폼 카드(주문 전: URL·옵션·수량 / 주문 후: 주문번호 / 판매·여행: 내용만; 게스트는 로그인 안내), 마이페이지 "문의" 섹션(상태·답변 표시), 어드민 `/admin/support`(답변 1회 → answered, 닫기; 내비 카운트 = open). 고객센터의 "채팅으로 문의" 버튼 제거(대화 테이블은 상품 필수라 지원용으로 못 씀).
 - **문의 패널 = 미니 메신저(2026-09-06, 사조 채널톡 첫 화면 구조)**: `SupportLauncher`가 홈/대화/설정 3탭. 홈 = 브랜드 커버·봇 인사 미리보기·큰 "문의하기" CTA(→ 봇 채팅, 헤더 뒤로가기) / 대화 = 내 문의 목록(`GET /api/support/tickets`, 상태·답변 미리보기) + 새 문의 / 설정 = 연락처 정보(프로필 편집 링크)·언어 KR/JP(쿠키 + refresh)·채팅 알림(PushToggle, 로그인 시). 운영시간은 정해진 게 없어 표기 안 함. 데스크톱 400×600 패널, 모바일 바텀시트.
 - **토스 심사 준비(2026-09-06)**: `docs/toss-review-checklist.md`가 기준 문서. 사업자 정보는 `lib/company.ts`(env `NEXT_PUBLIC_COMPANY_*`, `.env.example` 참고)에서 읽어 푸터·약관·고객센터에 표시(비면 "준비 중"). 약관류 `/terms` `/privacy` `/refund`(`LegalDoc`, ko/ja, 회사값 치환). 상세·외부 상세·주문서에 `PolicyNote`(배송 업체·기간·취소·반품 방법·주소·비용). 주문서에 필수 동의 체크(약관·개인정보·환불). 고객센터에 전화·이메일·운영시간 블록. 남은 건 사용자 몫: env 값 채우기, 통신판매업 신고, 토스 가입·서류, 심사용 테스트 계정, 라이브 키 교체.
+- **출시 전 전수 점검(2026-09-07)** — 보안·성능·SEO·UI 4개 감사(에이전트) 후 적용:
+  - 보안: 테스트 계정 비번 교체(`TEST_PASSWORD` env, git 밖), 오픈 리다이렉트(`//evil`) 차단, 보안 헤더(HSTS·XFO·nosniff·Referrer·Permissions + CSP Report-Only, `next.config.mjs`), 레이트리밋 `lib/ratelimit.ts`(공개 검색·시세 IP당, 로그인 API 사용자당), 외부 상품 id 정규식·스냅샷 URL은 `parseMarketUrl` 일치 필수·이미지 https만, 상품 이미지는 우리 스토리지 URL만, 토스 리다이렉트 origin `NEXT_PUBLIC_SITE_URL`, **마이그레이션 0023(적용 필요)**: listings 컬럼 단위 update 권한 + with check, `push_targets_for`(service_role)로 푸시 키 노출 차단(`lib/push.ts` 폴백 있음).
+  - 성능: `SupportLauncher`에서 봇·PushToggle 동적 import(전 페이지 supabase-js 242KB 제거), 메루카리 `unstable_cache`(DPoP 때문에 fetch 캐시 0%였음), 검색어 번역 24h 캐시, 제목 번역 타임아웃 2.5s, 외부 상세 병렬화, `createServerSupabase` React cache, 미들웨어 profiles 조회는 보호 경로만, 홈 히어로 헤드라인·검색 즉시 렌더(타일만 Suspense), 업로드 클라이언트 리사이즈 `lib/image-resize.ts`(긴 변 1600 JPEG), Geist 폰트 삭제.
+  - SEO/마케팅: `lib/site.ts` SITE_URL(기본 tomo-delta.vercel.app — `-projects` URL은 Vercel이 noindex), `metadataBase`·canonical·twitter card·아이콘, `app/robots.ts`·`app/sitemap.ts`(판매중 상품 포함)·`app/opengraph-image.tsx`, 상품 상세 설명/가격 메타 + Product JSON-LD + 봇 조회수 제외, 외부 상세·비공개 페이지 noindex, Organization JSON-LD(사업자 정보 완비 시), Vercel Analytics·Speed Insights, 공유 텍스트 브랜드, 404 한/일.
+  - UI/기능: `app/error.tsx`·`global-error.tsx`, `/global` 전용 스켈레톤, 문의 FAB이 상세 구매 바를 안 가리게, 상세 데스크톱 CTA를 가격 아래로, 로그인 화면 홈 링크·약관 동의 문구, 만남 장소 일본어, 헤더 2열 내비 44px, 버튼 600, 이모지 제거(카테고리·사전안내), 매니페스트 배경 흰색, 고객센터 전화 셀은 값 있을 때만, 이미지 없는 외부 캐시 항목 첫 화면 제외.
+  - 남은 것(사용자): 0023 SQL 적용, 커스텀 도메인 연결 후 `NEXT_PUBLIC_SITE_URL` 교체, 시드 데모 상품(alice/bob, 이미지 없음) 정리 — 테스트가 bob 상품을 쓰므로 hidden 처리 권장, CSP Report-Only 위반 로그 확인 후 강제 전환.
 - **어드민 재설계(2026-09-05, Linear 참조)**: `app/admin/layout.tsx`가 권한 가드 + 셸(사이드바 `components/admin/AdminNav.tsx`, 처리 필요 카운트 배지). 프리미티브 `components/admin/ui.tsx`(PageHeader·Panel·Table·Pill·Kpi·FilterTabs·Thumb·Avatar·상태 메타). 토큰은 `globals.css` `.admin` 스코프(중립 회색·1px 헤어라인·13px·6px 라운드) — 재사용 클라이언트 폼(견적·환율·큐레이션·토글)은 `.admin` 오버라이드로 도구 문법이 됨. /admin에서는 GNB·푸터·탭바 숨김. 페이지: 대시보드(KPI 6 + 인박스), 거래(신규, 상태 필터), 분쟁(펼쳐서 처리), 대행 요청(필터·펼쳐서 견적/전이), 주문(신규, proxy_orders), 센터(행에서 입고/발송), 상품, 사용자, 외부 상품(+수동 등록 패널), 큐레이션, 후기(신규, 삭제), 환율. 운영 화면은 한국어 고정.
 - 다음 후보: 커스텀 도메인, Stripe 키 투입 라이브 테스트, 폰트 셀프호스팅.
 - 운영자 계정: `tomo.test.center@gmail.com`이 admin. 실계정(mellowdazzle@gmail.com)은 온보딩 후 대시보드 SQL로 `profiles.is_admin=true` 1회 — 이후엔 `/admin/users` 버튼으로 부여. Supabase MCP 커넥터는 다른 조직 계정에 붙는 일이 잦아 DB 작업은 대시보드 SQL이 확실.
@@ -94,7 +100,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzd
   - 마이페이지: 할 일(데이터 유도 알림)·받은/보낸 제안·찜 해제·내 상품 상태전환/숨김/수정(`/listings/[id]/edit`, PATCH `/api/listings/[id]`)/삭제·프로필 편집(`/mypage/edit`)·탈퇴(비활성화). 거래 상세에 분쟁 신고. 어드민: `/admin/disputes`(정산/환불) `/admin/listings` `/admin/users` `/admin/rates`, 외부상품 숨김/삭제, 대행 큐 묶음 뱃지, 프로필 후기 삭제. 미구현: auth 계정 완전 삭제·Stripe 실환불(service_role/Stripe 키 투입 후), 인기 큐레이션 DB화
   - 상세 페이지는 메루카리 골격(제목→가격+배송주석→설명→상품정보 표→판매자→안심거래→하단 가격+구매 바), 공유·찜·가격제안·판매자 도구(끌올/제안 응답), 하단 "판매자의 다른 상품·비슷한 상품". 홈·리스트 카테고리 칩(`?cat=`). /global 검색창에 상품 URL 붙여넣기(`lib/market/url.ts`), 대행 요청란+묶음배송 희망은 note 필드로 전달. Supabase MCP 커넥터는 다른 계정에 붙어 있을 때가 많으니 마이그레이션은 대시보드 SQL이 가장 확실
   - Auth: 이메일 확인 꺼짐(개발용). **Google 로그인 설정 완료(2026-09-03)** — GCP 프로젝트 `My First Project`(id `disco-parsec-261005`, mellowdazzle@gmail.com 계정), OAuth 클라이언트 `TOMO web`(승인된 원본: 배포 URL·localhost:3000, 리디렉션 URI: `https://zftztnkczlblnkgaijzc.supabase.co/auth/v1/callback`). Supabase Site URL = 배포 URL, Redirect URLs = 배포·로컬 `/auth/callback`. 배포본에서 구글 버튼 → 온보딩 도달 확인. 동의 화면은 "외부·테스트" 상태라 테스트 사용자 외 계정으로 로그인하려면 GCP 인증 플랫폼 → 대상에서 "앱 게시" 필요
-- 테스트 계정: `tomo.test.alice@gmail.com`(한국/서울 마포구), `tomo.test.bob@gmail.com`(일본/신주쿠), `tomo.test.center@gmail.com`(센터 admin, is_admin=true) — 비밀번호 모두 `test-pass-1234`
+- 테스트 계정: `tomo.test.alice@gmail.com`(한국/서울 마포구), `tomo.test.bob@gmail.com`(일본/신주쿠), `tomo.test.center@gmail.com`(센터 admin, is_admin=true) — 비밀번호는 `.env.local`의 `TEST_PASSWORD` (2026-09-07 교체, git 밖)
 - 데모 상품 4건 시드됨. 재시드: `npx tsx scripts/seed-demo.ts` (멱등)
 
 ## 완료된 것

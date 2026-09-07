@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { allow } from "@/lib/ratelimit";
 
 // 문의 접수 — 지원 봇 "상담원 연결" 폼. 미들웨어 밖, 자체 인증. RLS가 user_id = auth.uid()를 강제
 export async function POST(req: Request) {
   const supabase = await createServerSupabase();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!allow(`support:${auth.user.id}`, 10)) return NextResponse.json({ error: "too many requests" }, { status: 429 });
 
   const b = await req.json().catch(() => ({}));
   const category = ["before", "after", "sell", "travel"].includes(b.category) ? b.category : null;
@@ -18,6 +20,6 @@ export async function POST(req: Request) {
     item_url: str(b.itemUrl, 500), item_option: str(b.itemOption, 200), order_ref: str(b.orderRef, 200),
     quantity: Number.isInteger(qty) && qty > 0 && qty < 1000 ? qty : null,
   }).select("id").single();
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  if (error) return NextResponse.json({ error: "invalid" }, { status: 400 }); // 제약명·컬럼명 노출 방지
   return NextResponse.json({ id: data.id });
 }

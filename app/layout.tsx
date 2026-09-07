@@ -9,21 +9,28 @@ import BottomNav from "@/components/BottomNav";
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
 import SupportLauncher from "@/components/SupportLauncher";
-import { company, bizLookupUrl } from "@/lib/company";
+import { company, bizLookupUrl, companyComplete } from "@/lib/company";
+import { SITE_URL } from "@/lib/site";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { getRequestLang } from "@/lib/locale";
 import { t } from "@/lib/i18n";
 import { createServerSupabase } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
-  title: "TOMO — 한국·일본 중고거래 · 韓国と日本のフリマ",
+  metadataBase: new URL(SITE_URL),
+  alternates: { canonical: "/" },
+  title: { default: "TOMO — 한국·일본 중고거래 · 韓国と日本のフリマ", template: "%s | TOMO" },
   description: "메루카리·야후 상품 구매대행부터 직거래까지. 한국과 일본을 잇는 중고마켓, 토모. / メルカリ・ヤフオク購入代行から直接取引まで。韓国と日本をつなぐフリマ、トモ。",
   openGraph: {
     title: "TOMO — 한국·일본 중고거래 · 韓国と日本のフリマ",
     description: "한국과 일본을 잇는 중고마켓 · 韓国と日本をつなぐフリマ",
     type: "website",
+    siteName: "TOMO",
   },
+  twitter: { card: "summary_large_image" },
   // PWA — 홈 화면에 추가하면 standalone 앱 (app/manifest.ts)
-  icons: { icon: "/icon-192.png", apple: "/apple-touch-icon.png" },
+  icons: { icon: [{ url: "/icon.svg", type: "image/svg+xml" }, { url: "/icon-192.png", sizes: "192x192", type: "image/png" }], apple: "/apple-touch-icon.png" },
   appleWebApp: { capable: true, title: "TOMO", statusBarStyle: "default" },
 };
 
@@ -74,6 +81,17 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <SiteFooter lang={lang} company={{ name: company.name, ceo: company.ceo, bizNo: company.bizNo, mailOrderNo: company.mailOrderNo, address: company.address, phone: company.phone, email: company.email, hours: company.hours, hosting: company.hosting, bizLookupUrl }} />
         <BottomNav lang={lang} unread={unread} />
         <SupportLauncher lang={lang} loggedIn={loggedIn} />
+        {/* 조직 구조화 데이터 — 사업자 정보가 채워졌을 때만 (날조 금지) */}
+        {companyComplete && (
+          <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+            "@context": "https://schema.org", "@type": "Organization", name: "TOMO", legalName: company.name, url: SITE_URL, logo: `${SITE_URL}/icon-512.png`,
+            address: { "@type": "PostalAddress", streetAddress: company.address, addressCountry: "KR" },
+            contactPoint: { "@type": "ContactPoint", contactType: "customer service", email: company.email, ...(company.phone ? { telephone: company.phone } : {}) },
+          }) }} />
+        )}
+        {/* 익명 집계 애널리틱스 — 쿠키 없음, 개인정보처리방침의 "추적 쿠키 미사용"과 충돌 없음 */}
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

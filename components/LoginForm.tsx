@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 import { Wordmark } from "@/components/Brand";
 import { t, type Lang } from "@/lib/i18n";
+import Link from "next/link";
 
 type Mode = "signin" | "signup";
 
@@ -16,7 +17,7 @@ export default function LoginForm({ lang }: { lang: Lang }) {
   const router = useRouter();
   const next = useSearchParams().get("next");
   // 온보딩이 미완이면 보호 경로 진입 시 미들웨어가 다시 온보딩으로 보냄
-  const dest = next && next.startsWith("/") ? next : "/onboarding";
+  const dest = next && /^\/(?![\/\\])/.test(next) ? next : "/onboarding";
 
   // 구글 OAuth — 콜백에서 세션 교환 후 dest로 (신규 유저는 온보딩이 받는다)
   async function googleLogin() {
@@ -78,7 +79,7 @@ export default function LoginForm({ lang }: { lang: Lang }) {
   return (
     <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-4 p-6">
       <div className="mb-1 flex flex-col items-center gap-1">
-        <Wordmark className="text-3xl" />
+        <Link href="/" aria-label="TOMO"><Wordmark className="text-3xl" /></Link>
         <p className="text-xs text-ink-soft">{t(lang, "footer.tagline")}</p>
       </div>
       <button type="button" onClick={googleLogin} disabled={busy}
@@ -115,6 +116,10 @@ export default function LoginForm({ lang }: { lang: Lang }) {
           {busy ? t(lang, "auth.wait") : mode === "signin" ? t(lang, "auth.signin") : t(lang, "auth.signupCta")}
         </button>
         {error && <p role="alert" className="text-sm text-tomo-rose">{error}</p>}
+        {/* 가입 동의 — 전자상거래·토스 심사 항목 */}
+        <p className="text-center text-[11px] leading-relaxed text-ink-soft">
+          {t(lang, "auth.consent")} <Link href="/terms" className="underline">{t(lang, "footer.terms")}</Link> · <Link href="/privacy" className="underline">{t(lang, "footer.privacy")}</Link>
+        </p>
       </form>
     </main>
   );

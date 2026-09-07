@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { config } from "dotenv";
 config({ path: ".env.local" });
+const TEST_PASSWORD = process.env.TEST_PASSWORD ?? "test-pass-1234"; // 운영 테스트 계정 비번은 .env.local (git 밖)
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -19,7 +20,7 @@ const DEMO = [
 async function main() {
   for (const u of DEMO) {
     const c = createClient(url, anonKey, { auth: { persistSession: false } });
-    const { data: auth, error } = await c.auth.signInWithPassword({ email: u.email, password: "test-pass-1234" });
+    const { data: auth, error } = await c.auth.signInWithPassword({ email: u.email, password: TEST_PASSWORD });
     if (error) throw error;
     for (const it of u.items) {
       const { data: existing } = await c.from("listings").select("id").eq("seller_id", auth.user!.id).eq("title", it.title).maybeSingle();

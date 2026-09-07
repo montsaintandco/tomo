@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll } from "vitest";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { config } from "dotenv";
 config({ path: ".env.local" });
+const TEST_PASSWORD = process.env.TEST_PASSWORD ?? "test-pass-1234"; // 운영 테스트 계정 비번은 .env.local (git 밖)
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -14,9 +15,9 @@ beforeAll(async () => {
   alice = createClient(url, anonKey, { auth: { persistSession: false } });
   bob = createClient(url, anonKey, { auth: { persistSession: false } });
   const a = await alice.auth.signInWithPassword({
-    email: "tomo.test.alice@gmail.com", password: "test-pass-1234" });
+    email: "tomo.test.alice@gmail.com", password: TEST_PASSWORD });
   const b = await bob.auth.signInWithPassword({
-    email: "tomo.test.bob@gmail.com", password: "test-pass-1234" });
+    email: "tomo.test.bob@gmail.com", password: TEST_PASSWORD });
   if (a.error || b.error) throw a.error ?? b.error;
   aliceId = a.data.user!.id; bobId = b.data.user!.id;
   const { data: l } = await bob.from("listings")

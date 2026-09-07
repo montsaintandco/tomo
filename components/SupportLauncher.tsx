@@ -2,8 +2,10 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import SupportBot from "@/components/SupportBot";
-import PushToggle from "@/components/PushToggle";
+import dynamic from "next/dynamic";
+// 봇·푸시 토글은 열 때만 로드 — PushToggle이 끌고 오던 supabase-js(242KB)가 전 페이지 번들에서 빠진다
+const SupportBot = dynamic(() => import("@/components/SupportBot"), { ssr: false, loading: () => <div className="skeleton m-4 h-40 rounded-card" aria-hidden /> });
+const PushToggle = dynamic(() => import("@/components/PushToggle"), { ssr: false });
 import { Wordmark } from "@/components/Brand";
 import { t, type Lang } from "@/lib/i18n";
 
@@ -28,6 +30,7 @@ export default function SupportLauncher({ lang, loggedIn }: { lang: Lang; logged
   }, [open, tab, loggedIn, tickets]);
 
   if (/^\/(login|onboarding|admin|help)/.test(path) || /^\/chat\/./.test(path)) return null;
+  const onDetail = /^\/(listings|global)\/./.test(path); // 상세는 모바일 하단 고정 구매 바가 있어 그 위로
 
   const show = () => { setOpen(true); setTab("home"); setBotOpen(false); ref.current?.showModal(); };
   const close = () => { ref.current?.close(); setOpen(false); };
@@ -43,7 +46,7 @@ export default function SupportLauncher({ lang, loggedIn }: { lang: Lang; logged
   return (
     <>
       <button type="button" onClick={show} aria-label={t(lang, "support.title")}
-        className="press fixed bottom-4 right-4 z-30 flex h-12 items-center gap-2 rounded-full bg-tomo-navy pl-4 pr-5 text-sm font-bold text-white shadow-lift standalone:bottom-[74px] md:bottom-6 md:right-6">
+        className={`press fixed right-4 z-30 flex h-12 items-center gap-2 rounded-full bg-tomo-navy pl-4 pr-5 text-sm font-bold text-white shadow-lift md:bottom-6 md:right-6 ${onDetail ? "bottom-[88px] standalone:bottom-[150px]" : "bottom-4 standalone:bottom-[74px]"}`}>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden><path d="M4 5.5h16v10H9l-4 3.5v-3.5H4z" /></svg>
         {t(lang, "support.cta")}
       </button>

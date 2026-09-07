@@ -4,8 +4,10 @@ import { yahooAuctionItem } from "@/lib/market/yahoo-auction";
 import { daangnItem } from "@/lib/market/daangn";
 import { joongnaItem } from "@/lib/market/joongna";
 import { LIVE_SOURCES, SOURCE_CURRENCY, type MarketSource, type MarketItemDetail } from "@/lib/market/types";
+import { parseMarketUrl } from "@/lib/market/url";
 
 export async function loadItem(source: MarketSource, id: string): Promise<MarketItemDetail | null> {
+  if (!/^[A-Za-z0-9_-]{1,64}$/.test(id)) return null; // 경로 세그먼트 삽입 방지 (../, %23 등)
   try {
     if (source === "mercari") return await mercariItem(id);
     if (source === "yahoo_auction") return await yahooAuctionItem(id);
@@ -46,12 +48,16 @@ export async function upsertExternalItem(
   if (opts.allowClientSnapshot) {
     const { title, url, images, sellerName } = body;
     if (typeof title !== "string" || !title || typeof url !== "string") return { error: "invalid item", status: 400 };
+    // 스냅샷 URL은 반드시 그 마켓의 그 상품 URL — 우리 도메인 상세에 임의 피싱 링크·이미지가 실리는 것을 막는다
+    const parsed = parseMarketUrl(url);
+    if (!parsed || parsed.source !== source || parsed.id !== sourceId) return { error: "invalid url", status: 400 };
+    const safeImages = Array.isArray(images) ? images.filter((s): s is string => typeof s === "string" && /^https:\/\//.test(s)).slice(0, 8) : [];
     const p = Number((body as { price?: unknown }).price);
     if (!Number.isFinite(p) || p < 0) return { error: "invalid price", status: 400 };
     const { data, error } = await admin.from("external_items").upsert({
       source, source_id: sourceId, url, title, price: Math.round(p), currency: SOURCE_CURRENCY[source],
-      images: Array.isArray(images) ? images.slice(0, 8) : [],
-      seller_name: typeof sellerName === "string" ? sellerName : "",
+      images: safeImages,
+      seller_name: typeof sellerName === "string" ? sellerName.slice(0, 100) : "",
       // 클라이언트 스냅샷은 견적 전용 — fetched_at을 과거로 박아 RPC stale 가드가 카트 주문을 막게 함 (라이브 파싱 성공 시 덮어씀)
       status: "active", fetched_at: new Date(0).toISOString(),
     }, { onConflict: "source,source_id" }).select("id").single();

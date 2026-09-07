@@ -3,7 +3,7 @@ import { getViewer } from "@/lib/listings";
 import AdminNav from "@/components/admin/AdminNav";
 import { redirect } from "next/navigation";
 
-export const metadata = { title: "운영 | TOMO" };
+export const metadata = { robots: { index: false }, title: "운영 | TOMO" };
 
 // 어드민 셸 — 권한 가드 한 곳 + Linear식 사이드바. 사용자 앱 크롬(GNB·푸터·탭바)은 /admin에서 숨긴다
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {

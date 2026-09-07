@@ -8,7 +8,7 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "한국과 일본을 잇는 중고마켓. 韓国と日本をつなぐフリマ。",
     start_url: "/",
     display: "standalone",
-    background_color: "#FBF9F4",
+    background_color: "#FFFFFF",
     theme_color: "#FFFFFF",
     lang: "ko",
     icons: [

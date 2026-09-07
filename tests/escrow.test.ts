@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll } from "vitest";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { config } from "dotenv";
 config({ path: ".env.local" });
+const TEST_PASSWORD = process.env.TEST_PASSWORD ?? "test-pass-1234"; // 운영 테스트 계정 비번은 .env.local (git 밖)
 
 // paid 이후 해피패스(센터 admin 전이·수령확인·후기·신뢰온도)는 mark_paid가 service_role
 // 전용이라 vitest에서 결제 상태에 도달할 수 없어, SQL 역할 임퍼소네이션으로 별도 증명됨
@@ -18,9 +19,9 @@ beforeAll(async () => {
   alice = createClient(url, anonKey, { auth: { persistSession: false } });
   bob = createClient(url, anonKey, { auth: { persistSession: false } });
   const a = await alice.auth.signInWithPassword({
-    email: "tomo.test.alice@gmail.com", password: "test-pass-1234" });
+    email: "tomo.test.alice@gmail.com", password: TEST_PASSWORD });
   const b = await bob.auth.signInWithPassword({
-    email: "tomo.test.bob@gmail.com", password: "test-pass-1234" });
+    email: "tomo.test.bob@gmail.com", password: TEST_PASSWORD });
   if (a.error || b.error) throw a.error ?? b.error;
   aliceId = a.data.user!.id; bobId = b.data.user!.id;
 

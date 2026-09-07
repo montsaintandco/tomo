@@ -109,4 +109,4 @@ export default async function ChatListPage() {
   );
 }
 
-export const metadata = { title: "채팅 · チャット | TOMO" };
+export const metadata = { title: "채팅 · チャット | TOMO", robots: { index: false } };

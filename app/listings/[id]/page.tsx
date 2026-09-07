@@ -1,6 +1,6 @@
 import { createServerSupabase } from "@/lib/supabase/server";
 import { getViewerOrGuest } from "@/lib/listings";
-import { convertPrice, formatPrice } from "@/lib/currency";
+import { convertPrice, formatPrice, type Currency } from "@/lib/currency";
 import { t, type Lang } from "@/lib/i18n";
 import OriginalToggle from "@/components/OriginalToggle";
 import ChatButton from "@/components/ChatButton";
@@ -19,6 +19,8 @@ import type { FeedListing } from "@/components/ListingRow";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import PolicyNote from "@/components/PolicyNote";
+import { headers } from "next/headers";
+import { SITE_URL } from "@/lib/site";
 
 const HEART = "M12 21C7.2 17.2 2.5 13.6 2.5 8.9 2.5 5.6 5 3.5 7.8 3.5c1.7 0 3.3.9 4.2 2.3.9-1.4 2.5-2.3 4.2-2.3 2.8 0 5.3 2.1 5.3 5.4 0 4.7-4.7 8.3-9.5 12.1z";
 const CATEGORIES = ["figure", "camera", "fashion", "kpop", "game", "vintage", "etc"] as const;
@@ -38,6 +40,7 @@ export default async function ListingDetail(props: { params: Promise<{ id: strin
 
   const seller = l.profiles;
   const isMine = !viewer.guest && viewer.id === seller.id;
+  const isBot = /bot|crawl|spider|slurp|facebookexternalhit|preview/i.test((await headers()).get("user-agent") ?? "");
 
   // 카운터(당근 "관심·조회·채팅")는 공개 함수, 내 찜/제안은 본인 행 RLS, 셀러는 받은 제안. 조회수는 렌더마다 +1
   const [wishRes, chatRes, mineRes, myOfferRes, receivedRes] = await Promise.all([
@@ -51,7 +54,7 @@ export default async function ListingDetail(props: { params: Promise<{ id: strin
       ? supabase.from("offers").select("id, price, status, created_at, profiles!offers_buyer_id_fkey(nickname)")
           .eq("listing_id", l.id).order("created_at", { ascending: false })
       : Promise.resolve({ data: null }),
-    isMine ? Promise.resolve(null) : supabase.rpc("increment_view", { lid: l.id }),
+    isMine || isBot ? Promise.resolve(null) : supabase.rpc("increment_view", { lid: l.id }), // 크롤러는 조회수에서 제외
   ]);
   // 상세 하단 탐색 (당근·메루카리): 판매자의 다른 상품 + 같은 카테고리
   const CARD_SELECT = "id, title, price, currency, source_language, country, region, status, images, created_at, trade_method, cross_border_enabled, listing_translations(language, title)";
@@ -134,6 +137,14 @@ export default async function ListingDetail(props: { params: Promise<{ id: strin
 
   return (
     <main className="mx-auto max-w-md pb-24 standalone:pb-36 md:grid md:max-w-5xl md:grid-cols-2 md:items-start md:gap-10 md:px-6 md:pb-16 md:pt-8">
+      {/* Product 구조화 데이터 — 검색 결과에 가격·재고 리치 스니펫 */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+        "@context": "https://schema.org", "@type": "Product", name: l.title, image: images.slice(0, 5),
+        description: String(l.description ?? "").slice(0, 500),
+        itemCondition: `https://schema.org/${l.condition === "new" ? "NewCondition" : "UsedCondition"}`,
+        offers: { "@type": "Offer", price: l.price, priceCurrency: l.currency, url: `${SITE_URL}/listings/${l.id}`,
+          availability: `https://schema.org/${l.status === "active" ? "InStock" : "SoldOut"}`, seller: { "@type": "Person", name: seller.nickname } },
+      }) }} />
       {/* 이미지 위 뒤로가기 — 상세는 이미지가 헤더다. 데스크톱은 좌측 고정 컬럼 */}
       <div className="relative md:sticky md:top-24 md:overflow-hidden md:rounded-card md:shadow-soft">
         <Link href="/" aria-label={t(lang, "detail.back")}
@@ -190,6 +201,42 @@ export default async function ListingDetail(props: { params: Promise<{ id: strin
             lang={lang}
             between={priceBlock}
           />
+        {/* 하단 바 — 메루카리식: [채팅] 가격 [구매하기]. 모바일 고정, 데스크톱은 가격 바로 아래 흐름 배치(첫 화면에 다음 행동) */}
+        {canAct && !isMine && (
+          <div className="fixed bottom-0 standalone:bottom-[62px] left-0 right-0 z-20 mx-auto max-w-md border-t border-tomo-navy/5 bg-white/95 px-4 py-3 backdrop-blur md:static md:mx-0 md:mt-4 md:max-w-none md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-0">
+            {viewer.guest ? (
+              <div className="flex items-center gap-3">
+                <span className="min-w-0 flex-1">
+                  <span className="tnum block truncate text-[17px] font-extrabold leading-tight text-ink">{buyerPrice}</span>
+                  <span className="block truncate text-[11px] text-ink-soft">{shipNote}</span>
+                </span>
+                <Link href={`/login?next=/listings/${l.id}`}
+                  className="btn shrink-0 bg-tomo-coral-deep px-6 py-3 text-center text-sm text-white">
+                  {t(lang, "detail.loginCta")}
+                </Link>
+              </div>
+            ) : (
+              <div className="relative flex flex-col gap-1.5">
+                <div className="flex items-center gap-3">
+                  <ChatButton listingId={l.id} lang={lang} compact />
+                  <span className="min-w-0 flex-1">
+                    <span className="tnum block truncate text-[17px] font-extrabold leading-tight text-ink">{buyerPrice}</span>
+                    <span className="block truncate text-[11px] text-ink-soft">{shipNote}</span>
+                  </span>
+                  {!free && (
+                    <div className="w-[46%] shrink-0">
+                      {/* 직거래 상품(특히 여행 직거래)은 만남 거래가 기본 — 선결제 에스크로로 노쇼 방지 */}
+                      <CheckoutButton listingId={l.id} lang={lang} meetup={meetupPrimary} />
+                    </div>
+                  )}
+                </div>
+                {!free && secondaryCheckout && (
+                  <div className="text-right"><CheckoutButton listingId={l.id} lang={lang} meetup={!meetupPrimary} variant="link" /></div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
           {/* 액션 행 — 메루카리 「いいね · 共有」 */}
           <div className="mt-3 flex items-center justify-between gap-2">
             <span className="flex flex-wrap items-center gap-2">
@@ -219,9 +266,9 @@ export default async function ListingDetail(props: { params: Promise<{ id: strin
           <div className="rounded-card bg-tomo-navy/5 p-3.5 text-[13px] leading-relaxed text-ink">
             <p>{t(lang, "detail.travelBody", { market: t(lang, `market.${country}`) })}</p>
             <p className="mt-1 text-[12px] text-ink-soft">{t(lang, "detail.meetupNote")}</p>
-            {meetupSpots(l.region).length > 0 && (
+            {meetupSpots(l.region, lang).length > 0 && (
               <p className="mt-1.5 text-[12px] text-ink">
-                <span className="font-bold text-tomo-navy">{t(lang, "meet.spots")}:</span> {meetupSpots(l.region).join(" · ")}
+                <span className="font-bold text-tomo-navy">{t(lang, "meet.spots")}:</span> {meetupSpots(l.region, lang).join(" · ")}
               </p>
             )}
             {myTrip ? (
@@ -325,42 +372,6 @@ export default async function ListingDetail(props: { params: Promise<{ id: strin
           </div>
         )}
 
-        {/* 하단 바 — 메루카리식: [채팅] 가격 [구매하기]. 모바일 고정, 데스크톱은 흐름 배치 */}
-        {canAct && !isMine && (
-          <div className="fixed bottom-0 standalone:bottom-[62px] left-0 right-0 z-20 mx-auto max-w-md border-t border-tomo-navy/5 bg-white/95 px-4 py-3 backdrop-blur md:static md:mx-0 md:max-w-none md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-0">
-            {viewer.guest ? (
-              <div className="flex items-center gap-3">
-                <span className="min-w-0 flex-1">
-                  <span className="tnum block truncate text-[17px] font-extrabold leading-tight text-ink">{buyerPrice}</span>
-                  <span className="block truncate text-[11px] text-ink-soft">{shipNote}</span>
-                </span>
-                <Link href={`/login?next=/listings/${l.id}`}
-                  className="btn shrink-0 bg-tomo-coral-deep px-6 py-3 text-center text-sm text-white">
-                  {t(lang, "detail.loginCta")}
-                </Link>
-              </div>
-            ) : (
-              <div className="relative flex flex-col gap-1.5">
-                <div className="flex items-center gap-3">
-                  <ChatButton listingId={l.id} lang={lang} compact />
-                  <span className="min-w-0 flex-1">
-                    <span className="tnum block truncate text-[17px] font-extrabold leading-tight text-ink">{buyerPrice}</span>
-                    <span className="block truncate text-[11px] text-ink-soft">{shipNote}</span>
-                  </span>
-                  {!free && (
-                    <div className="w-[46%] shrink-0">
-                      {/* 직거래 상품(특히 여행 직거래)은 만남 거래가 기본 — 선결제 에스크로로 노쇼 방지 */}
-                      <CheckoutButton listingId={l.id} lang={lang} meetup={meetupPrimary} />
-                    </div>
-                  )}
-                </div>
-                {!free && secondaryCheckout && (
-                  <div className="text-right"><CheckoutButton listingId={l.id} lang={lang} meetup={!meetupPrimary} variant="link" /></div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
       </div>
     </main>
   );
@@ -370,8 +381,16 @@ export default async function ListingDetail(props: { params: Promise<{ id: strin
 export async function generateMetadata(props: { params: Promise<{ id: string }> }): Promise<import("next").Metadata> {
   const { id } = await props.params;
   const supabase = await createServerSupabase();
-  const { data } = await supabase.from("listings").select("title, images").eq("id", id).maybeSingle();
+  const { data } = await supabase.from("listings").select("title, description, price, currency, status, images").eq("id", id).maybeSingle();
   if (!data) return { title: "TOMO" };
   const img = (data.images as string[])?.[0];
-  return { title: `${data.title} | TOMO`, openGraph: { title: data.title, ...(img ? { images: [img] } : {}) } };
+  const price = formatPrice(data.price, data.currency as Currency);
+  const description = `${price} · ${String(data.description ?? "").replace(/\s+/g, " ").slice(0, 120)}`;
+  return {
+    title: data.title, description,
+    alternates: { canonical: `/listings/${id}` },
+    openGraph: { type: "website", title: data.title, description, ...(img ? { images: [img] } : {}) },
+    twitter: { card: img ? "summary_large_image" : "summary" },
+    ...(data.status !== "active" ? { robots: { index: false, follow: true } } : {}),
+  };
 }

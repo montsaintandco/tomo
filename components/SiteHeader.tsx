@@ -125,7 +125,7 @@ export default function SiteHeader({ lang = "ko", unread = 0, cartCount = 0, log
 
       {/* 2열 — 정보 페이지 내비 (사줘: 홈·서비스 소개·카테고리·고객센터·공지사항). 모바일은 가로 스크롤 */}
       <nav aria-label={t(lang, "nav.main")} className="border-t border-tomo-navy/5">
-        <ul className="mx-auto flex h-9 max-w-6xl items-stretch gap-5 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:gap-6 md:px-6">
+        <ul className="mx-auto flex h-11 max-w-6xl items-stretch gap-5 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:gap-6 md:px-6">
           {LINKS.map((l) => (
             <li key={l.href} className="flex shrink-0">
               <Link href={l.href} aria-current={isActive(l.href) ? "page" : undefined}

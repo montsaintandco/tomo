@@ -72,7 +72,7 @@ input[type="search"]::-webkit-search-cancel-button { display: none; } /* 커스�
 
   .btn {
     border-radius: 8px;
-    font-weight: 700;
+    font-weight: 600; /* 버튼은 600, 700은 가격·헤드라인·워드마크만 (DESIGN.md) */
     transition: transform var(--dur-fast) var(--ease-out), opacity 150ms ease, background-color 150ms ease, box-shadow 150ms ease;
   }
   @media (hover: hover) and (pointer: fine) { .btn:hover:not(:disabled) { opacity: 0.94; } }

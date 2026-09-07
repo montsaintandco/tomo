@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { unstable_cache } from "next/cache";
 import { searchMarkets } from "@/lib/market/search";
 import { SOURCE_CURRENCY, type MarketSource } from "@/lib/market/types";
+import { allow, clientIp } from "@/lib/ratelimit";
 
 export const runtime = "nodejs";
 
@@ -25,6 +26,7 @@ const priceStats = (q: string, currency: "KRW" | "JPY") =>
   }, ["price-stats", "v1", currency, q.toLowerCase()], { revalidate: 600 })();
 
 export async function GET(req: Request) {
+  if (!allow(`price:${clientIp(req)}`, 20)) return NextResponse.json({ error: "too many requests" }, { status: 429 });
   const url = new URL(req.url);
   const q = (url.searchParams.get("q") ?? "").trim().slice(0, 80);
   const currency = url.searchParams.get("currency") === "JPY" ? "JPY" : "KRW";

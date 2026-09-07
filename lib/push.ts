@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { createAdminSupabase } from "@/lib/supabase/admin";
 
 export type PushPayload = { title: string; body: string; url: string; tag?: string };
 
@@ -7,7 +8,14 @@ export type PushPayload = { title: string; body: string; url: string; tag?: stri
 export async function pushToCounterpart(supabase: SupabaseClient, conversationId: string, payload: PushPayload): Promise<void> {
   const pub = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY, priv = process.env.VAPID_PRIVATE_KEY;
   if (!pub || !priv) return;
-  const { data: targets } = await supabase.rpc("push_targets", { p_conversation: conversationId });
+  // 0023 이후: 구독 키를 클라이언트가 못 읽게 push_targets_for(service_role 전용)로. 마이그레이션 전이면 기존 함수로 폴백
+  const { data: auth } = await supabase.auth.getUser();
+  let targets: unknown[] | null = null;
+  if (auth.user) {
+    const { data, error } = await createAdminSupabase().rpc("push_targets_for", { p_conversation: conversationId, p_sender: auth.user.id });
+    if (!error) targets = data;
+  }
+  if (!targets) ({ data: targets } = await supabase.rpc("push_targets", { p_conversation: conversationId }));
   if (!targets || targets.length === 0) return;
 
   const webpush = (await import("web-push")).default;

@@ -23,7 +23,8 @@ import { unstable_cache } from "next/cache";
 import { withTranslatedTitles } from "@/lib/market/translate-items";
 import PolicyNote from "@/components/PolicyNote";
 
-export const dynamic = "force-dynamic"; // 가격·품절은 진입 시점 확인
+export const dynamic = "force-dynamic";
+export const metadata = { robots: { index: false, follow: true } }; // 외부 마켓 스크랩 콘텐츠 — 색인 안 함 // 가격·품절은 진입 시점 확인
 
 // 게시 시각 상대 표기 (ListingRow와 같은 규칙)
 function ago(iso: string, lang: Lang): string {
@@ -69,11 +70,11 @@ export default async function ExternalItemPage(props: {
   const viewer = await getViewerOrGuest(supabase);
   const lang: Lang = viewer.language;
 
-  const live = LIVE_SOURCES.includes(source) ? await loadItem(source, params.id) : null;
-
-  // 캐시 폴백 (파서 실패 또는 한국 소스의 어드민 등록분)
-  const { data: cached } = await supabase.from("external_items")
-    .select("*").eq("source", source).eq("source_id", params.id).maybeSingle();
+  // 라이브 파싱과 캐시 조회를 동시에 — 캐시는 파서 실패·한국 소스 어드민 등록분 폴백
+  const [live, { data: cached }] = await Promise.all([
+    LIVE_SOURCES.includes(source) ? loadItem(source, params.id) : Promise.resolve(null),
+    supabase.from("external_items").select("*").eq("source", source).eq("source_id", params.id).maybeSingle(),
+  ]);
   if (!live && !cached) notFound();
 
   const item: MarketItemDetail = live ?? {
@@ -98,13 +99,16 @@ export default async function ExternalItemPage(props: {
   const sourceLang: Lang = SOURCE_CURRENCY[source] === "JPY" ? "ja" : "ko";
   const sourceCountry = SOURCE_CURRENCY[source] === "JPY" ? "JP" : "KR";
   const needsTranslation = !!live && sourceLang !== lang; // 캐시 폴백은 title_translated를 이미 쓴다
-  const tr = needsTranslation ? await translateExternal(source, params.id, lang, [item.title, item.description, item.condition, item.category ?? "", ...(item.tradeTags ?? []), ...Object.values(item.extra)]) : null;
+  const seen = new Set<string>([params.id, `${item.title}|${item.price}`]); // 당근은 URL id와 내부 id가 달라 제목·가격으로도 거른다
+  const sellerRaw = (item.sellerItems ?? []).filter((it) => { const k = it.sourceId; if (seen.has(k) || seen.has(`${it.title}|${it.price}`)) return false; seen.add(k); seen.add(`${it.title}|${it.price}`); return true; }); // 현재 상품·중복 제거
+  // 본문 번역과 판매자 상품 제목 번역은 서로 독립 — 동시에
+  const [tr, sellerItems] = await Promise.all([
+    needsTranslation ? translateExternal(source, params.id, lang, [item.title, item.description, item.condition, item.category ?? "", ...(item.tradeTags ?? []), ...Object.values(item.extra)]) : Promise.resolve(null),
+    sellerRaw.length ? withTranslatedTitles(sellerRaw, lang) : Promise.resolve([] as typeof sellerRaw),
+  ]);
   const category = tr?.[3] || item.category;
   const tradeTags = item.tradeTags?.map((tag, i) => tr?.[4 + i] || tag);
   const extraBase = 4 + (item.tradeTags?.length ?? 0);
-  const seen = new Set<string>([params.id, `${item.title}|${item.price}`]); // 당근은 URL id와 내부 id가 달라 제목·가격으로도 거른다
-  const sellerRaw = (item.sellerItems ?? []).filter((it) => { const k = it.sourceId; if (seen.has(k) || seen.has(`${it.title}|${it.price}`)) return false; seen.add(k); seen.add(`${it.title}|${it.price}`); return true; }); // 현재 상품·중복 제거
-  const sellerItems = sellerRaw.length ? await withTranslatedTitles(sellerRaw, lang) : [];
   const extra = Object.entries(item.extra).map(([k, v], i) => [k, tr?.[extraBase + i] || v] as const);
 
   return (

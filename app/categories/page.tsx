@@ -7,7 +7,7 @@ import { getThemes } from "@/lib/market/themes";
 export const metadata = { title: "카테고리 · カテゴリー | TOMO" };
 
 // 카테고리 — 사줘의 "카테고리"에 해당. 카테고리마다 해외직구 검색·국내 상품 두 진입, 아래에 상대국 인기 키워드
-const ICON: Record<string, string> = { figure: "🧸", camera: "📷", fashion: "👕", kpop: "🎤", game: "🎮", vintage: "🕰️", etc: "📦" };
+const ICON: Record<string, string> = { figure: "", camera: "", fashion: "", kpop: "", game: "", vintage: "", etc: "" }; // 장식 없음(DESIGN.md) — 이모지는 기기별 렌더가 달라 폐기
 const C = {
   ko: { h1: "카테고리", sub: "해외직구는 상대국 마켓에서, 국내는 토모에 올라온 상품에서 찾아요.", global: "해외직구", local: "국내 상품", themes: "지금 인기 키워드" },
   ja: { h1: "カテゴリー", sub: "海外購入は相手国のマーケットから、国内はトモの出品から探せます。", global: "海外購入", local: "国内商品", themes: "いま人気のキーワード" },

@@ -62,7 +62,7 @@ export default async function GlobalPage(props: {
     // 검색어 없거나 한국 소스: 캐시된 상품 (어드민 수동 등록 포함). 미지원 URL은 빈 상태로 안내
     let cache = supabase.from("external_items")
       .select("source, source_id, title, title_translated, price, currency, images, status")
-      .eq("status", "active").order("fetched_at", { ascending: false }).limit(60);
+      .eq("status", "active").not("images", "eq", "{}").order("fetched_at", { ascending: false }).limit(60); // 이미지 없는 행(테스트·파싱 실패)은 첫 화면에서 제외
     cache = source !== "all" ? cache.eq("source", source) : cache.in("source", mySources);
     const { data } = await cache;
     items = (data ?? []).map((r) => ({

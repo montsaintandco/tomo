@@ -3,6 +3,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { config } from "dotenv";
 config({ path: ".env.local" });
+const TEST_PASSWORD = process.env.TEST_PASSWORD ?? "test-pass-1234"; // 운영 테스트 계정 비번은 .env.local (git 밖)
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -14,7 +15,7 @@ let itemFetchedAt = "";
 
 async function signIn(tag: string): Promise<[SupabaseClient, string]> {
   const c = createClient(url, anonKey, { auth: { persistSession: false } });
-  const { data, error } = await c.auth.signInWithPassword({ email: `tomo.test.${tag}@gmail.com`, password: "test-pass-1234" });
+  const { data, error } = await c.auth.signInWithPassword({ email: `tomo.test.${tag}@gmail.com`, password: TEST_PASSWORD });
   if (error) throw error;
   return [c, data.user!.id];
 }

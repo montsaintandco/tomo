@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { translateListing } from "@/lib/translate";
+import { allow } from "@/lib/ratelimit";
 
 const CATEGORIES = ["figure","camera","fashion","kpop","game","vintage","etc"];
 const METHODS = ["direct","shipping","both"];
@@ -8,10 +9,13 @@ const CONDITIONS = ["new","like_new","good","fair","poor"];
 const PAYERS = ["seller","buyer"];
 const SHIP_DAYS = ["1_2","2_3","4_7"];
 
+const imageOk = (s: unknown): s is string => typeof s === "string" && s.startsWith(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/listing-images/`); // 외부 픽셀·이미지 바꿔치기 차단
+
 export async function POST(req: Request) {
   const supabase = await createServerSupabase();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!allow(`listings:${auth.user.id}`, 20)) return NextResponse.json({ error: "too many requests" }, { status: 429 });
 
   const { data: profile } = await supabase.from("profiles")
     .select("country, region, language").eq("id", auth.user.id).single();
@@ -41,7 +45,7 @@ export async function POST(req: Request) {
     cross_border_enabled: !!crossBorder,
     country: profile.country,
     region: profile.region,
-    images: Array.isArray(images) ? images.slice(0, 5) : [],
+    images: Array.isArray(images) ? images.filter(imageOk).slice(0, 5) : [],
     condition, shipping_payer: shippingPayer, ship_days: shipDays,
     allow_offers: price > 0 && !!allowOffers,   // 나눔엔 가격제안 없음
   }).select("id").single();

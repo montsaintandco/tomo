@@ -6,6 +6,7 @@ const PROTECTED = ["/sell", "/chat", "/transactions", "/admin", "/proxy", "/onbo
 
 export async function proxy(req: NextRequest) {
   const res = NextResponse.next();
+  res.headers.append("Vary", "Accept-Language"); // 같은 URL이 언어별로 다르게 렌더됨을 캐시·크롤러에 알린다
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -28,7 +29,7 @@ export async function proxy(req: NextRequest) {
   }
 
   // 로그인했지만 프로필(온보딩) 미완 → 보호 경로 접근 시 온보딩으로
-  if (!path.startsWith("/onboarding")) {
+  if (isProtected && !path.startsWith("/onboarding")) { // 공개 경로에선 프로필 왕복 생략
     const { data: profile } = await supabase
       .from("profiles").select("id").eq("id", data.user.id).maybeSingle();
     if (!profile && isProtected) return NextResponse.redirect(new URL("/onboarding", req.url));

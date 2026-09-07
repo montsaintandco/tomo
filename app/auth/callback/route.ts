@@ -6,7 +6,7 @@ export async function GET(req: NextRequest) {
   const url = new URL(req.url);
   const code = url.searchParams.get("code");
   const next = url.searchParams.get("next");
-  const dest = next && next.startsWith("/") ? next : "/onboarding";
+  const dest = next && /^\/(?![\/\\])/.test(next) ? next : "/onboarding"; // "//evil.com"은 절대 URL로 해석되므로 두 번째 문자까지 검사
 
   if (!code) return NextResponse.redirect(new URL("/login?error=oauth", url.origin));
 
