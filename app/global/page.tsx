@@ -13,7 +13,7 @@ import { withTranslatedTitles } from "@/lib/market/translate-items";
 
 export const dynamic = "force-dynamic"; // 외부 검색은 요청 시점 조회
 
-// 해외직구 = 상대국 마켓만. 내 나라 마켓은 TOMO가 더해줄 게 없다(대행 불필요) — 한국 뷰어는 메루카리·야후옥션, 일본 뷰어는 당근·중고나라
+// 해외직구 = 상대국 마켓만. 내 나라 마켓은 TOMO가 더해줄 게 없다(대행 불필요) — 한국 뷰어는 메루카리·야후 플리마, 일본 뷰어는 당근·중고나라
 function sourcesFor(country: "KR" | "JP"): MarketSource[] {
   return LIVE_SOURCES.filter((s) => SOURCE_CURRENCY[s] === (country === "KR" ? "JPY" : "KRW"));
 }

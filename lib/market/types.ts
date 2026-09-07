@@ -50,7 +50,8 @@ export const SOURCE_LABEL: Record<MarketSource, string> = {
 };
 
 // 실파싱 가능 소스. 일본은 API/마크업, 한국은 JSON-LD(당근)·카드 마크업(중고나라)
-export const LIVE_SOURCES: MarketSource[] = ["mercari", "yahoo_auction", "yahoo_flea", "daangn", "joongna"];
+// 야후옥션은 잠정 중단(2026-09-07): 입찰형 경매는 정액 중고거래인 TOMO와 성격이 달라 제외. 재개하려면 배열에 "yahoo_auction" 추가
+export const LIVE_SOURCES: MarketSource[] = ["mercari", "yahoo_flea", "daangn", "joongna"];
 
 // 소스별 취급 통화 — 검색어 번역 방향과 대행 견적 통화를 정한다
 export const SOURCE_CURRENCY: Record<MarketSource, "KRW" | "JPY"> = {

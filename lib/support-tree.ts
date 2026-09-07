@@ -20,7 +20,7 @@ export const ROOT = ["before", "after", "sell", "travel"];
 
 export const NODES: Record<string, Node> = {
   // ── 대분류
-  before: { id: "before", label: ["주문 전", "注文前"], children: ["bill", "howto", "url", "auction", "askSeller", "when"] },
+  before: { id: "before", label: ["주문 전", "注文前"], children: ["bill", "howto", "url", "askSeller", "when"] },
   after: { id: "after", label: ["주문 후", "注文後"], children: ["status", "cancel", "billAfter", "problem", "refund"] },
   sell: { id: "sell", label: ["판매하기", "出品"], children: ["sellHow", "payout", "sellShip", "sellCancel"] },
   travel: { id: "travel", label: ["여행 직거래", "旅行直接取引"], children: ["travelHow", "travelPay", "travelSpot"] },
@@ -69,18 +69,10 @@ export const NODES: Record<string, Node> = {
   url: {
     id: "url", label: ["URL 붙여넣기는 어떤 사이트가 되나요?", "URL貼り付けはどのサイトに対応？"],
     answer: [
-      ["메루카리·야후옥션·당근마켓·중고나라 상품 링크를 검색창에 붙여넣으면 바로 상세로 열려요.", "그 외 사이트는 아직 지원하지 않아요. 상담원 연결로 요청 주시면 검토해 드려요."],
-      ["メルカリ・ヤフオク・タングン・チュンゴナラの商品リンクを検索窓に貼ると、すぐ詳細が開きます。", "その他のサイトはまだ未対応です。担当者につないでご相談ください。"],
+      ["메루카리·야후 플리마·당근마켓·중고나라 상품 링크를 검색창에 붙여넣으면 바로 상세로 열려요.", "그 외 사이트는 아직 지원하지 않아요. 상담원 연결로 요청 주시면 검토해 드려요."],
+      ["メルカリ・Yahoo!フリマ・タングン・チュンゴナラの商品リンクを検索窓に貼ると、すぐ詳細が開きます。", "その他のサイトはまだ未対応です。担当者につないでご相談ください。"],
     ],
     related: ["howto"],
-  },
-  auction: {
-    id: "auction", label: ["경매 상품도 되나요?", "オークション商品も買えますか？"],
-    answer: [
-      ["야후옥션은 최대 입찰가를 적어 입찰 대행을 신청해요.", "낙찰되면 확정 금액으로 결제 안내를 드리고, 유찰되면 청구가 없어요."],
-      ["ヤフオクは最高入札額を入力して入札代行を依頼します。", "落札したら確定金額で決済のご案内をし、落札できなければ請求はありません。"],
-    ],
-    related: ["bill"],
   },
   askSeller: {
     id: "askSeller", label: ["상품 정보를 판매자에게 물어볼 수 있나요?", "商品について出品者に質問できますか？"],

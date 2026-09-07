@@ -9,7 +9,7 @@ import SellForm, { type SellPrefill } from "@/components/SellForm";
 export const metadata = { title: "판매하기 · 出品する | TOMO", robots: { index: false } };
 
 // ?hint= : 홈 "상대국이 찾는 것" 칩에서 제목 프리필
-// ?from= : 크로스리스팅 — 메루카리·야후옥션·당근·중고나라 내 상품 링크를 파서로 읽어 폼을 채운다 (공급 확보의 핵심)
+// ?from= : 크로스리스팅 — 메루카리·야후 플리마·당근·중고나라 내 상품 링크를 파서로 읽어 폼을 채운다 (공급 확보의 핵심)
 export default async function SellPage(props: { searchParams: Promise<{ hint?: string; from?: string }> }) {
   const { hint, from } = await props.searchParams;
   const supabase = await createServerSupabase();

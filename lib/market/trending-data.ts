@@ -10,7 +10,7 @@ export type TrendingTheme = {
   sources: MarketSource[];
 };
 
-const JP: MarketSource[] = ["mercari", "yahoo_auction", "yahoo_flea"];
+const JP: MarketSource[] = ["mercari", "yahoo_flea"];
 const KR: MarketSource[] = ["daangn", "joongna"];
 
 export const TRENDING: Record<"KR" | "JP", TrendingTheme[]> = {

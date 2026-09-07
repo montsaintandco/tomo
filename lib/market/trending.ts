@@ -7,7 +7,7 @@ import { joongnaSearch } from "./joongna";
 import { translateTexts } from "@/lib/translate";
 import { pickTrendingItems, type TrendingTheme } from "./trending-data";
 import { getThemes } from "./themes";
-import { SOURCE_CURRENCY, type MarketItem, type MarketSource } from "./types";
+import { LIVE_SOURCES, SOURCE_CURRENCY, type MarketItem, type MarketSource } from "./types";
 
 export type TrendingSection = { theme: TrendingTheme; items: MarketItem[] };
 
@@ -26,7 +26,7 @@ function withTimeout<T>(p: Promise<T>, ms: number, fallback: T): Promise<T> {
 }
 
 async function fetchTheme(theme: TrendingTheme): Promise<MarketItem[]> {
-  const results = await Promise.all(theme.sources.map((s) =>
+  const results = await Promise.all(theme.sources.filter((s) => LIVE_SOURCES.includes(s)).map((s) =>
     withTimeout(SEARCHERS[s](theme.term).catch(() => [] as MarketItem[]), SOURCE_TIMEOUT_MS, [] as MarketItem[])
   ));
   const picked = pickTrendingItems(results);
