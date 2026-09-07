@@ -343,7 +343,6 @@ export default async function ListingDetail(props: { params: Promise<{ id: strin
           <TrustStrip lang={lang} />
         </section>
 
-        <PolicyNote lang={lang} kind={meetupPrimary ? "meetup" : "domestic"} />
 
         {!canAct && (
           <p className="rounded-card bg-tomo-navy/5 p-3 text-center text-sm font-bold text-ink-soft">
@@ -372,6 +371,7 @@ export default async function ListingDetail(props: { params: Promise<{ id: strin
           </div>
         )}
 
+        <div className="md:col-span-2"><PolicyNote lang={lang} kind={meetupPrimary ? "meetup" : "domestic"} /></div>
       </div>
     </main>
   );

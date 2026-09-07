@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { mercariItem } from "@/lib/market/mercari";
 import { yahooAuctionItem } from "@/lib/market/yahoo-auction";
+import { yahooFleaItem } from "@/lib/market/yahoo-flea";
 import { daangnItem } from "@/lib/market/daangn";
 import { joongnaItem } from "@/lib/market/joongna";
 import { LIVE_SOURCES, SOURCE_CURRENCY, type MarketSource, type MarketItemDetail } from "@/lib/market/types";
@@ -11,6 +12,7 @@ export async function loadItem(source: MarketSource, id: string): Promise<Market
   try {
     if (source === "mercari") return await mercariItem(id);
     if (source === "yahoo_auction") return await yahooAuctionItem(id);
+    if (source === "yahoo_flea") return await yahooFleaItem(id);
     if (source === "daangn") return await daangnItem(id);
     if (source === "joongna") return await joongnaItem(id);
   } catch {

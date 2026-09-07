@@ -1,5 +1,5 @@
 // 외부 마켓 공통 타입 — 소스별 파서가 이 형태로 정규화해 반환
-export type MarketSource = "mercari" | "yahoo_auction" | "daangn" | "joongna";
+export type MarketSource = "mercari" | "yahoo_auction" | "yahoo_flea" | "daangn" | "joongna";
 
 // 공통 검색 필터 (메루카리 필터 참조) — 가격은 소스 통화. 소스가 지원하면 서버에서, 아니면 결과를 받은 뒤 거른다
 export type SearchFilters = {
@@ -43,15 +43,16 @@ export type MarketItemDetail = MarketItem & {
 
 export const SOURCE_LABEL: Record<MarketSource, string> = {
   mercari: "메루카리",
-  yahoo_auction: "야후옥션·플리마",
+  yahoo_auction: "야후옥션",
+  yahoo_flea: "야후 플리마",
   daangn: "당근마켓",
   joongna: "중고나라",
 };
 
 // 실파싱 가능 소스. 일본은 API/마크업, 한국은 JSON-LD(당근)·카드 마크업(중고나라)
-export const LIVE_SOURCES: MarketSource[] = ["mercari", "yahoo_auction", "daangn", "joongna"];
+export const LIVE_SOURCES: MarketSource[] = ["mercari", "yahoo_auction", "yahoo_flea", "daangn", "joongna"];
 
 // 소스별 취급 통화 — 검색어 번역 방향과 대행 견적 통화를 정한다
 export const SOURCE_CURRENCY: Record<MarketSource, "KRW" | "JPY"> = {
-  mercari: "JPY", yahoo_auction: "JPY", daangn: "KRW", joongna: "KRW",
+  mercari: "JPY", yahoo_auction: "JPY", yahoo_flea: "JPY", daangn: "KRW", joongna: "KRW",
 };

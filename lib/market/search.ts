@@ -1,5 +1,6 @@
 import { mercariSearch } from "./mercari";
 import { yahooAuctionSearch } from "./yahoo-auction";
+import { yahooFleaSearch } from "./yahoo-flea";
 import { daangnSearch } from "./daangn";
 import { joongnaSearch } from "./joongna";
 import { translateQueryTo } from "@/lib/translate";
@@ -9,6 +10,7 @@ import { LIVE_SOURCES, SOURCE_CURRENCY, type MarketItem, type MarketSource, type
 const SEARCHERS: Record<MarketSource, (q: string, f: SearchFilters) => Promise<MarketItem[]>> = {
   mercari: mercariSearch,
   yahoo_auction: yahooAuctionSearch,
+  yahoo_flea: yahooFleaSearch,
   daangn: (q) => daangnSearch(q),
   joongna: (q) => joongnaSearch(q),
 };

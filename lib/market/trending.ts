@@ -1,6 +1,7 @@
 import { unstable_cache } from "next/cache";
 import { mercariSearch } from "./mercari";
 import { yahooAuctionSearch } from "./yahoo-auction";
+import { yahooFleaSearch } from "./yahoo-flea";
 import { daangnSearch } from "./daangn";
 import { joongnaSearch } from "./joongna";
 import { translateTexts } from "@/lib/translate";
@@ -13,6 +14,7 @@ export type TrendingSection = { theme: TrendingTheme; items: MarketItem[] };
 const SEARCHERS: Record<MarketSource, (q: string) => Promise<MarketItem[]>> = {
   mercari: mercariSearch,
   yahoo_auction: yahooAuctionSearch,
+  yahoo_flea: yahooFleaSearch,
   daangn: daangnSearch,
   joongna: joongnaSearch,
 };

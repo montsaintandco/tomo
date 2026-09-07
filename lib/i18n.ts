@@ -30,7 +30,7 @@ const D = {
   "market.KR": ["한국", "韓国"],
   "market.JP": ["일본", "日本"],
   "sources.KR": ["당근마켓·중고나라", "タングン・チュンゴナラ"],
-  "sources.JP": ["메루카리·야후옥션", "メルカリ・ヤフオク"],
+  "sources.JP": ["메루카리·야후옥션·야후 플리마", "メルカリ・ヤフオク・Yahoo!フリマ"],
 
   "trust.aria": ["토모 안전장치", "トモの安心機能"],
   "trust.escrow": ["에스크로 안전결제", "エスクロー安心決済"],
@@ -381,7 +381,8 @@ const D = {
   "global.emptyIdleSub": ["메루카리·야후옥션·당근·중고나라를 한 번에 찾아드려요", "メルカリ・ヤフオク・タングン・チュンゴナラをまとめて検索します"],
   "global.emptySearchSub": ["다른 검색어를 써보세요", "別のキーワードで試してみてください"],
   "source.mercari": ["메루카리", "メルカリ"],
-  "source.yahoo_auction": ["야후옥션·플리마", "ヤフオク・フリマ"],
+  "source.yahoo_auction": ["야후옥션", "ヤフオク"],
+  "source.yahoo_flea": ["야후 플리마", "Yahoo!フリマ"],
   "source.daangn": ["당근마켓", "タングンマーケット"],
   "source.joongna": ["중고나라", "チュンゴナラ"],
 
