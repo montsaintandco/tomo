@@ -32,7 +32,7 @@ export const metadata: Metadata = {
   // 검색엔진 소유 확인 — 구글은 Search Console HTML 태그, 네이버는 서치어드바이저 태그(값을 Vercel env에 넣으면 출력)
   verification: {
     google: "vMO5xOzy6MJQOfiOhntsK_EC-NdjUNjUHcLOBCmVDFo",
-    ...(process.env.NEXT_PUBLIC_NAVER_SITE_VERIFICATION ? { other: { "naver-site-verification": process.env.NEXT_PUBLIC_NAVER_SITE_VERIFICATION } } : {}),
+    other: { "naver-site-verification": "28924c76b13ac458f1bd74d1499d2d673da52e11" },
   },
   // PWA — 홈 화면에 추가하면 standalone 앱 (app/manifest.ts)
   icons: { icon: [{ url: "/icon.svg", type: "image/svg+xml" }, { url: "/icon-192.png", sizes: "192x192", type: "image/png" }], apple: "/apple-touch-icon.png" },
