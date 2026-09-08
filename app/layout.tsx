@@ -19,7 +19,6 @@ import { createServerSupabase } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  alternates: { canonical: "/" },
   title: { default: "TOMO — 한국·일본 중고거래 · 韓国と日本のフリマ", template: "%s | TOMO" },
   description: "메루카리·야후 플리마 상품 구매대행부터 직거래까지. 한국과 일본을 잇는 중고마켓, 토모. / メルカリ・Yahoo!フリマ購入代行から直接取引まで。韓国と日本をつなぐフリマ、トモ。",
   openGraph: {

@@ -1,7 +1,7 @@
 import LegalDoc, { type Section } from "@/components/LegalDoc";
 import { getRequestLang } from "@/lib/locale";
 
-export const metadata = { title: "개인정보처리방침 · プライバシーポリシー | TOMO" };
+export const metadata = { title: "개인정보처리방침 · プライバシーポリシー", description: "TOMO 개인정보처리방침 — 수집 항목, 이용 목적, 보관 기간, 위탁 업체(토스페이먼츠·Supabase·Vercel·Google), 이용자 권리와 개인정보 보호책임자.", alternates: { canonical: "/privacy" } };
 
 // 개인정보처리방침 — 실제 수집·처리 현황 그대로: Supabase(계정·DB), Vercel(호스팅), 토스페이먼츠(결제, 카드정보 미보관),
 // 판매자/국제배송사(배송지 제공), 구글 번역 경로(채팅·상품 문구 번역). 없는 걸 적지 않는다

@@ -15,6 +15,8 @@ const TABS = [["all", "tab.all"], ["local", "tab.local"], ["travel", "tab.travel
 const FEED_LIMIT = 40;
 const FEED_SELECT = "id, title, price, currency, source_language, country, region, status, images, created_at, trade_method, cross_border_enabled, listing_translations(language, title)";
 
+export const metadata = { alternates: { canonical: "/" } };
+
 export default async function Home(props: { searchParams: Promise<{ tab?: string; q?: string; cat?: string }> }) {
   const searchParams = await props.searchParams;
   const supabase = await createServerSupabase();

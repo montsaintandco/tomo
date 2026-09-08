@@ -1,7 +1,7 @@
 import { getRequestLang } from "@/lib/locale";
 import { NOTICES } from "@/lib/notices";
 
-export const metadata = { title: "공지사항 · お知らせ | TOMO" };
+export const metadata = { title: "공지사항 · お知らせ", description: "TOMO 서비스 공지사항 — 업데이트, 점검, 정책 변경 안내.", alternates: { canonical: "/notice" } };
 
 // 공지사항 — 사줘의 "공지사항"에 해당. ponytail: 코드 테이블(lib/notices.ts), 운영 공지가 잦아지면 admin 테이블로
 const C = { ko: { h1: "공지사항", empty: "아직 공지가 없어요." }, ja: { h1: "お知らせ", empty: "まだお知らせはありません。" } } as const;

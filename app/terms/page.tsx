@@ -1,7 +1,7 @@
 import LegalDoc, { type Section } from "@/components/LegalDoc";
 import { getRequestLang } from "@/lib/locale";
 
-export const metadata = { title: "이용약관 · 利用規約 | TOMO" };
+export const metadata = { title: "이용약관 · 利用規約", description: "TOMO 이용약관 — 회원, 거래·에스크로, 구매대행, 배송·센터 검수, 수수료, 책임과 분쟁 처리 규정.", alternates: { canonical: "/terms" } };
 
 // 이용약관 — TOMO의 세 역할을 한 문서에: (1) 개인 간 거래 중개(통신판매중개) (2) 구매대행(통신판매) (3) 에스크로 안전결제.
 // 시행일과 회사 정보는 env. 법률 검토 후 확정할 것 — 조항 번호는 검토 시 바뀌어도 되게 느슨하게
