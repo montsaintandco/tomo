@@ -5,7 +5,11 @@ import { NextResponse, type NextRequest } from "next/server";
 const PROTECTED = ["/sell", "/chat", "/transactions", "/admin", "/proxy", "/onboarding"];
 
 export async function proxy(req: NextRequest) {
-  const res = NextResponse.next();
+  // ?lang=ko|ja — hreflang 변형 URL. 쿠키 없이도 그 언어로 렌더되도록 요청 헤더에 싣는다 (lib/locale.ts가 최우선으로 읽음)
+  const langParam = req.nextUrl.searchParams.get("lang");
+  const reqHeaders = new Headers(req.headers);
+  if (langParam === "ko" || langParam === "ja") reqHeaders.set("x-tomo-lang", langParam);
+  const res = NextResponse.next({ request: { headers: reqHeaders } });
   res.headers.append("Vary", "Accept-Language"); // 같은 URL이 언어별로 다르게 렌더됨을 캐시·크롤러에 알린다
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

@@ -1,8 +1,11 @@
 import Link from "next/link";
+import { pageMeta, langFromSearch } from "@/lib/seo";
 import { getRequestLang } from "@/lib/locale";
 import { t } from "@/lib/i18n";
 
-export const metadata = { title: "서비스 소개 · サービス紹介", description: "한국과 일본을 잇는 중고거래 TOMO 소개. 에스크로 안전결제, 서울·나리타 센터 검수, 채팅 자동번역으로 국경 없는 직거래와 구매대행을 제공합니다.", alternates: { canonical: "/about" } };
+export async function generateMetadata(props: { searchParams: Promise<{ lang?: string }> }) {
+  return pageMeta("/about", { title: "서비스 소개 · サービス紹介", description: "한국과 일본을 잇는 중고거래 TOMO 소개. 에스크로 안전결제, 서울·나리타 센터 검수, 채팅 자동번역으로 국경 없는 직거래와 구매대행을 제공합니다." }, langFromSearch(await props.searchParams));
+}
 
 // 서비스 소개 — 사줘의 "서비스 소개"에 해당. 사실만: 수수료·배송·검수·양방향. 수치는 lib/fees 상수에서
 const C = {

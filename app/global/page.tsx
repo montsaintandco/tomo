@@ -1,4 +1,5 @@
 import { createServerSupabase } from "@/lib/supabase/server";
+import { pageMeta, langFromSearch } from "@/lib/seo";
 import { getViewerOrGuest } from "@/lib/listings";
 import ExternalItemCard, { type ExternalCardItem } from "@/components/ExternalItemCard";
 import { TomoSymbol } from "@/components/Brand";
@@ -170,7 +171,7 @@ export default async function GlobalPage(props: {
         )}
       </header>
 
-      <div className="px-4 pb-6 pt-2 md:px-0 md:pb-16">
+      <div className="min-h-[70dvh] px-4 pb-6 pt-2 md:px-0 md:pb-16">
         {q && usedQueries.length > 0 && (
           <p className="mb-3 text-[12px] text-ink-soft">{t(lang, "global.translatedAs", { q: usedQueries.join(" · ") })}</p>
         )}
@@ -198,4 +199,6 @@ export default async function GlobalPage(props: {
   );
 }
 
-export const metadata = { title: "해외직구 · 海外購入", description: "메루카리·Yahoo!フリマ·당근마켓·중고나라 상품을 한 번에 검색하고 구매대행으로 받아보세요. 견적 확인 후 결제, 센터 검수 후 배송.", alternates: { canonical: "/global" } };
+export async function generateMetadata(props: { searchParams: Promise<{ lang?: string }> }) {
+  return pageMeta("/global", { title: "해외직구 · 海外購入", description: "메루카리·Yahoo!フリマ·당근마켓·중고나라 상품을 한 번에 검색하고 구매대행으로 받아보세요. 견적 확인 후 결제, 센터 검수 후 배송." }, langFromSearch(await props.searchParams));
+}

@@ -1,10 +1,13 @@
 import Link from "next/link";
+import { pageMeta, langFromSearch } from "@/lib/seo";
 import { getRequestLang } from "@/lib/locale";
 import { t, otherCountry } from "@/lib/i18n";
 import { CATEGORY_KEYS } from "@/components/CategoryChips";
 import { getThemes } from "@/lib/market/themes";
 
-export const metadata = { title: "카테고리 · カテゴリー", description: "피규어·카메라·패션·K-POP·게임·빈티지 등 카테고리별로 한국·일본 중고 상품을 둘러보세요.", alternates: { canonical: "/categories" } };
+export async function generateMetadata(props: { searchParams: Promise<{ lang?: string }> }) {
+  return pageMeta("/categories", { title: "카테고리 · カテゴリー", description: "피규어·카메라·패션·K-POP·게임·빈티지 등 카테고리별로 한국·일본 중고 상품을 둘러보세요." }, langFromSearch(await props.searchParams));
+}
 
 // 카테고리 — 사줘의 "카테고리"에 해당. 카테고리마다 해외직구 검색·국내 상품 두 진입, 아래에 상대국 인기 키워드
 const ICON: Record<string, string> = { figure: "", camera: "", fashion: "", kpop: "", game: "", vintage: "", etc: "" }; // 장식 없음(DESIGN.md) — 이모지는 기기별 렌더가 달라 폐기

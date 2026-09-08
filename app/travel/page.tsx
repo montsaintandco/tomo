@@ -1,4 +1,5 @@
 import { createServerSupabase } from "@/lib/supabase/server";
+import { pageMeta, langFromSearch } from "@/lib/seo";
 import { getViewerOrGuest } from "@/lib/listings";
 import { t, otherCountry, type Lang } from "@/lib/i18n";
 import TripForm, { type Trip } from "@/components/TripForm";
@@ -7,7 +8,9 @@ import type { FeedListing } from "@/components/ListingRow";
 import { TomoSymbol } from "@/components/Brand";
 import Link from "next/link";
 
-export const metadata = { title: "여행 직거래 · 旅行で直接取引", description: "일본·한국 여행 중 판매자와 직접 만나 받는 직거래 상품 모음. 국제배송비 없이 현지에서 바로 받으세요.", alternates: { canonical: "/travel" } };
+export async function generateMetadata(props: { searchParams: Promise<{ lang?: string }> }) {
+  return pageMeta("/travel", { title: "여행 직거래 · 旅行で直接取引", description: "일본·한국 여행 중 판매자와 직접 만나 받는 직거래 상품 모음. 국제배송비 없이 현지에서 바로 받으세요." }, langFromSearch(await props.searchParams));
+}
 
 const CARD_SELECT = "id, title, price, currency, source_language, country, region, status, images, created_at, trade_method, cross_border_enabled, listing_translations(language, title)";
 

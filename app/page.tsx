@@ -9,13 +9,18 @@ import { t } from "@/lib/i18n";
 import { parseMarketUrl } from "@/lib/market/url";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { pageMeta, langFromSearch } from "@/lib/seo";
 
 // 구매 루트: 전체 / 내 동네 직거래 / 상대국 여행 중 직거래 (해외 대행구매는 /global)
 const TABS = [["all", "tab.all"], ["local", "tab.local"], ["travel", "tab.travel"]] as const;
 const FEED_LIMIT = 40;
 const FEED_SELECT = "id, title, price, currency, source_language, country, region, status, images, created_at, trade_method, cross_border_enabled, listing_translations(language, title)";
 
-export const metadata = { alternates: { canonical: "/" } };
+export async function generateMetadata(props: { searchParams: Promise<{ lang?: string }> }) {
+  const lang = langFromSearch(await props.searchParams);
+  const m = pageMeta("/", { title: "TOMO — 한국·일본 중고거래 · 韓国と日本のフリマ" }, lang);
+  return { alternates: m.alternates, openGraph: m.openGraph }; // 홈 제목·설명은 루트 레이아웃 기본값 유지
+}
 
 export default async function Home(props: { searchParams: Promise<{ tab?: string; q?: string; cat?: string }> }) {
   const searchParams = await props.searchParams;

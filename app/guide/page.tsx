@@ -1,15 +1,17 @@
 import Link from "next/link";
+import { pageMeta, langFromSearch } from "@/lib/seo";
 import { getRequestLang } from "@/lib/locale";
 import { SITE_URL } from "@/lib/site";
 import { CUSTOMS_FREE_LIMIT, PROXY_SHIPPING_ESTIMATE_JPY, PROXY_SHIPPING_ESTIMATE_KRW } from "@/lib/fees";
 
 // 구매대행 랜딩 — "메루카리 구매대행"·"일본 구매대행"·"야후 플리마 구매대행" 검색 의도용.
 // SERP를 지배하는 대행 서비스 랜딩의 문법(수수료표 → 절차 → 신뢰 증빙 → FAQ → 단일 CTA)을 따른다. 수치는 lib/fees 상수·정책 문서와 동일.
-export const metadata = {
-  title: "일본 구매대행 · 메루카리·Yahoo!フリマ 대신 사서 검수 후 배송",
-  description: "메루카리·야후 플리마 상품을 TOMO가 대신 구매해 나리타 센터에서 검수한 뒤 한국까지 배송합니다. 수수료·국제배송비·관세를 주문 시 1회 결제, 받을 때 추가 청구 없음. 10~18일 도착.",
-  alternates: { canonical: "/guide" },
-};
+export async function generateMetadata(props: { searchParams: Promise<{ lang?: string }> }) {
+  return pageMeta("/guide", {
+    title: "일본 구매대행 · 메루카리·Yahoo!フリマ 대신 사서 검수 후 배송",
+    description: "메루카리·야후 플리마 상품을 TOMO가 대신 구매해 나리타 센터에서 검수한 뒤 한국까지 배송합니다. 수수료·국제배송비·관세를 주문 시 1회 결제, 받을 때 추가 청구 없음. 10~18일 도착.",
+  }, langFromSearch(await props.searchParams));
+}
 
 const C = {
   ko: {

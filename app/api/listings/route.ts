@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { pingIndexNow } from "@/lib/indexnow";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { translateListing } from "@/lib/translate";
 import { allow } from "@/lib/ratelimit";
@@ -62,5 +63,6 @@ export async function POST(req: Request) {
       description: translated.description,
     });
   }
+  void pingIndexNow([`/listings/${listing.id}`, "/sitemap.xml"]); // 네이버·빙 즉시 색인 (실패 무시)
   return NextResponse.json({ id: listing.id }, { status: 201 });
 }
