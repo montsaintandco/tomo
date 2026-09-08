@@ -72,9 +72,10 @@ export default async function Home(props: { searchParams: Promise<{ tab?: string
   // 허브용 데이터 — 국내 판매중 최신 12 + 상대국 직거래 가능 최신 8 (병렬)
   const [hubOwn, hubTravel] = hub
     ? await Promise.all([
-        supabase.from("listings").select(FEED_SELECT).eq("status", "active")
+        // 홈 허브는 사진 있는 상품만 — 사진 없는 시드·테스트 상품이 빈 마켓처럼 보이는 것을 막는다 (리스트 모드에는 그대로 보임)
+        supabase.from("listings").select(FEED_SELECT).eq("status", "active").not("images", "eq", "{}")
           .eq("country", viewer.country).order("bumped_at", { ascending: false }).limit(12),
-        supabase.from("listings").select(FEED_SELECT).eq("status", "active")
+        supabase.from("listings").select(FEED_SELECT).eq("status", "active").not("images", "eq", "{}")
           .neq("country", viewer.country).in("trade_method", ["direct", "both"])
           .order("bumped_at", { ascending: false }).limit(8),
       ])

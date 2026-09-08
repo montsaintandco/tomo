@@ -204,24 +204,38 @@ export default function HomeHub({ viewer, listings, travel }: {
             {listings.map((l) => <li key={l.id}><ListingCard listing={l} viewer={viewer} /></li>)}
           </ul>
         ) : (
-          <div className="flex flex-col items-center gap-2 py-8 text-center">
-            <TomoSymbol />
-            <p className="text-sm text-ink-soft">{t(lang, "empty.none")}</p>
-          </div>
+          /* 출시 초기 빈 상태 — 그리드 대신 한 줄 카드: "당신의 물건이 첫 상품" 이라는 초대 */
+          <Link href="/sell" className="press flex items-center gap-3 rounded-card border border-dashed border-tomo-navy/20 px-4 py-4">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-tomo-navy/5"><TomoSymbol className="h-5 w-7 opacity-70" /></span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[14px] font-bold text-ink">{t(lang, "hub.ownEmpty")}</span>
+              <span className="block text-[12px] text-ink-soft">{t(lang, "hub.ownEmptySub")}</span>
+            </span>
+            <span className="btn shrink-0 bg-tomo-navy px-3.5 py-2 text-[13px] text-white">{t(lang, "hub.sellCta")}</span>
+          </Link>
         )}
       </section>
 
       <SellPrompt viewer={viewer} />
 
-      {travel.length > 0 && (
-        <section className="mt-8" aria-label={t(lang, "hub.travel", { market: otherName })}>
-          <SectionHeader lang={lang} title={t(lang, "hub.travel", { market: otherName })} sub={t(lang, "hub.travelSub")}
-            href="/?tab=travel" linkLabel={t(lang, "hub.all")} />
+      <section className="mt-8" aria-label={t(lang, "hub.travel", { market: otherName })}>
+        <SectionHeader lang={lang} title={t(lang, "hub.travel", { market: otherName })} sub={t(lang, "hub.travelSub")}
+          href={travel.length > 0 ? "/?tab=travel" : "/travel"} linkLabel={travel.length > 0 ? t(lang, "hub.all") : t(lang, "hub.travelPlan")} />
+        {travel.length > 0 ? (
           <ul className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:mx-0 md:px-0">
             {travel.map((l) => <li key={l.id} className="w-[140px] shrink-0"><ListingCard listing={l} viewer={viewer} /></li>)}
           </ul>
-        </section>
-      )}
+        ) : (
+          /* 직거래 상품이 아직 없어도 차별점은 보여준다 — 여행 일정 등록으로 유도하는 한 줄 카드 */
+          <Link href="/travel" className="press flex items-center gap-3 rounded-card bg-[#eef2ff] px-4 py-4">
+            <span className="min-w-0 flex-1">
+              <span className="block text-[14px] font-bold text-ink">{t(lang, "hub.travelEmpty", { market: otherName })}</span>
+              <span className="block text-[12px] text-ink-soft">{t(lang, "hub.travelEmptySub")}</span>
+            </span>
+            <span className="shrink-0 text-[13px] font-bold text-tomo-coral-deep">{t(lang, "hub.travelPlan")} →</span>
+          </Link>
+        )}
+      </section>
 
       <Suspense fallback={<section className="mt-8" aria-hidden><ThemeSkeleton rows={3} /></section>}>
         <TrendingRest viewer={viewer} />
