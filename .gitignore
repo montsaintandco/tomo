@@ -42,3 +42,6 @@ next-env.d.ts
 
 # Claude Code skill symlinks (machine-local; source of truth is .agents/skills + skills-lock.json)
 /.claude/skills/
+
+# graphify knowledge graph (generated, 3MB)
+graphify-out/
