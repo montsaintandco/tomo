@@ -4,7 +4,7 @@ import { useTransition } from "react";
 import type { Lang } from "@/lib/i18n";
 
 // 브랜드 장치를 기능으로: 파란 말풍선 KR ⇄ 분홍 말풍선 JP. 쿠키 저장 후 서버 렌더를 새로 받는다
-function writeLangCookie(next: Lang) {
+export function writeLangCookie(next: Lang) {
   document.cookie = `tomo_lang=${next}; path=/; max-age=31536000; samesite=lax`;
 }
 

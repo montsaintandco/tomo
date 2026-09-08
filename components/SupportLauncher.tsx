@@ -8,6 +8,7 @@ const SupportBot = dynamic(() => import("@/components/SupportBot"), { ssr: false
 const PushToggle = dynamic(() => import("@/components/PushToggle"), { ssr: false });
 import { Wordmark } from "@/components/Brand";
 import { t, type Lang } from "@/lib/i18n";
+import { writeLangCookie } from "@/components/LangToggle";
 
 // 플로팅 문의 패널 — 사조(채널톡 메신저) 첫 화면 구조 그대로: 홈(브랜드·인사 미리보기·"문의하기" CTA) / 대화(내 문의 목록·새 문의) / 설정(언어·알림·연락처).
 // 문의하기를 누르면 봇 채팅으로. 채팅방·인증·어드민·고객센터(인라인 봇)에서는 숨김
@@ -34,7 +35,7 @@ export default function SupportLauncher({ lang, loggedIn }: { lang: Lang; logged
 
   const show = () => { setOpen(true); setTab("home"); setBotOpen(false); ref.current?.showModal(); };
   const close = () => { ref.current?.close(); setOpen(false); };
-  const setLang = (next: Lang) => { if (next === lang) return; document.cookie = `tomo_lang=${next}; path=/; max-age=31536000; samesite=lax`; router.refresh(); };
+  const setLang = (next: Lang) => { if (next === lang) return; writeLangCookie(next); router.refresh(); };
   const tabBtn = (id: Tab, label: string, icon: React.ReactNode) => (
     <button type="button" onClick={() => { setTab(id); setBotOpen(false); }} aria-current={tab === id ? "page" : undefined}
       className={`press flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-bold ${tab === id ? "text-tomo-coral-deep" : "text-ink-soft"}`}>
