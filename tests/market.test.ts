@@ -17,8 +17,8 @@ describe("market http retry policy", () => {
 });
 
 describe("market sources", () => {
-  it("has all four markets live-parseable", () => {
-    expect(LIVE_SOURCES).toEqual(["mercari", "yahoo_auction", "daangn", "joongna"]);
+  it("lists the live-parseable markets (yahoo_auction paused, yahoo_flea live)", () => {
+    expect(LIVE_SOURCES).toEqual(["mercari", "yahoo_flea", "daangn", "joongna"]);
   });
 
   it("maps each source to its market currency (drives search language)", () => {
