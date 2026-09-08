@@ -16,7 +16,8 @@ export const company = {
   hosting: "Vercel Inc.",
 };
 
-export const companyComplete = !!(company.name && company.ceo && company.bizNo && company.address && company.phone && company.email);
+// Organization JSON-LD 출력 조건 — 전화는 선택(contactPoint에 있으면 포함). 심사용 전화 표기는 푸터 "준비 중"이 따로 알린다
+export const companyComplete = !!(company.name && company.ceo && company.bizNo && company.address && company.email);
 
 // 공정위 사업자정보확인 링크 (사업자등록번호 있을 때만)
 export const bizLookupUrl = company.bizNo

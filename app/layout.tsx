@@ -16,6 +16,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import { getRequestLang } from "@/lib/locale";
 import { t } from "@/lib/i18n";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { preconnect } from "react-dom";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -39,6 +40,9 @@ export const viewport: Viewport = { themeColor: "#FFFFFF", viewportFit: "cover" 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   // 뷰어 언어가 문서 언어다 — 스크린리더 발음·폰트 셰이핑·번역 방향의 기준
   const lang = await getRequestLang();
+  // 홈 히어로·캐러셀 썸네일은 외부 마켓 CDN — 모바일 LCP를 끄는 첫 이미지의 DNS·TLS를 HTML 단계에서 미리 연다
+  preconnect("https://static.mercdn.net");
+  preconnect("https://auc-pctr.c.yimg.jp");
   // 안읽은 채팅 수 — 로그인 시에만, 실패(미적용 마이그레이션 등)면 0
   let unread = 0;
   let cartCount = 0;
