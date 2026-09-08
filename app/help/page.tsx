@@ -35,7 +35,7 @@ const C = {
       ["為替はどう適用されますか？", "決済時点のレートで計算します。詳細ページの金額は現在レートです。"],
       ["受け取り時に関税を別途払いますか？", "いいえ。通関・関税の項目に含まれているため、お受け取り時に追加で支払う金額はありません。"],
       ["現地配送費は別にかかりますか？", "ほとんど無料ですが、一部の販売元では現地配送費がかかります。その場合は注文画面に「現地配送費」として別途表示され、送料無料条件を満たしていたり二重請求があれば確認後に返金します。"],
-      ["配送はどれくらいかかりますか？", "約10〜14日です。販売元発送・現地移動4〜6日、国際配送・受け取り6〜8日。マイページの注文で段階ごとの状態を確認できます。"],
+      ["配送はどれくらいかかりますか？", "約10〜18日です。出品者発送4〜7日、センター検品1〜2日、国際配送・通関4〜7日。マイページの注文で段階ごとの状態を確認できます。"],
       ["通関の進行はどこで確認できますか？", "韓国は関税庁UNI-PASS（unipass.customs.go.kr）で個人通関固有番号または追跡番号で照会できます。税関から追加書類を求められたらチャットでご連絡ください。代わりに対応します。"],
       ["注文のキャンセルはできますか？", "決済待ちの状態ならマイページでキャンセルできます。決済後はすぐに現地で買い付けるため、都合によるキャンセルはできません。販売元の都合でキャンセルになった場合は全額返金します。"],
       ["表示された金額がおかしいです。", "チャットでお知らせください。注文前なら商品URL、注文後なら注文番号と商品名を送っていただければ確認してご案内します。"],
@@ -51,8 +51,14 @@ export default async function HelpPage() {
   const { data: auth } = await (await createServerSupabase()).auth.getUser();
   const loggedIn = !!auth.user;
   const c = C[lang];
+  // FAQPage 구조화 데이터 — 화면의 Q&A와 동일 텍스트
+  const faqLd = {
+    "@context": "https://schema.org", "@type": "FAQPage",
+    mainEntity: c.faq.map(([q, a]) => ({ "@type": "Question", name: q, acceptedAnswer: { "@type": "Answer", text: a } })),
+  };
   return (
     <main className="mx-auto max-w-3xl px-4 py-8 md:px-6 md:py-12">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }} />
       <h1 className="text-[22px] font-extrabold text-ink md:text-3xl">{c.h1}</h1>
       <p className="mt-2 text-sm text-ink-soft">{c.sub}</p>
       {/* 사조식 봇을 고객센터 첫 화면에 — 버튼 트리로 답하고, 특정 주문은 상담원(채팅)으로 */}
@@ -71,8 +77,8 @@ export default async function HelpPage() {
       <div className="mt-3 divide-y divide-tomo-navy/10 rounded-card border border-tomo-navy/10">
         {c.faq.map(([q, a]) => (
           <details key={q} className="group px-4 py-3">
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-bold text-ink [&::-webkit-details-marker]:hidden">
-              {q}
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 [&::-webkit-details-marker]:hidden">
+              <h3 className="text-sm font-bold text-ink">{q}</h3>
               <span className="text-ink-soft transition-transform group-open:rotate-45" aria-hidden>+</span>
             </summary>
             <p className="reveal mt-2 text-[13px] leading-relaxed text-ink-soft">{a}</p>

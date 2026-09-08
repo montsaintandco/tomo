@@ -18,6 +18,7 @@ const ICONS: Record<string, React.ReactNode> = {
 const LINKS = [
   { href: "/", label: "nav.home" },
   { href: "/travel", label: "nav.travel" },
+  { href: "/guide", label: "nav.guide" },
   { href: "/about", label: "nav.about" },
   { href: "/categories", label: "nav.categories" },
   { href: "/help", label: "nav.help" },
