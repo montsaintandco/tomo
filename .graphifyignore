@@ -1,0 +1,5 @@
+# graphify: third-party skill docs are noise in the TOMO graph
+.agents/
+node_modules/
+.next/
+graphify-out/
