@@ -2,6 +2,7 @@ import { Suspense, cache } from "react";
 import Link from "next/link";
 import type { ViewerOrGuest } from "@/lib/listings";
 import { getTrendingSections, type TrendingSection } from "@/lib/market/trending";
+import { heroImage } from "@/lib/hero-image";
 import { getThemes } from "@/lib/market/themes";
 import { t, otherCountry, type Lang } from "@/lib/i18n";
 import { convertPrice, formatPrice } from "@/lib/currency";
@@ -75,7 +76,9 @@ async function HeroTiles({ viewer }: { viewer: ViewerOrGuest }) {
     const items = s.items.filter((it) => it.thumb && !it.soldOut && !it.auction && it.price > 0); // 0원(나눔·미정)은 최저가에서 제외
     const min = items.reduce((m, it) => Math.min(m, it.price), Infinity);
     const cover = items[0] ?? s.items.find((it) => it.thumb);
-    return cover ? { key: s.theme.key, label: label(s), href: `/global?q=${encodeURIComponent(label(s))}`, thumb: cover.thumb, min: Number.isFinite(min) ? min : null, currency: cover.currency } : null;
+    const fixed = heroImage(s.theme.key); // 지정 사진이 있으면 상품이 없어도 타일을 만든다
+    if (!cover && !fixed) return null;
+    return { key: s.theme.key, label: label(s), href: `/global?q=${encodeURIComponent(label(s))}`, thumb: fixed ?? cover!.thumb, min: Number.isFinite(min) ? min : null, currency: cover?.currency ?? "JPY" as const };
   }).filter((x): x is NonNullable<typeof x> => !!x).slice(0, 4);
   return (
     <>

@@ -16,12 +16,11 @@ const KR: MarketSource[] = ["daangn", "joongna"];
 export const TRENDING: Record<"KR" | "JP", TrendingTheme[]> = {
   // 한국 구매자가 일본 마켓에서 많이 찾는 것
   KR: [
+    // DB trending_themes(KR)와 동일 — 2026-09-10 사용자 지정 4종. 히어로 타일 사진은 public/hero/<key>.jpg
     { key: "pokemon-card", label: "포켓몬카드", labelJa: "ポケモンカード", term: "ポケモンカード", sources: JP },
-    { key: "film-camera", label: "필름카메라", labelJa: "フィルムカメラ", term: "フィルムカメラ", sources: JP },
-    { key: "ghibli", label: "지브리 굿즈", labelJa: "ジブリ グッズ", term: "ジブリ グッズ", sources: JP },
-    { key: "sanrio", label: "산리오", labelJa: "サンリオ", term: "サンリオ", sources: JP },
-    { key: "seiko-vintage", label: "세이코 빈티지 시계", labelJa: "セイコー ヴィンテージ", term: "セイコー 腕時計 ヴィンテージ", sources: JP },
-    { key: "anime-figure", label: "애니 피규어", labelJa: "アニメ フィギュア", term: "アニメ フィギュア", sources: JP },
+    { key: "chiikawa", label: "치이카와", labelJa: "ちいかわ", term: "ちいかわ", sources: JP },
+    { key: "luxury-brand", label: "중고명품", labelJa: "ブランド品", term: "ブランド バッグ 財布", sources: JP },
+    { key: "figure", label: "피규어", labelJa: "フィギュア", term: "フィギュア", sources: JP },
   ],
   // 일본 구매자가 한국 마켓에서 많이 찾는 것
   JP: [
