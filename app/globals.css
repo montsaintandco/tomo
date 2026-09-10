@@ -97,6 +97,8 @@ input[type="search"]::-webkit-search-cancel-button { display: none; } /* 커스�
       overlay var(--dur-sheet) allow-discrete, display var(--dur-sheet) allow-discrete;
   }
   dialog.sheet[open] { opacity: 1; transform: translateY(0); }
+  /* 닫힌 시트는 레이아웃에서 제거 — 유틸리티 `flex`가 UA의 dialog:not([open]){display:none}을 덮어써 투명한 채 탭을 가로채던 버그(모바일 히어로 타일) */
+  dialog.sheet:not([open]) { display: none; }
   dialog.sheet::backdrop { opacity: 0; transition: opacity var(--dur-sheet) ease, overlay var(--dur-sheet) allow-discrete, display var(--dur-sheet) allow-discrete; }
   dialog.sheet[open]::backdrop { opacity: 1; }
   @starting-style {
