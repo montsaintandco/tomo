@@ -1,7 +1,7 @@
 import { Suspense, cache } from "react";
 import Link from "next/link";
 import type { ViewerOrGuest } from "@/lib/listings";
-import { getTrendingSections, type TrendingSection } from "@/lib/market/trending";
+import { getFixedSections, type TrendingSection } from "@/lib/market/trending";
 import { heroImage } from "@/lib/hero-image";
 import { getThemes } from "@/lib/market/themes";
 import { t, otherCountry, type Lang } from "@/lib/i18n";
@@ -14,7 +14,8 @@ import { TomoSymbol } from "@/components/Brand";
 import CategoryChips from "@/components/CategoryChips";
 
 // 한 요청 안에서 두 Suspense 블록이 같은 프로미스를 공유한다 (테마 캐시는 별도로 1h)
-const getSections = cache((country: "KR" | "JP") => getTrendingSections(country));
+// 홈 키워드는 고정(코드 테이블). 어드민 큐레이션은 /global·카테고리 페이지에서만
+const getSections = cache((country: "KR" | "JP") => getFixedSections(country));
 
 function ThemeBlock({ section, viewer }: { section: TrendingSection; viewer: ViewerOrGuest }) {
   const lang: Lang = viewer.language;
@@ -122,7 +123,7 @@ function HeroSkeleton() {
 
 // 첫 테마 하나 — TOMO 상품 위에 "상대국에서 지금 인기"의 맛보기 (사기)
 async function TrendingLead({ viewer }: { viewer: ViewerOrGuest }) {
-  const sections = await getSections(viewer.country);
+  const sections = (await getSections(viewer.country)).filter((s) => s.items.length > 0);
   if (sections.length === 0) return null;
   const lang = viewer.language;
   const other = otherCountry(viewer.country);
@@ -137,7 +138,7 @@ async function TrendingLead({ viewer }: { viewer: ViewerOrGuest }) {
 
 // 나머지 테마 — TOMO 상품·팔기·여행 직거래 아래
 async function TrendingRest({ viewer }: { viewer: ViewerOrGuest }) {
-  const sections = (await getSections(viewer.country)).slice(1);
+  const sections = (await getSections(viewer.country)).filter((s) => s.items.length > 0).slice(1);
   if (sections.length === 0) return null;
   const lang = viewer.language;
   return (

@@ -5,7 +5,7 @@ import { yahooFleaSearch } from "./yahoo-flea";
 import { daangnSearch } from "./daangn";
 import { joongnaSearch } from "./joongna";
 import { translateTexts } from "@/lib/translate";
-import { pickTrendingItems, type TrendingTheme } from "./trending-data";
+import { pickTrendingItems, TRENDING, type TrendingTheme } from "./trending-data";
 import { getThemes } from "./themes";
 import { LIVE_SOURCES, SOURCE_CURRENCY, type MarketItem, type MarketSource } from "./types";
 
@@ -49,4 +49,11 @@ export async function getTrendingSections(country: "KR" | "JP", limitThemes = 4)
   const themes = (await getThemes(country)).slice(0, limitThemes);
   const items = await Promise.all(themes.map(cachedTheme));
   return themes.map((theme, i) => ({ theme, items: items[i] })).filter((s) => s.items.length > 0);
+}
+
+// 홈 히어로용 고정 키워드 — DB·캐시와 무관하게 코드 테이블(TRENDING) 순서 그대로, 상품이 0건이어도 키워드·타일은 남긴다
+export async function getFixedSections(country: "KR" | "JP", limitThemes = 4): Promise<TrendingSection[]> {
+  const themes = TRENDING[country].slice(0, limitThemes);
+  const items = await Promise.all(themes.map(cachedTheme));
+  return themes.map((theme, i) => ({ theme, items: items[i] }));
 }
