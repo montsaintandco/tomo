@@ -26,8 +26,12 @@ async function googleTranslate(texts: string[], from: Lang, to: Lang): Promise<s
     const out = j.map((item) =>
       typeof item === "string" ? item : Array.isArray(item) && typeof item[0] === "string" ? item[0] : ""
     );
-    if (out.length !== texts.length || out.some((s) => s.trim().length === 0)) return null;
-    return out.map((s) => s.trim());
+    if (out.length !== texts.length) return null;
+    // 일부 항목만 빈 문자열로 오는 경우가 있다 — 배치 전체를 버리면 10개 중 1개 때문에
+    // 나머지 9개도 원문으로 남는다. 빈 항목만 원문 유지하고, 전부 비었을 때만 실패로 본다.
+    const filled = out.map((s, i) => s.trim() || texts[i]);
+    if (out.every((s) => s.trim().length === 0)) return null;
+    return filled;
   } catch {
     return null;
   }

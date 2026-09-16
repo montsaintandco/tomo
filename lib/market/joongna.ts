@@ -16,11 +16,19 @@ async function fetchHtml(url: string, revalidate = 300): Promise<string> {
   return res.text();
 }
 
+// HTML 엔티티 복원 — 안 하면 제목에 "&amp;"가 그대로 노출되고 번역문에도 따라들어간다
+const NAMED: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " " };
+function decodeEntities(s: string): string {
+  return s.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (m, e: string) => {
+    if (e[0] !== "#") return NAMED[e.toLowerCase()] ?? m;
+    const n = e[1] === "x" || e[1] === "X" ? parseInt(e.slice(2), 16) : Number(e.slice(1));
+    return Number.isFinite(n) && n > 0 && n <= 0x10ffff ? String.fromCodePoint(n) : m;
+  });
+}
+
 // 태그·SVG 제거 후 순수 텍스트
 function textOf(html: string): string {
-  return html.replace(/<svg[\s\S]*?<\/svg>/g, " ")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/g, " ")
+  return decodeEntities(html.replace(/<svg[\s\S]*?<\/svg>/g, " ").replace(/<[^>]+>/g, " "))
     .replace(/\s+/g, " ")
     .trim();
 }
