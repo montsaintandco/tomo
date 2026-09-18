@@ -19,6 +19,7 @@ const securityHeaders = [
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self' https://*.tosspayments.com",
+      "report-uri /api/csp-report", // 없으면 Report-Only 위반이 어디에도 안 남는다
     ].join("; "),
   },
 ];
