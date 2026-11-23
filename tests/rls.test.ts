@@ -61,7 +61,7 @@ afterAll(async () => {
 
 describe("RLS", () => {
   it("blocks updating another user's profile", async () => {
-    const { data } = await bob.from("profiles").update({ nickname: "hacked" }).eq("id", aliceId).select();
+    const { data } = await bob.from("profiles").update({ nickname: "hacked" }).eq("id", aliceId).select("id"); // 0028: profiles는 열 단위 select라 select() 전체 열은 권한 오류
     expect(data).toEqual([]);
   });
 
