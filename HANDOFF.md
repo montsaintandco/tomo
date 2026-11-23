@@ -178,3 +178,15 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=<Supabase 대시보드 → Project Settings → AP
 - GNB를 사줘식으로(2026-09-04): 로고 | 검색창(키워드·URL, /global로 GET) | KR/JP·카트·로그인/채팅·마이·판매, 2열 내비 = 홈·서비스 소개(/about)·카테고리(/categories)·고객센터(/help, FAQ <details>)·공지사항(/notice, lib/notices.ts 코드 테이블). 홈 데스크톱의 페이지 검색창은 숨김(모바일은 유지). 푸터는 한 줄 메뉴 + 회사 정보로 축소(브랜드 밴드·설명 제거).
 - 속도(2026-09-04): 원인 = Vercel 함수가 미국(iad1)에서 서울 Supabase(ap-northeast-2)로 페이지당 직렬 5~7 RTT + Pretendard 2MB 통파일. 조치: `vercel.json` regions icn1(서울), 레이아웃 unread·카트 병렬, getViewer 프로필·환율·언어 병렬, Pretendard 다이나믹 서브셋 CSS(@import). 로그인 사용자 TTFB가 크게 줄어야 정상.
 - 결제 구조 사줘 역산 반영(2026-09-04): "수수료" 단어 제거. 상세는 상품 가격·총 상품 금액(상품 가격 + 현지 유통비 ₩0)·배송 예상(약 10~14일)·"주문 전 3가지 확인" 모달만. 배송비·통관은 장바구니·주문서에서: 상품 소계 → 국제 배송비 → **통관·관세** → 전체 금액 + "받으실 때 추가 청구 없음" ? 모달(비용 안내). 통관·관세 = 면세 한도(KRW 20만/JPY 1만) 이하 소계 10%, 초과 시 KR 관세 8%+부가세 10%(CIF) + 5%, JP 소비세 10% + 5% (`lib/fees.ts customsCharge`, DB `proxy_customs`, 마이그레이션 **0020** MCP 적용). 사줘 캡처(소계 1,410,657 → 통관·관세 337,276)를 ±2원으로 재현하는 테스트 포함. vitest 70, 파일 병렬 끔(alice 픽스처 경합).
+
+## 2026-11-23 호스팅 이전: Vercel → 아마존 Lightsail 도쿄(Coolify), 에어쉽과 같은 서버
+
+- 새 주소: **https://tomo.airship.click** (Cloudflare Proxied, airship.click 영역). Vercel(tomo-montsaintandcos-projects.vercel.app)은 되돌리기용으로 그대로 둔다.
+- 서버: `airship-tokyo-1` (57.182.181.165). Coolify 프로젝트 `tomo` / 앱 `tomo-image`(uuid `davjrdbsym90qkqzgmdt4zlu`, Docker Image `ghcr.io/montsaintandco/tomo:latest`, 포트 3000, 상태 점검 GET /robots.txt).
+- 빌드: `.github/workflows/server-image.yml` — master 푸시(md·docs·plans·supabase·.agents만 바뀐 푸시는 건너뜀) → `next build`(standalone) → `deploy/server.Dockerfile` 이미지 → ghcr. 수동은 Actions 「server-image」 Run workflow.
+- NEXT_PUBLIC_* 는 빌드 때 박히므로 저장소 Actions 변수(vars)에 있다. 서버 실행 비밀값(SUPABASE_SERVICE_ROLE_KEY·TOSS_*·VAPID_*)은 Coolify 환경변수에만 있다.
+- 배포: 서버 systemd `tomo-deploy-watch.timer`(1분) → `/usr/local/bin/tomo-deploy-watch`가 ghcr :latest 다이제스트 변화를 보면 Coolify API(10.0.1.1:8000)로 배포. 로그 `journalctl -t tomo-deploy`. Cloudflare 캐시는 안 비운다(정적 파일 해시 이름, 비우면 airship.click 전체가 비워짐).
+- 코드: Vercel 밖에서는 `output: "standalone"`, Vercel 애널리틱스 끔, 레이트리밋 IP는 `cf-connecting-ip` 먼저, 호스팅 표기(푸터·개인정보처리방침)는 AWS.
+- VAPID 키는 새로 만들었다(주소가 바뀌어 기존 구독은 어차피 못 씀).
+- **DB 주의**: Supabase tomo(`zftztnkczlblnkgaijzc`)는 10/27부터 일시정지(무료 2개 한도로 재개 막힘). 로그인·내 상품·채팅·결제 등 DB 기능은 새 주소에서도 안 된다. 외부 마켓 검색·번역·정적 페이지만 동작.
+- 되돌리기: Cloudflare에서 tomo 레코드 삭제, Coolify `tomo-image` 중지, `systemctl disable --now tomo-deploy-watch.timer`. Vercel은 그대로라 이전 주소는 계속 산다.
