@@ -1,0 +1,43 @@
+# master 푸시마다 서버용 이미지를 만들어 ghcr에 올린다. 서버 감시 타이머가 :latest 변화를 보고 Coolify에 배포한다.
+# NEXT_PUBLIC_* 는 빌드 때 박히므로 저장소 Actions 변수(vars)에서 읽는다. 비밀값은 Coolify 실행 환경변수에만 둔다.
+name: server-image
+on:
+  push:
+    branches: [master]
+    paths-ignore: ["docs/**", "plans/**", "supabase/**", ".agents/**", "**/*.md"]
+  workflow_dispatch:
+concurrency: { group: server-image, cancel-in-progress: true }
+permissions: { contents: read, packages: write }
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+      NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      NEXT_PUBLIC_SITE_URL: ${{ vars.NEXT_PUBLIC_SITE_URL }}
+      NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${{ vars.NEXT_PUBLIC_VAPID_PUBLIC_KEY }}
+      NEXT_PUBLIC_COMPANY_NAME: ${{ vars.NEXT_PUBLIC_COMPANY_NAME }}
+      NEXT_PUBLIC_COMPANY_CEO: ${{ vars.NEXT_PUBLIC_COMPANY_CEO }}
+      NEXT_PUBLIC_COMPANY_BIZ_NO: ${{ vars.NEXT_PUBLIC_COMPANY_BIZ_NO }}
+      NEXT_PUBLIC_COMPANY_MAIL_ORDER_NO: ${{ vars.NEXT_PUBLIC_COMPANY_MAIL_ORDER_NO }}
+      NEXT_PUBLIC_COMPANY_ADDRESS: ${{ vars.NEXT_PUBLIC_COMPANY_ADDRESS }}
+      NEXT_PUBLIC_COMPANY_PHONE: ${{ vars.NEXT_PUBLIC_COMPANY_PHONE }}
+      NEXT_PUBLIC_COMPANY_EMAIL: ${{ vars.NEXT_PUBLIC_COMPANY_EMAIL }}
+      NEXT_PUBLIC_COMPANY_HOURS: ${{ vars.NEXT_PUBLIC_COMPANY_HOURS }}
+      NEXT_PUBLIC_COMPANY_PRIVACY_OFFICER: ${{ vars.NEXT_PUBLIC_COMPANY_PRIVACY_OFFICER }}
+      NEXT_PUBLIC_COMPANY_RETURN_ADDRESS: ${{ vars.NEXT_PUBLIC_COMPANY_RETURN_ADDRESS }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm install --no-audit --no-fund
+      - run: npm run build
+      - uses: docker/login-action@v3
+        with: { registry: ghcr.io, username: "${{ github.actor }}", password: "${{ secrets.GITHUB_TOKEN }}" }
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/server.Dockerfile
+          push: true
+          tags: ghcr.io/montsaintandco/tomo:latest,ghcr.io/montsaintandco/tomo:${{ github.sha }}

@@ -13,5 +13,6 @@ export function allow(key: string, limit = 30, windowMs = 60_000): boolean {
 }
 
 export function clientIp(req: Request): string {
-  return (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown";
+  // Cloudflare 뒤에서는 x-forwarded-for 첫 값을 방문자가 꾸밀 수 있어 cf-connecting-ip를 먼저 본다
+  return req.headers.get("cf-connecting-ip") || (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown";
 }

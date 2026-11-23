@@ -98,8 +98,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           }) }} />
         )}
         {/* 익명 집계 애널리틱스 — 쿠키 없음, 개인정보처리방침의 "추적 쿠키 미사용"과 충돌 없음 */}
-        <Analytics />
-        <SpeedInsights />
+        {process.env.VERCEL && <><Analytics /><SpeedInsights /></>}
       </body>
     </html>
   );

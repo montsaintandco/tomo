@@ -13,7 +13,7 @@ export const company = {
   hours: v("NEXT_PUBLIC_COMPANY_HOURS"),         // 운영시간 (예: 평일 10:00–18:00, 주말·공휴일 휴무)
   privacyOfficer: v("NEXT_PUBLIC_COMPANY_PRIVACY_OFFICER"), // 개인정보보호책임자 (이름 · 이메일)
   returnAddress: v("NEXT_PUBLIC_COMPANY_RETURN_ADDRESS"),   // 반품(센터) 주소 — 심사 항목
-  hosting: "Vercel Inc.",
+  hosting: "Amazon Web Services Japan G.K.",
 };
 
 // Organization JSON-LD 출력 조건 — 전화는 선택(contactPoint에 있으면 포함). 심사용 전화 표기는 푸터 "준비 중"이 따로 알린다

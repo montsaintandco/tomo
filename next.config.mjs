@@ -27,6 +27,8 @@ const securityHeaders = [
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   poweredByHeader: false,
+  // Vercel 밖(도쿄 서버 Docker 이미지)에서는 node server.js 하나로 도는 standalone 출력
+  output: process.env.VERCEL ? undefined : "standalone",
   async headers() {
     return [{ source: "/(.*)", headers: securityHeaders }];
   },
