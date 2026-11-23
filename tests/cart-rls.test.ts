@@ -74,7 +74,8 @@ describe("proxy_orders", () => {
     const { data: reqs } = await alice.from("proxy_requests").select("id, status").eq("order_id", o.id);
     expect(reqs?.length).toBe(1);
     expect(reqs?.[0].status).toBe("requested");
-    const { data: p } = await alice.from("profiles").select("ship_name").eq("id", aliceId).single();
+    // 0028 이후 profiles.ship_* 는 본인도 열 단위로 못 읽는다 — 주문 스냅샷으로 확인
+    const { data: p } = await alice.from("proxy_orders").select("ship_name").eq("id", o.id).single();
     expect(p?.ship_name).toBe("앨리스");
     // 정리: 대기 주문 취소 → 하위 요청도 cancelled
     const { data: c } = await alice.rpc("cancel_proxy_order", { p_id: o.id });

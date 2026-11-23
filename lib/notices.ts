@@ -1,5 +1,29 @@
-// 공지사항 — 최신이 위. 사실만 적는다 (배포된 기능 기준)
-export type Notice = { date: string; title: { ko: string; ja: string }; body: { ko: string; ja: string } };
+// 공지사항 — 정본은 notices 표(0029, 어드민 /admin/notices). 아래 NOTICES 는 표가 없거나·DB 오류·0건일 때의 폴백.
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { rows } from "./safe";
+
+export type Notice = { id?: string; date: string; pinned?: boolean; title: { ko: string; ja: string }; body: { ko: string; ja: string } };
+export type NoticeRow = {
+  id: string; published_on: string; title_ko: string; title_ja: string; body_ko: string; body_ja: string;
+  pinned: boolean; is_published: boolean; created_at: string; updated_at: string;
+};
+export const NOTICE_COLS = "id, published_on, title_ko, title_ja, body_ko, body_ja, pinned, is_published, created_at, updated_at";
+
+/** /notice 목록 — 게시된 행(고정 먼저, 최신 먼저). 0건·오류면 코드 목록 */
+export async function loadNotices(supabase: SupabaseClient): Promise<Notice[]> {
+  try {
+    const res = await supabase.from("notices").select(NOTICE_COLS).eq("is_published", true)
+      .order("pinned", { ascending: false }).order("published_on", { ascending: false }).order("created_at", { ascending: false })
+      .limit(100).abortSignal(AbortSignal.timeout(3000));
+    const list = rows(res as unknown as { data: NoticeRow[] | null; error: { code?: string } | null });
+    if (list.length === 0) return NOTICES;
+    return list.map((r) => ({ id: r.id, date: r.published_on, pinned: r.pinned, title: { ko: r.title_ko, ja: r.title_ja }, body: { ko: r.body_ko, ja: r.body_ja } }));
+  } catch {
+    return NOTICES;
+  }
+}
+
+// 폴백 — 최신이 위. 사실만 적는다 (배포된 기능 기준). 0029 시드와 같은 내용
 
 export const NOTICES: Notice[] = [
   {

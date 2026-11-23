@@ -29,7 +29,7 @@ export default function ListingOwnerActions({ listingId, status, hidden, hiddenB
     const { error: e } = await createBrowserSupabase().from("listings").delete().eq("id", listingId);
     setBusy(false);
     if (e) { setError(t(lang, "own.fail")); return; }
-    router.push("/mypage"); router.refresh();
+    router.push("/mypage/sales"); router.refresh();
   }
 
   const chip = "press rounded-full bg-tomo-navy/5 px-3 py-1.5 text-[12px] font-bold text-tomo-navy disabled:opacity-45";

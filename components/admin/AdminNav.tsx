@@ -3,7 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Wordmark } from "@/components/Brand";
 
-export type NavCounts = { disputes: number; proxy: number; center: number; support: number };
+export type NavCounts = { disputes: number; proxy: number; center: number; support: number; refunds: number; payouts: number };
 
 const GROUPS: { label: string; items: { href: string; label: string; count?: keyof NavCounts }[] }[] = [
   { label: "운영", items: [
@@ -15,10 +15,15 @@ const GROUPS: { label: string; items: { href: string; label: string; count?: key
     { href: "/admin/center", label: "센터", count: "center" },
     { href: "/admin/support", label: "문의", count: "support" },
   ] },
+  { label: "정산", items: [
+    { href: "/admin/refunds", label: "환불", count: "refunds" },
+    { href: "/admin/payouts", label: "판매 정산·출금", count: "payouts" },
+  ] },
   { label: "카탈로그", items: [
     { href: "/admin/listings", label: "상품" },
     { href: "/admin/external", label: "외부 상품" },
     { href: "/admin/trending", label: "큐레이션" },
+    { href: "/admin/banners", label: "배너" },
   ] },
   { label: "사람", items: [
     { href: "/admin/users", label: "사용자" },
@@ -26,6 +31,8 @@ const GROUPS: { label: string; items: { href: string; label: string; count?: key
   ] },
   { label: "설정", items: [
     { href: "/admin/rates", label: "환율" },
+    { href: "/admin/notices", label: "공지" },
+    { href: "/admin/activity", label: "활동 기록" },
   ] },
 ];
 

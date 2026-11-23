@@ -2,8 +2,13 @@ import { createServerSupabase } from "@/lib/supabase/server";
 import { PageHeader, Panel, Table, Pill, fmtDate, money } from "@/components/admin/ui";
 import TxActions from "@/components/TxActions";
 import Link from "next/link";
+import { rows as safeRows } from "@/lib/safe";
 
-// 분쟁 큐 — 사유 확인 → 정산(완료) / 환불(취소). 행을 펼치면 처리 폼. 카드 환불은 tossCancel(lib/toss.ts)로 — 분쟁 확정 시 연결 예정
+const REFUND: Record<string, { label: string; tone: "amber" | "red" | "green" }> = {
+  pending: { label: "환불 대기", tone: "amber" }, failed: { label: "환불 실패", tone: "red" }, done: { label: "환불 완료", tone: "green" },
+};
+
+// 분쟁 큐 — 사유 확인 → 정산(완료) / 환불(취소). 행을 펼치면 처리 폼. 환불 취소는 /api/admin/cancel → refunds → 토스 취소(실패하면 /admin/refunds)
 export default async function AdminDisputesPage() {
   const supabase = await createServerSupabase();
   const { data } = await supabase.from("transactions")
@@ -16,6 +21,8 @@ export default async function AdminDisputesPage() {
     dispute_reason: string | null; dispute_resolution: string | null; updated_at: string;
     listings: { title: string } | null; buyer: { nickname: string } | null; seller: { nickname: string } | null;
   }[];
+  const refundRes = await supabase.from("refunds").select("transaction_id, status").eq("kind", "tx").in("transaction_id", rows.map((r) => r.id));
+  const refundOf = Object.fromEntries((safeRows(refundRes) as { transaction_id: string; status: string }[]).map((f) => [f.transaction_id, f.status]));
   const open = rows.filter((r) => r.status === "disputed");
   const closed = rows.filter((r) => r.status !== "disputed");
 
@@ -30,7 +37,8 @@ export default async function AdminDisputesPage() {
         <p className="whitespace-pre-wrap">{r.dispute_reason}</p>
         {r.dispute_resolution && <p className="a-muted mt-1 text-[12px]">처리: {r.dispute_resolution}</p>}
       </td>
-      <td><Pill tone={r.status === "disputed" ? "red" : r.status === "completed" ? "green" : "gray"}>{r.status === "disputed" ? "처리 필요" : r.status === "completed" ? "정산" : "환불"}</Pill></td>
+      <td><Pill tone={r.status === "disputed" ? "red" : r.status === "completed" ? "green" : "gray"}>{r.status === "disputed" ? "처리 필요" : r.status === "completed" ? "정산" : "환불"}</Pill>
+        {refundOf[r.id] && <span className="mt-1 block"><Pill tone={REFUND[refundOf[r.id]]?.tone}>{REFUND[refundOf[r.id]]?.label ?? refundOf[r.id]}</Pill></span>}</td>
       <td className="a-faint tnum whitespace-nowrap">{fmtDate(r.updated_at)}</td>
       <td className="min-w-[280px]">
         {expandable && (

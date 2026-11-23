@@ -12,6 +12,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import PayNotice from "@/components/PayNotice";
 import { Suspense } from "react";
+import { rows as safeRows } from "@/lib/safe";
 
 type TxDetail = {
   id: string; status: string; is_cross_border: boolean; meetup: boolean; center: string | null;
@@ -61,6 +62,16 @@ export default async function TransactionPage(props: { params: Promise<{ id: str
   const isParty = role === "buyer" || role === "seller";
   const total = buyerTotal(tx.item_price, tx.is_cross_border ? tx.intl_shipping_fee : 0);
 
+  // 취소 사유·환불(0025) — 별도 조회, 마이그레이션 전에는 비어 있음. 판매자는 환불 행을 RLS로 못 봄
+  const [cancelRes, refundRes] = tx.status === "cancelled"
+    ? await Promise.all([
+      supabase.from("transactions").select("cancel_reason").eq("id", tx.id),
+      supabase.from("refunds").select("amount, currency, status").eq("kind", "tx").eq("transaction_id", tx.id),
+    ])
+    : [{ data: [], error: null }, { data: [], error: null }];
+  const cancelReason = (safeRows(cancelRes) as { cancel_reason: string | null }[])[0]?.cancel_reason ?? null;
+  const refund = (safeRows(refundRes) as { amount: number; currency: Currency; status: string }[])[0];
+
   let alreadyReviewed = false;
   if (tx.status === "completed" && isParty) {
     const { data: mine } = await supabase.from("reviews")
@@ -100,6 +111,18 @@ export default async function TransactionPage(props: { params: Promise<{ id: str
           {tx.dispute_reason && <p><span className="font-bold text-tomo-rose">{t(lang, "dispute.reasonLabel")}:</span> {tx.dispute_reason}</p>}
           {tx.dispute_resolution && <p className="mt-1"><span className="font-bold text-tomo-navy">{t(lang, "dispute.resolution")}:</span> {tx.dispute_resolution}</p>}
           {tx.status === "disputed" && !tx.dispute_resolution && <p className="mt-1 text-[12px] text-ink-soft">{t(lang, "dispute.opened")}</p>}
+        </div>
+      )}
+
+      {(cancelReason || refund) && (
+        <div className="mb-4 rounded-card bg-tomo-navy/5 p-3.5 text-[13px] leading-relaxed text-ink">
+          {cancelReason && <p><span className="font-bold">{t(lang, "refund.cancelReasonLabel")}:</span> {cancelReason}</p>}
+          {refund && (
+            <p className="mt-1 flex justify-between gap-3">
+              <span className="text-ink-soft">{t(lang, "refund.amountLine")} · {t(lang, refund.status === "done" ? "refund.status.done" : "refund.status.pending")}</span>
+              <span className="tnum font-bold text-tomo-navy">{formatPrice(refund.amount, refund.currency)}</span>
+            </p>
+          )}
         </div>
       )}
 

@@ -190,3 +190,15 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=<Supabase 대시보드 → Project Settings → AP
 - VAPID 키는 새로 만들었다(주소가 바뀌어 기존 구독은 어차피 못 씀).
 - **DB 주의**: Supabase tomo(`zftztnkczlblnkgaijzc`)는 10/27부터 일시정지(무료 2개 한도로 재개 막힘). 로그인·내 상품·채팅·결제 등 DB 기능은 새 주소에서도 안 된다. 외부 마켓 검색·번역·정적 페이지만 동작.
 - 되돌리기: Cloudflare에서 tomo 레코드 삭제, Coolify `tomo-image` 중지, `systemctl disable --now tomo-deploy-watch.timer`. Vercel은 그대로라 이전 주소는 계속 산다.
+## 2026-11-23 — 에어쉽·키라팝 기능 이식 (마이페이지·어드민 포함)
+
+설계서: `docs/port-plan-2026-11-23.md`(이식 목록·제외 이유·DB·파일 소유). Ren 지시 「airship·키라팝 기능 중 tomo 이식할 것 전부, 마이페이지·어드민 포함」.
+
+- **환불·취소(0025)**: 토스 실환불 연결(`lib/refunds.ts`, `/api/admin/cancel`, `/api/admin/refunds`). 순서는 DB 상태 변경 + `refunds` pending → 토스 취소(Idempotency-Key=환불 id) → `refund_mark`. 실패·키 없음은 `/admin/refunds` 대기열에서 「다시 시도」. 관리자 거래 취소·강제 구매확정, 관리자 대행 취소(환불액 미리보기·상한 안 수정), 고객 결제 후 취소 요청, 활동 기록 `/admin/activity`(`admin_actions`).
+- **판매 정산·출금(0026)**: `seller_ledger`(완료 거래 트리거로 sale 적립), 출금 계좌·신청(`/mypage/payouts`), 어드민 `/admin/payouts`(지급 완료·반려·수동 조정·미지급 합계), 회원 상세 `/admin/users/[id]`.
+- **마이페이지 셸·알림·주소록·탈퇴(0027·0028)**: `/mypage` 하위 10메뉴(구매·판매·가격제안·정산·찜·알림·문의·배송지·설정), 20건씩 더보기. 알림은 DB 트리거가 `notifications`에 kind만 넣고 문구는 i18n `notif.<kind>`. 헤더 벨(데스크톱)·마이 아이콘 점(모바일). 주소록(복수 배송지·기본·KR 통관부호, `profiles`에는 통관부호 안 둠). 탈퇴는 `account_blockers()`로 진행 거래·환불·정산 잔액·출금 신청이 있으면 409. **0028은 `profiles` select를 열 단위로 바꿔 `ship_*` 공개 조회를 막는다**(이전엔 anon 키로 누구나 배송지를 읽을 수 있었음).
+- **배너·공지(0029)**: `banners`(KR/JP/ALL·기간·순서·storage `banners` 버킷) → 홈 `BannerStrip`, `/admin/banners`. 공지 DB화 `/admin/notices`, `/notice`는 DB 오류·0건이면 `lib/notices.ts`로 폴백.
+- **공용**: `lib/safe.ts`(`rows`·`tableMissing`) — 새 표가 없어도 화면이 죽지 않는다. i18n은 `lib/i18n-port/*.ts` 조각을 `lib/i18n.ts`의 `D`에 펼침. 어드민 내비에 「정산」 그룹(환불·판매 정산·출금, 카운트), 배너·공지·활동 기록 추가. 대시보드에 「돈 처리 대기」 줄.
+- **제외**(이유는 설계서 2절): 바우처 충전·멤버십·등급·추천인·경매 자동입찰·3PL·홍보 레이더·AI 상담·알림톡/메일.
+- **검증**: tsc 0, eslint 오류 0, 순수 함수 vitest 9파일 64개 통과, `next build` 성공. **DB 일시정지라 0025~0029는 미적용·미실행.** DB를 쓰는 기존 테스트(escrow·rls·cart 등)는 돌리지 못함.
+- **DB 재개 후 할 일**: ① 0025→0026→0027→0028→0029 순서로 대시보드 SQL 적용(각각 `begin … rollback`으로 먼저 검증) ② 실환불은 토스 테스트 키로 부분·전액 1회씩 확인한 뒤 켠다 ③ 0028 뒤 `tests/cart-rls.test.ts`(주문 스냅샷으로 바꿈) 포함 전체 vitest ④ 배너 업로드→홈 노출(KR·JP), 공지 작성→/notice 반영.

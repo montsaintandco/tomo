@@ -8,7 +8,7 @@ export default async function AdminHome() {
   const today = todayIso();
   const cnt = (q: PromiseLike<{ count: number | null }>) => q.then((r) => r.count ?? 0);
 
-  const [activeListings, users, openTx, disputes, proxyWait, centerWait, newListings, newUsers, paidOrders, disputeRows, proxyRows, centerRows] = await Promise.all([
+  const [activeListings, users, openTx, disputes, proxyWait, centerWait, newListings, newUsers, paidOrders, disputeRows, proxyRows, centerRows, refundWait, payoutWait, cancelReq] = await Promise.all([
     cnt(supabase.from("listings").select("id", { count: "exact", head: true }).eq("status", "active").eq("hidden", false)),
     cnt(supabase.from("profiles").select("id", { count: "exact", head: true }).eq("suspended", false)),
     cnt(supabase.from("transactions").select("id", { count: "exact", head: true }).not("status", "in", "(completed,cancelled,pending_payment)")),
@@ -24,6 +24,10 @@ export default async function AdminHome() {
       .in("status", ["requested", "approved", "paid", "purchasing", "center_received"]).order("created_at", { ascending: true }).limit(6),
     supabase.from("transactions").select("id, status, center, updated_at, listings(title)")
       .in("status", ["shipped_to_center", "center_received"]).order("updated_at", { ascending: true }).limit(6),
+    // 0025·0026 미적용이면 오류 → 0
+    cnt(supabase.from("refunds").select("id", { count: "exact", head: true }).in("status", ["pending", "failed"])),
+    cnt(supabase.from("payouts").select("id", { count: "exact", head: true }).eq("status", "requested")),
+    cnt(supabase.from("proxy_requests").select("id", { count: "exact", head: true }).eq("status", "paid").not("cancel_requested_at", "is", null)),
   ]);
 
   type Row = { id: string; status: string; updated_at?: string; created_at?: string; item_price?: number; currency?: string; center?: string | null; dispute_reason?: string | null;
@@ -44,6 +48,14 @@ export default async function AdminHome() {
         <Kpi label="센터 대기" value={centerWait} href="/admin/center" alert />
       </div>
 
+      {refundWait + payoutWait + cancelReq > 0 && (
+        <div className="a-panel mb-4 flex flex-wrap items-center gap-x-5 gap-y-2 px-4 py-3 text-[13px]">
+          <span className="font-semibold">돈 처리 대기</span>
+          {refundWait > 0 && <Link href="/admin/refunds" className="a-link">환불 대기·실패 {refundWait}건 →</Link>}
+          {payoutWait > 0 && <Link href="/admin/payouts" className="a-link">출금 신청 {payoutWait}건 →</Link>}
+          {cancelReq > 0 && <Link href="/admin/proxy?f=cancelreq" className="a-link">대행 취소 요청 {cancelReq}건 →</Link>}
+        </div>
+      )}
       <div className="grid gap-4 lg:grid-cols-2">
         <Panel title="분쟁" count={disputes} actions={<Link href="/admin/disputes" className="a-link text-[12px]">전체 →</Link>}>
           <Table head={["상품", "구매자", "금액", "사유", "갱신"]} empty="처리할 분쟁이 없어요">

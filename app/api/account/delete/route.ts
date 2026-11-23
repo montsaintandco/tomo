@@ -1,16 +1,28 @@
 import { NextResponse } from "next/server";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { createAdminSupabase } from "@/lib/supabase/admin";
+import { tableMissing } from "@/lib/safe";
 
 // 본인 계정 삭제. 1) 익명화·상품 숨김(deactivate_my_account) 2) service_role 키가 있으면 auth 계정 완전 삭제.
 // 키가 없으면 비활성화만 되고 202로 알린다 (키 투입 후 자동으로 완전 삭제로 승격)
+// 0028 적용 후: 진행 거래·대행·환불·정산 잔액·출금 신청이 있으면 409 + 차단 사유 목록. RPC가 없으면 기존 동작
 export async function POST(req: Request) {
   const supabase = await createServerSupabase();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
+  const blk = await supabase.rpc("account_blockers");
+  if (blk.error && !tableMissing(blk.error)) return NextResponse.json({ error: blk.error.message }, { status: 400 });
+  const blockers = Array.isArray(blk.data) ? (blk.data as { code: string; n: number }[]) : [];
+  if (blockers.length > 0) return NextResponse.json({ error: "blocked", blockers }, { status: 409 });
+
   const { label } = await req.json().catch(() => ({ label: "탈퇴한 사용자" }));
   const { error } = await supabase.rpc("deactivate_my_account", { p_label: String(label ?? "탈퇴한 사용자").slice(0, 40) });
+  // 사이에 상태가 바뀌어 RPC가 막은 경우
+  if (error?.message?.includes("blocked")) {
+    const again = await supabase.rpc("account_blockers");
+    return NextResponse.json({ error: "blocked", blockers: Array.isArray(again.data) ? again.data : [] }, { status: 409 });
+  }
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {

@@ -6,6 +6,7 @@ import { t, type Lang } from "@/lib/i18n";
 
 type Role = "buyer" | "seller" | "admin" | "other";
 const DISPUTABLE = ["paid", "shipped", "shipped_to_center", "center_received", "shipped_international", "delivered"];
+const ADMIN_CANCELABLE = ["paid", "shipped_to_center", "center_received"];   // DB admin_cancel_transaction과 정합
 
 export default function TxActions({
   txId, status, isCrossBorder, role, meetup = false, lang = "ko",
@@ -17,6 +18,8 @@ export default function TxActions({
   const [disputeOpen, setDisputeOpen] = useState(false);
   const [reason, setReason] = useState("");
   const [note, setNote] = useState("");
+  const [notice, setNotice] = useState("");
+  const [cancelReason, setCancelReason] = useState("");
   const router = useRouter();
   const working = busy || isPending;
   const isParty = role === "buyer" || role === "seller";
@@ -54,7 +57,24 @@ export default function TxActions({
 
   const canDispute = isParty && DISPUTABLE.includes(status);
   const canResolve = role === "admin" && status === "disputed";
-  if (!action && !canDispute && !canResolve) return null;
+  const canAdminCancel = role === "admin" && ADMIN_CANCELABLE.includes(status);
+  const canForceComplete = role === "admin" && status === "delivered";
+
+  // 운영자 처리(환불이 걸린 일)는 서버 라우트로 — DB 상태 변경 후 토스 취소, 실패하면 환불 대기열
+  async function adminCall(body: Record<string, unknown>) {
+    if (!confirm(t(lang, "refund.confirm"))) return false;
+    setBusy(true); setError(""); setNotice("");
+    const res = await fetch("/api/admin/cancel", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const j = await res.json().catch(() => ({}));
+    setBusy(false);
+    if (!res.ok) { setError(String(j.error ?? res.status)); return false; }
+    setNotice(!j.refund ? t(lang, "refund.msgOk")
+      : j.refund.status === "done" ? t(lang, "refund.msgDone") : t(lang, "refund.msgQueued", { error: String(j.refund.error ?? "") }));
+    startTransition(() => router.refresh());
+    return true;
+  }
+
+  if (!action && !canDispute && !canResolve && !canAdminCancel && !canForceComplete && !notice && !error) return null;
 
   return (
     <div className="flex flex-col gap-2">
@@ -107,18 +127,54 @@ export default function TxActions({
             className="rounded-full bg-white px-4 py-2.5 text-base placeholder:text-ink-soft" />
           <div className="flex gap-2">
             <button type="button" disabled={working}
-              onClick={() => rpc("resolve_dispute", { p_tx_id: txId, p_to: "cancelled", p_note: note.trim() })}
+              onClick={() => adminCall({ type: "dispute", id: txId, to: "cancelled", reason: note.trim() })}
               className="btn flex-1 border-[1.5px] border-tomo-navy bg-white py-2.5 text-[13px] text-tomo-navy">
               {t(lang, "dispute.resolveRefund")}
             </button>
             <button type="button" disabled={working}
-              onClick={() => rpc("resolve_dispute", { p_tx_id: txId, p_to: "completed", p_note: note.trim() })}
+              onClick={() => adminCall({ type: "dispute", id: txId, to: "completed", reason: note.trim() })}
               className="btn flex-1 bg-tomo-coral-deep py-2.5 text-[13px] text-white">
               {t(lang, "dispute.resolveRelease")}
             </button>
           </div>
         </div>
       )}
+      {/* 운영자 거래 취소 — 결제 후 센터 단계까지, 결제 금액 전부 환불 */}
+      {canAdminCancel && (
+        <details className="rounded-card bg-tomo-navy/5 p-3">
+          <summary className="cursor-pointer text-[13px] font-bold text-tomo-rose">{t(lang, "refund.adminCancelTx")}</summary>
+          <div className="reveal mt-2 flex flex-col gap-2">
+            <p className="text-[12px] text-ink-soft">{t(lang, "refund.adminCancelTxNote")}</p>
+            <input value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} maxLength={1000}
+              placeholder={t(lang, "refund.reasonPh")}
+              className="rounded-full bg-white px-4 py-2.5 text-base placeholder:text-ink-soft" />
+            <button type="button" disabled={working || !cancelReason.trim()}
+              onClick={() => adminCall({ type: "tx", id: txId, reason: cancelReason.trim() })}
+              className="btn bg-tomo-rose py-2.5 text-sm text-white">
+              {working ? t(lang, "act.working") : t(lang, "refund.adminCancelTx")}
+            </button>
+          </div>
+        </details>
+      )}
+
+      {/* 운영자 강제 구매확정 — 배송 도착 후 구매자가 확인을 안 할 때 */}
+      {canForceComplete && (
+        <details className="rounded-card bg-tomo-navy/5 p-3">
+          <summary className="cursor-pointer text-[13px] font-bold text-tomo-navy">{t(lang, "refund.adminComplete")}</summary>
+          <div className="reveal mt-2 flex flex-col gap-2">
+            <p className="text-[12px] text-ink-soft">{t(lang, "refund.adminCompleteNote")}</p>
+            <input value={note} onChange={(e) => setNote(e.target.value)} maxLength={1000}
+              placeholder={t(lang, "refund.notePh")}
+              className="rounded-full bg-white px-4 py-2.5 text-base placeholder:text-ink-soft" />
+            <button type="button" disabled={working}
+              onClick={() => adminCall({ type: "complete", id: txId, reason: note.trim() })}
+              className="btn bg-tomo-coral-deep py-2.5 text-sm text-white">
+              {working ? t(lang, "act.working") : t(lang, "refund.adminComplete")}
+            </button>
+          </div>
+        </details>
+      )}
+      {notice && <p role="status" className="text-xs text-tomo-navy">{notice}</p>}
       {error && <p role="alert" className="text-xs text-tomo-rose">{error}</p>}
     </div>
   );

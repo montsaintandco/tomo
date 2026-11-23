@@ -41,7 +41,7 @@ export default async function AdminUsersPage(props: { searchParams: Promise<{ q?
           {rows.map((u) => (
             <tr key={u.id}>
               <td>
-                <Link href={`/profile/${u.id}`} className="flex items-center gap-2">
+                <Link href={`/admin/users/${u.id}`} className="flex items-center gap-2">
                   <Avatar name={u.nickname} />
                   <span className="a-link">{u.nickname}</span>
                 </Link>

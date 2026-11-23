@@ -27,12 +27,32 @@ export async function tossConfirm(secretKey: string, body: { paymentKey: string;
   return { ok: false, error: { code: String(j.code ?? "UNKNOWN"), message: String(j.message ?? "") } };
 }
 
-// 전액 취소(환불). 분쟁·판매자 취소에서 사용. 부분 취소는 cancelAmount 추가
-export async function tossCancel(secretKey: string, paymentKey: string, reason: string): Promise<boolean> {
+// 결제 조회 — 부분 환불 전에 토스 잔액(balanceAmount)을 확인해 초과 취소를 막는다
+export type TossPayment = { totalAmount: number; balanceAmount: number; status: string };
+export async function tossPayment(secretKey: string, paymentKey: string):
+  Promise<{ ok: true; payment: TossPayment } | { ok: false; error: TossError }> {
+  const res = await fetch(`${API}/payments/${encodeURIComponent(paymentKey)}`, { headers: auth(secretKey), cache: "no-store" });
+  const j = await res.json().catch(() => ({}));
+  if (!res.ok) return { ok: false, error: { code: String(j.code ?? "UNKNOWN"), message: String(j.message ?? "") } };
+  return { ok: true, payment: { totalAmount: Number(j.totalAmount) || 0, balanceAmount: Number(j.balanceAmount) || 0, status: String(j.status ?? "") } };
+}
+
+// 취소(환불). cancelAmount 없으면 남은 잔액 전부. idempotencyKey(= refunds.id)로 재시도해도 두 번 취소되지 않는다
+export async function tossCancel(secretKey: string, paymentKey: string, reason: string,
+  opts: { cancelAmount?: number; idempotencyKey?: string } = {}):
+  Promise<{ ok: true; canceledKrw: number | null } | { ok: false; error: TossError }> {
+  const headers: Record<string, string> = auth(secretKey);
+  if (opts.idempotencyKey) headers["Idempotency-Key"] = opts.idempotencyKey;
+  const body: Record<string, unknown> = { cancelReason: reason.slice(0, 200) || "환불" };
+  if (opts.cancelAmount != null) body.cancelAmount = opts.cancelAmount;
   const res = await fetch(`${API}/payments/${encodeURIComponent(paymentKey)}/cancel`, {
-    method: "POST", headers: auth(secretKey), body: JSON.stringify({ cancelReason: reason.slice(0, 200) }), cache: "no-store",
+    method: "POST", headers, body: JSON.stringify(body), cache: "no-store",
   });
-  return res.ok;
+  const j = await res.json().catch(() => ({}));
+  if (!res.ok) return { ok: false, error: { code: String(j.code ?? "UNKNOWN"), message: String(j.message ?? "") } };
+  const cancels = Array.isArray(j.cancels) ? j.cancels : [];
+  const last = cancels[cancels.length - 1];
+  return { ok: true, canceledKrw: last ? Number(last.cancelAmount) || null : null };
 }
 
 // 청구 금액(KRW). KRW면 그대로, JPY면 환율표로 환산. 환율표가 없으면 결제를 열지 않는다(null)

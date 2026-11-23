@@ -105,7 +105,7 @@ export const NODES: Record<string, Node> = {
       ["결제 전 주문은 주문 페이지에서 바로 취소할 수 있어요.", "결제 후에는 TOMO가 아직 구매하기 전이면 취소·전액 환불이 돼요. 이미 구매가 끝났으면 상담원 연결로 문의해 주세요."],
       ["決済前の注文は注文ページからすぐキャンセルできます。", "決済後はTOMOがまだ購入していなければキャンセル・全額返金できます。すでに購入済みの場合は担当者につないでください。"],
     ],
-    related: ["refund"], link: { href: "/mypage", label: ["주문 보기", "注文を見る"] },
+    related: ["refund"], link: { href: "/mypage/orders", label: ["주문 보기", "注文を見る"] },
   },
   billAfter: {
     id: "billAfter", label: ["청구 금액에 대해 알고 싶어요", "請求金額について知りたい"],

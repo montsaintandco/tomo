@@ -1,6 +1,14 @@
 import { createServerSupabase } from "@/lib/supabase/server";
 import { PageHeader, Panel, Table, Pill, FilterTabs, TX_META, fmtDate, money } from "@/components/admin/ui";
 import Link from "next/link";
+import TxActions from "@/components/TxActions";
+import { rows as safeRows } from "@/lib/safe";
+
+// 운영자가 이 화면에서 바로 처리하는 상태: 취소·환불(결제~센터 입고), 센터 입고·국제 발송, 강제 구매확정(배송 도착)
+const ACTIONABLE = ["paid", "shipped_to_center", "center_received", "delivered"];
+const REFUND: Record<string, { label: string; tone: "amber" | "red" | "green" }> = {
+  pending: { label: "환불 대기", tone: "amber" }, failed: { label: "환불 실패", tone: "red" }, done: { label: "환불 완료", tone: "green" },
+};
 
 const OPEN = ["paid", "shipped", "shipped_to_center", "center_received", "shipped_international", "delivered"];
 const FILTERS = [
@@ -22,21 +30,37 @@ export default async function AdminTransactionsPage(props: { searchParams: Promi
     id: string; status: string; is_cross_border: boolean; meetup: boolean; center: string | null; item_price: number; currency: string; updated_at: string;
     listings: { title: string } | null; buyer: { nickname: string } | null; seller: { nickname: string } | null;
   }[];
+  const cancelledIds = rows.filter((r) => r.status === "cancelled").map((r) => r.id);
+  const refundRes = cancelledIds.length
+    ? await supabase.from("refunds").select("transaction_id, status").eq("kind", "tx").in("transaction_id", cancelledIds)
+    : { data: [], error: null };
+  const refundOf = Object.fromEntries((safeRows(refundRes) as { transaction_id: string; status: string }[]).map((f) => [f.transaction_id, f.status]));
 
   return (
     <>
       <PageHeader title="거래" sub="에스크로 거래 전체. 최근 갱신순 100건" />
       <FilterTabs base="/admin/transactions" param="status" options={FILTERS} current={status} />
       <Panel>
-        <Table head={["상품", "구매자 → 판매자", "금액", "유형", "상태", "갱신"]}>
+        <Table head={["상품", "구매자 → 판매자", "금액", "유형", "상태", "갱신", ""]}>
           {rows.map((r) => (
             <tr key={r.id}>
               <td><Link href={`/transactions/${r.id}`} className="a-link block max-w-[260px] truncate">{r.listings?.title ?? "—"}</Link></td>
               <td className="whitespace-nowrap">{r.buyer?.nickname} <span className="a-faint">→</span> {r.seller?.nickname}</td>
               <td className="tnum whitespace-nowrap">{money(r.item_price, r.currency)}</td>
               <td className="a-muted whitespace-nowrap">{r.meetup ? "만남" : r.is_cross_border ? `국제 · ${r.center === "NARITA" ? "나리타" : "서울"}` : "국내"}</td>
-              <td><Pill tone={TX_META[r.status]?.tone}>{TX_META[r.status]?.label ?? r.status}</Pill></td>
+              <td>
+                <Pill tone={TX_META[r.status]?.tone}>{TX_META[r.status]?.label ?? r.status}</Pill>
+                {refundOf[r.id] && <span className="mt-1 block"><Pill tone={REFUND[refundOf[r.id]]?.tone}>{REFUND[refundOf[r.id]]?.label ?? refundOf[r.id]}</Pill></span>}
+              </td>
               <td className="a-faint tnum whitespace-nowrap">{fmtDate(r.updated_at)}</td>
+              <td className="min-w-[240px]">
+                {ACTIONABLE.includes(r.status) && (
+                  <details>
+                    <summary className="a-link text-[12px]">처리 ▾</summary>
+                    <div className="reveal mt-2"><TxActions txId={r.id} status={r.status} isCrossBorder={r.is_cross_border} meetup={r.meetup} role="admin" lang="ko" /></div>
+                  </details>
+                )}
+              </td>
             </tr>
           ))}
         </Table>

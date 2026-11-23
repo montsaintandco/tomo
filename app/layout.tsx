@@ -52,17 +52,20 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   let unread = 0;
   let cartCount = 0;
   let loggedIn = false;
+  let notif = -1; // 안 읽은 알림(0027). -1 = 없음·오류 → 벨 숨김
   try {
     const supabase = await createServerSupabase();
     const { data: auth } = await supabase.auth.getUser();
     if (auth.user) {
       loggedIn = true;
       // 두 쿼리는 서로 무관 — 직렬이면 RTT가 두 배
-      const [u, c] = await Promise.all([
+      const [u, c, n] = await Promise.all([
         supabase.rpc("unread_count"),
         supabase.from("cart_items").select("*", { count: "exact", head: true }),
+        supabase.rpc("unread_notifications"),
       ]);
       unread = Number(u.data ?? 0); cartCount = c.count ?? 0;
+      notif = n.error ? -1 : Number(n.data ?? 0);
     }
   } catch { unread = 0; }
   return (
@@ -84,10 +87,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-full focus:bg-tomo-navy focus:px-4 focus:py-2 focus:text-sm focus:font-bold focus:text-white">
           {t(lang, "skip.main")}
         </a>
-        <SiteHeader lang={lang} unread={unread} cartCount={cartCount} loggedIn={loggedIn} />
+        <SiteHeader lang={lang} unread={unread} cartCount={cartCount} loggedIn={loggedIn} notif={notif} />
         <div id="main">{children}</div>
         <SiteFooter lang={lang} company={{ name: company.name, ceo: company.ceo, bizNo: company.bizNo, mailOrderNo: company.mailOrderNo, address: company.address, phone: company.phone, email: company.email, hours: company.hours, hosting: company.hosting, bizLookupUrl }} />
-        <BottomNav lang={lang} unread={unread} />
+        <BottomNav lang={lang} unread={unread} notif={notif} />
         <SupportLauncher lang={lang} loggedIn={loggedIn} />
         {/* 조직 구조화 데이터 — 사업자 정보가 채워졌을 때만 (날조 금지) */}
         {companyComplete && (

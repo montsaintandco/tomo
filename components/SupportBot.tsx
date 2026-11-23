@@ -57,7 +57,7 @@ export default function SupportBot({ lang, compact = false, loggedIn = true }: {
     const res = await fetch("/api/support", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
     const ok = res.ok;
     setMsgs((m) => [...m.filter((x) => !x.form), { who: "me", lines: [String(fd.get("body") ?? "")] },
-      ok ? { who: "bot", lines: [t(lang, "support.received")], link: { href: "/mypage#support", label: t(lang, "support.myTickets") } }
+      ok ? { who: "bot", lines: [t(lang, "support.received")], link: { href: "/mypage/support", label: t(lang, "support.myTickets") } }
          : { who: "bot", lines: [t(lang, "support.failed")] }]);
     setForm(null); setChoices(ROOT); setStack([]);
   }

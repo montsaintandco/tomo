@@ -19,7 +19,7 @@ const items = [
   { href: "/mypage", label: "nav.my", icon: "user" },
 ] as const;
 
-export default function BottomNav({ lang = "ko", unread = 0 }: { lang?: Lang; unread?: number }) {
+export default function BottomNav({ lang = "ko", unread = 0, notif = -1 }: { lang?: Lang; unread?: number; notif?: number }) {
   const path = usePathname();
   if (path.startsWith("/login") || path.startsWith("/onboarding") || path.startsWith("/admin")) return null;
 
@@ -63,6 +63,10 @@ export default function BottomNav({ lang = "ko", unread = 0 }: { lang?: Lang; un
                   {i.icon === "chat" && unread > 0 && (
                     <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-tomo-coral-deep px-1 text-[11px] font-bold leading-none text-white"
                       aria-label={t(lang, "chat.unread", { n: unread })}>{unread > 9 ? "9+" : unread}</span>
+                  )}
+                  {/* 안 읽은 알림(0027) — 마이 탭에 점. 알림함은 마이페이지 메뉴에 */}
+                  {i.icon === "user" && notif > 0 && (
+                    <span className="absolute right-1 top-0 h-2 w-2 rounded-full bg-tomo-coral-deep" aria-label={t(lang, "my.notif.unread", { n: notif })} />
                   )}
                 </span>
                 {t(lang, i.label)}

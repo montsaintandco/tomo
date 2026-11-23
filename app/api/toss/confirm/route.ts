@@ -47,5 +47,10 @@ export async function GET(req: Request) {
     const { data } = await admin.rpc("mark_proxy_order_paid", { p_session_id: orderId, p_payment_intent_id: paymentKey });
     if (data?.status !== "paid") console.error("[toss confirm] proxy order not paid", { orderId, paymentKey, status: data?.status });
   }
+
+  // 4. 실제 청구 원화 기록(부분 환불 비율 계산용, 0025 paid_krw). 컬럼이 없거나 실패해도 결제 확정에는 영향 없음
+  try {
+    await admin.from(parsed.kind === "tx" ? "transactions" : "proxy_orders").update({ paid_krw: amount }).eq("id", parsed.id).is("paid_krw", null);
+  } catch { /* 무시 */ }
   return NextResponse.redirect(new URL(`${back}?pay=ok`, url.origin));
 }

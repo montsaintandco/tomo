@@ -12,6 +12,7 @@ import MarketCarousel, { CarouselSkeleton } from "@/components/MarketCarousel";
 import ListingCard from "@/components/ListingCard";
 import { TomoSymbol } from "@/components/Brand";
 import CategoryChips from "@/components/CategoryChips";
+import BannerStrip from "@/components/BannerStrip";
 
 // 한 요청 안에서 두 Suspense 블록이 같은 프로미스를 공유한다 (테마 캐시는 별도로 1h)
 // 홈 키워드는 고정(코드 테이블). 어드민 큐레이션은 /global·카테고리 페이지에서만
@@ -188,6 +189,8 @@ export default function HomeHub({ viewer, listings, travel }: {
         <Suspense fallback={<HeroSkeleton />}><HomeHero viewer={viewer} /></Suspense>
       </div>
       <CategoryChips lang={lang} />
+      {/* 어드민 배너 띠 — Suspense 밖(최대 1.5초 대기)이라 나중에 끼어들어 아래를 밀지 않는다. 0건·오류면 없음 */}
+      <BannerStrip country={viewer.country} lang={lang} />
 
       <Suspense fallback={
         <section className="mt-8" aria-hidden>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Wordmark } from "@/components/Brand";
 import LangToggle from "@/components/LangToggle";
+import NotificationBell from "@/components/NotificationBell";
 import { t, type Lang } from "@/lib/i18n";
 
 // 사이트 GNB — 사줘(SAZO)식 검색 우선 헤더: [로고 | 검색창(키워드·URL) | KR/JP·카트·로그인/마이·판매] + 2열: 홈·서비스 소개·카테고리·고객센터·공지사항 (사줘와 같은 구성).
@@ -38,8 +39,8 @@ function Icon({ name, className = "h-[22px] w-[22px]", stroke = 1.7 }: { name: s
   );
 }
 
-export default function SiteHeader({ lang = "ko", unread = 0, cartCount = 0, loggedIn = false }: {
-  lang?: Lang; unread?: number; cartCount?: number; loggedIn?: boolean;
+export default function SiteHeader({ lang = "ko", unread = 0, cartCount = 0, loggedIn = false, notif = -1 }: {
+  lang?: Lang; unread?: number; cartCount?: number; loggedIn?: boolean; notif?: number;
 }) {
   const path = usePathname();
   const [count, setCount] = useState(cartCount);
@@ -89,6 +90,10 @@ export default function SiteHeader({ lang = "ko", unread = 0, cartCount = 0, log
                     {m.href === "/chat" && unread > 0 && (
                       <span className="absolute right-1 top-1.5 h-2 w-2 rounded-full bg-tomo-coral-deep" aria-label={t(lang, "chat.unread", { n: unread })} />
                     )}
+                    {/* 모바일은 자리가 없어 벨 대신 마이 아이콘에 점 — 누르면 홈의 알림 메뉴 */}
+                    {m.href === "/mypage" && notif > 0 && (
+                      <span className="absolute right-1 top-1.5 h-2 w-2 rounded-full bg-tomo-coral-deep" aria-label={t(lang, "my.notif.unread", { n: notif })} />
+                    )}
                   </Link>
                 </li>
               ))}
@@ -102,6 +107,7 @@ export default function SiteHeader({ lang = "ko", unread = 0, cartCount = 0, log
                 <Icon name="chat" />
                 {unread > 0 && <span className="absolute right-1 top-1.5 h-2 w-2 rounded-full bg-tomo-coral-deep" aria-label={t(lang, "chat.unread", { n: unread })} />}
               </Link>
+              <NotificationBell lang={lang} count={notif} active={path.startsWith("/mypage/notifications")} />
               <Link href="/mypage" aria-label={t(lang, "nav.mypage")} aria-current={isActive("/mypage") ? "page" : undefined} className={iconBtn(isActive("/mypage"))}>
                 <Icon name="user" />
               </Link>

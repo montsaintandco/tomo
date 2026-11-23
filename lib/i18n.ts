@@ -1,8 +1,17 @@
 // UI 문자열 사전 — 뷰어 언어(ko/ja) 하나로 화면 전체가 뒤집힌다. 라이브러리 없이 키·치환만.
 // ponytail: 페이지가 늘어 키가 200개를 넘기면 네임스페이스 파일로 분할
+import { REFUND_I18N } from "./i18n-port/refund";
+import { PAYOUT_I18N } from "./i18n-port/payout";
+import { MY_I18N } from "./i18n-port/my";
+import { CONTENT_I18N } from "./i18n-port/content";
+
 export type Lang = "ko" | "ja";
 
 const D = {
+  ...REFUND_I18N,
+  ...PAYOUT_I18N,
+  ...MY_I18N,
+  ...CONTENT_I18N,
   "nav.home": ["홈", "ホーム"],
   "nav.global": ["해외직구", "海外購入"],
   "nav.sell": ["판매", "出品"],

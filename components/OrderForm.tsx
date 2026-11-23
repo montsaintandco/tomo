@@ -8,6 +8,7 @@ import { formatPrice, convertPrice } from "@/lib/currency";
 import { payWithToss } from "@/lib/toss-client";
 import Link from "next/link";
 import PolicyNote from "@/components/PolicyNote";
+import type { Addr } from "@/components/AddressBook";
 
 type Ship = { name: string; phone: string; postal: string; address: string; note: string };
 const METHODS_KRW = ["card", "kakao_pay", "naver_pay"] as const;
@@ -25,10 +26,14 @@ function Field({ k, label, value, onChange, type = "text", required = true }: {
   );
 }
 
-export default function OrderForm({ lang, rows, totals, rate, initialShip }: {
-  lang: Lang; rows: CartRow[]; totals: ProxyOrderTotal; rate: number; initialShip: Ship;
+// addresses: null = 주소록(0028) 없음 → 기존 프로필 프리필만. needPccc: 주소록이 있고 한국 수취 주문일 때만 통관부호 필수
+export default function OrderForm({ lang, rows, totals, rate, initialShip, addresses = null, needPccc = false }: {
+  lang: Lang; rows: CartRow[]; totals: ProxyOrderTotal; rate: number; initialShip: Ship; addresses?: Addr[] | null; needPccc?: boolean;
 }) {
+  const first = addresses?.find((a) => a.is_default) ?? addresses?.[0];
   const [ship, setShip] = useState<Ship>(initialShip);
+  const [addressId, setAddressId] = useState<string | null>(first?.id ?? null);
+  const [pccc, setPccc] = useState(first?.pccc ?? "");
   const [method, setMethod] = useState<string>("card");
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -37,13 +42,20 @@ export default function OrderForm({ lang, rows, totals, rate, initialShip }: {
   const [consent, setConsent] = useState(false);
   const methods = totals.currency === "KRW" ? METHODS_KRW : METHODS_JPY;
   const set = (k: keyof Ship) => (e: React.ChangeEvent<HTMLInputElement>) => setShip((s) => ({ ...s, [k]: e.target.value }));
+  const pick = (a: Addr | null) => {
+    setAddressId(a?.id ?? null);
+    setShip(a ? { name: a.name, phone: a.phone, postal: a.postal, address: a.address, note: a.note } : { name: "", phone: "", postal: "", address: "", note: "" });
+    setPccc(a?.pccc ?? "");
+  };
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!consent) { setError(t(lang, "order.consentNeeded")); return; }
+    const code = pccc.trim().toUpperCase();
+    if (needPccc && !/^P[0-9]{12}$/.test(code)) { setError(t(lang, code ? "addr.pcccInvalid" : "addr.pcccRequired")); return; }
     setBusy(true); setMsg(""); setError("");
     const res = await fetch("/api/order", { method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ itemIds: rows.map((r) => r.id), method, ship }) });
+      body: JSON.stringify({ itemIds: rows.map((r) => r.id), method, ship: needPccc ? { ...ship, pccc: code } : ship, addressId }) });
     const json = await res.json().catch(() => ({}));
     if (res.status === 503) { setMsg(t(lang, "order.pending")); setBusy(false); return; }
     if (res.status === 401) { setError(t(lang, "order.fail")); setBusy(false); return; }
@@ -78,11 +90,32 @@ export default function OrderForm({ lang, rows, totals, rate, initialShip }: {
 
         <section className="card flex flex-col gap-3 p-4">
           <h2 className="text-[15px] font-extrabold text-ink">{t(lang, "order.address")}</h2>
+          {addresses && addresses.length > 0 && (
+            <div role="radiogroup" aria-label={t(lang, "addr.saved")} className="flex flex-wrap gap-1.5">
+              {addresses.map((a) => (
+                <button key={a.id} type="button" role="radio" aria-checked={addressId === a.id} onClick={() => pick(a)}
+                  className={`press rounded-full px-3 py-2 text-[12px] font-bold ${addressId === a.id ? "bg-tomo-navy text-white" : "bg-tomo-navy/5 text-ink"}`}>
+                  {a.label || a.name}
+                </button>
+              ))}
+              <button type="button" role="radio" aria-checked={addressId === null} onClick={() => pick(null)}
+                className={`press rounded-full px-3 py-2 text-[12px] font-bold ${addressId === null ? "bg-tomo-navy text-white" : "bg-tomo-navy/5 text-ink"}`}>
+                {t(lang, "addr.new")}
+              </button>
+            </div>
+          )}
           <Field k="name" label={t(lang, "order.name")} value={ship.name} onChange={set("name")} />
           <Field k="phone" label={t(lang, "order.phone")} type="tel" value={ship.phone} onChange={set("phone")} />
           <Field k="postal" label={t(lang, "order.postal")} value={ship.postal} onChange={set("postal")} />
           <Field k="address" label={t(lang, "order.addressLine")} value={ship.address} onChange={set("address")} />
           <Field k="note" label={t(lang, "order.shipNote")} required={false} value={ship.note} onChange={set("note")} />
+          {needPccc && (
+            <label className="block text-[12px] font-bold text-ink">{t(lang, "addr.pccc")}
+              <input value={pccc} onChange={(e) => setPccc(e.target.value)} required pattern="[Pp][0-9]{12}" maxLength={13} autoComplete="off"
+                className="mt-1 w-full rounded-full bg-white px-4 py-2.5 text-base font-normal shadow-soft placeholder:text-ink-soft" />
+              <span className="mt-1 block text-[11px] font-normal text-ink-soft">{t(lang, "addr.pcccHint")}</span>
+            </label>
+          )}
         </section>
 
         <section className="rounded-card bg-tomo-navy/5 p-4 text-[12px] text-ink-soft">

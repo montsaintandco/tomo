@@ -1,40 +1,18 @@
 import { createServerSupabase } from "@/lib/supabase/server";
-import { getViewer, displayTitle } from "@/lib/listings";
-import { formatPrice, type Currency } from "@/lib/currency";
-import { t, type I18nKey, type Lang } from "@/lib/i18n";
+import { getViewer } from "@/lib/listings";
+import { t, type Lang } from "@/lib/i18n";
 import HeartGauge from "@/components/HeartGauge";
 import SectionHeader from "@/components/SectionHeader";
-import { CountryChip, TomoSymbol } from "@/components/Brand";
-import LogoutButton from "@/components/LogoutButton";
-import ListingOwnerActions from "@/components/ListingOwnerActions";
-import UnwishButton from "@/components/UnwishButton";
-import DeactivateButton from "@/components/DeactivateButton";
-import PushToggle from "@/components/PushToggle";
-import { type MarketSource } from "@/lib/market/types";
+import { CountryChip } from "@/components/Brand";
+import MyNav, { Empty } from "@/components/mypage/MyNav";
+import { rows } from "@/lib/safe";
+import { notifHref, notifText, type Notif } from "@/lib/notifications";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
 export const metadata = { title: "마이페이지 · マイページ | TOMO", robots: { index: false } };
 
-const TX_STATUS: Record<string, I18nKey> = {
-  pending_payment: "status.pending_payment", paid: "status.paid", shipped: "status.shipped",
-  shipped_to_center: "status.shipped_to_center", center_received: "status.center_received",
-  shipped_international: "status.shipped_international", delivered: "status.delivered",
-  completed: "status.completed", cancelled: "status.cancelled", disputed: "status.disputed",
-};
-const PROXY_STATUS: Record<string, I18nKey> = {
-  requested: "pstatus.requested", quoted: "pstatus.quoted", approved: "pstatus.approved",
-  paid: "pstatus.paid", purchasing: "pstatus.purchasing", center_received: "pstatus.center_received",
-  shipped_international: "pstatus.shipped_international", delivered: "pstatus.delivered",
-  completed: "pstatus.completed", cancelled: "pstatus.cancelled",
-};
-type MiniListing = {
-  id: string; title: string; price: number; currency: string; status: string; images: string[];
-  source_language: string; listing_translations: { language: string; title: string }[];
-};
-type OfferStatus = "pending" | "accepted" | "declined";
-const LISTING_SEL = "id, title, price, currency, status, images, source_language, listing_translations(language, title)";
-
+// 마이페이지 홈 — 프로필·신뢰온도·할 일·최근 알림. 목록은 하위 화면(/mypage/*)으로 옮겼다.
 export default async function MyPage() {
   const supabase = await createServerSupabase();
   const viewer = await getViewer(supabase);
@@ -42,63 +20,41 @@ export default async function MyPage() {
   const lang: Lang = viewer.language;
   const me = viewer.id;
 
-  const [
-    { data: profile }, { data: buying }, { data: selling }, { data: proxies }, { data: wishes },
-    { data: offersIn }, { data: offersOut }, shipRes, receiveRes, { data: tickets },
-  ] = await Promise.all([
+  const [{ data: profile }, offersInRes, offersOutRes, wishRes, shipRes, receiveRes, travelersRes, notifRes, unreadRes] = await Promise.all([
     supabase.from("profiles").select("nickname, country, region, trust_temp").eq("id", me).single(),
-    supabase.from("transactions")
-      .select("id, status, item_price, currency, listings(title, source_language, images, listing_translations(language, title))")
-      .eq("buyer_id", me).order("created_at", { ascending: false }).limit(10),
-    supabase.from("listings")
-      .select("id, title, price, currency, status, images, hidden, hidden_by_admin")
-      .eq("seller_id", me).order("created_at", { ascending: false }).limit(20),
-    supabase.from("proxy_requests")
-      .select("id, status, quote_total, order_id, external_items(source, title, title_translated, images)")
-      .eq("user_id", me).order("created_at", { ascending: false }).limit(10),
-    supabase.from("wishlists")
-      .select(`listing_id, price_at_wish, listings(${LISTING_SEL})`)
-      .eq("user_id", me).order("created_at", { ascending: false }).limit(20),
-    // 받은 제안 = 내 상품에 온 것 (RLS: seller reads offers on own listings)
-    supabase.from("offers")
-      .select(`id, price, status, created_at, listings!inner(${LISTING_SEL}, seller_id), profiles!offers_buyer_id_fkey(nickname)`)
-      .eq("listings.seller_id", me).order("created_at", { ascending: false }).limit(20),
-    supabase.from("offers")
-      .select(`id, price, status, created_at, listings(${LISTING_SEL})`)
-      .eq("buyer_id", me).order("created_at", { ascending: false }).limit(20),
+    supabase.from("offers").select("id, listings!inner(seller_id)", { count: "exact", head: true }).eq("listings.seller_id", me).eq("status", "pending"),
+    supabase.from("offers").select("id, listings!inner(status)", { count: "exact", head: true }).eq("buyer_id", me).eq("status", "accepted").eq("listings.status", "active"),
+    supabase.from("wishlists").select("price_at_wish, listings(price)").eq("user_id", me).not("price_at_wish", "is", null).limit(200),
     supabase.from("transactions").select("id", { count: "exact", head: true }).eq("seller_id", me).eq("status", "paid"),
     supabase.from("transactions").select("id", { count: "exact", head: true }).eq("buyer_id", me).in("status", ["shipped", "shipped_international", "delivered"]),
-    supabase.from("support_tickets").select("id, body, status, reply, created_at").eq("user_id", me).order("created_at", { ascending: false }).limit(10),
+    supabase.rpc("travelers_to", { p_country: viewer.country, p_region: viewer.region }),
+    supabase.from("notifications").select("id, kind, ref_type, ref_id, data, read_at, created_at").order("created_at", { ascending: false }).limit(3),
+    supabase.rpc("unread_notifications"),
   ]);
 
-  type OfferIn = { id: string; price: number; status: OfferStatus; listings: MiniListing; profiles: { nickname: string } | null };
-  type OfferOut = { id: string; price: number; status: OfferStatus; listings: MiniListing | null };
-  const inRows = (offersIn ?? []) as unknown as OfferIn[];
-  const outRows = ((offersOut ?? []) as unknown as OfferOut[]).filter((o) => o.listings);
-  const wishRows = ((wishes ?? []) as unknown as { listing_id: string; price_at_wish: number | null; listings: MiniListing | null }[]).filter((w) => w.listings);
-
-  // 할 일 — 알림 인프라 없이 데이터에서 유도 (당근·메루카리의 알림 탭 역할)
-  const pendingIn = inRows.filter((o) => o.status === "pending").length;
-  const acceptedOut = outRows.filter((o) => o.status === "accepted" && o.listings!.status === "active").length;
-  const drops = wishRows.filter((w) => w.price_at_wish && w.listings!.price < w.price_at_wish).length;
+  // 할 일 — 지금 내가 움직여야 하는 것만. 링크는 하위 화면으로
+  const pendingIn = offersInRes.count ?? 0;
+  const acceptedOut = offersOutRes.count ?? 0;
+  const drops = (wishRes.data ?? []).filter((w) => {
+    const l = w.listings as unknown as { price: number } | null;
+    return l && w.price_at_wish && l.price < w.price_at_wish;
+  }).length;
   const toShip = shipRes.count ?? 0;
   const toReceive = receiveRes.count ?? 0;
-  const { data: travelersRaw } = await supabase.rpc("travelers_to", { p_country: viewer.country, p_region: viewer.region });
-  const travelers = typeof travelersRaw === "number" ? travelersRaw : 0;
+  const travelers = typeof travelersRes.data === "number" ? travelersRes.data : 0;
   const todos: { text: string; href: string }[] = [
-    ...(toShip ? [{ text: t(lang, "my.todoShip", { n: toShip }), href: "#selling" }] : []),
-    ...(toReceive ? [{ text: t(lang, "my.todoReceive", { n: toReceive }), href: "#buying" }] : []),
-    ...(pendingIn ? [{ text: t(lang, "my.todoOffersIn", { n: pendingIn }), href: "#offers-in" }] : []),
-    ...(acceptedOut ? [{ text: t(lang, "my.todoOfferAccepted", { n: acceptedOut }), href: "#offers-out" }] : []),
-    ...(drops ? [{ text: t(lang, "my.todoDrop", { n: drops }), href: "#wishlist" }] : []),
+    ...(toShip ? [{ text: t(lang, "my.todoShip", { n: toShip }), href: "/mypage/sales?tab=tx" }] : []),
+    ...(toReceive ? [{ text: t(lang, "my.todoReceive", { n: toReceive }), href: "/mypage/orders" }] : []),
+    ...(pendingIn ? [{ text: t(lang, "my.todoOffersIn", { n: pendingIn }), href: "/mypage/offers" }] : []),
+    ...(acceptedOut ? [{ text: t(lang, "my.todoOfferAccepted", { n: acceptedOut }), href: "/mypage/offers?tab=out" }] : []),
+    ...(drops ? [{ text: t(lang, "my.todoDrop", { n: drops }), href: "/mypage/wishlist" }] : []),
     ...(travelers ? [{ text: t(lang, "trip.travelers", { n: travelers }), href: "/sell" }] : []),
   ];
-
-  const priceOf = (l: { price: number; currency: string }) => l.price === 0 ? t(lang, "price.free") : formatPrice(l.price, l.currency as Currency);
-  const statusOf = (s: string) => t(lang, s === "active" ? "status.selling" : s === "reserved" ? "badge.reserved" : "status.soldDone");
+  const notifs = rows(notifRes as { data: Notif[] | null; error: { code?: string } | null });
+  const unread = typeof unreadRes.data === "number" ? unreadRes.data : 0;
 
   return (
-    <main className="mx-auto max-w-md p-4 pb-8 standalone:pb-24 md:max-w-2xl md:px-6 md:pb-16 md:pt-8">
+    <main className="mx-auto max-w-md p-4 pb-8 standalone:pb-24 md:max-w-none md:p-0 md:pb-16">
       <div className="card mb-6 p-4 md:p-6">
         <div className="mb-4 flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
@@ -114,187 +70,43 @@ export default async function MyPage() {
             </div>
           </div>
           <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-            {viewer.isAdmin && (
-              <Link href="/admin" className="btn bg-tomo-navy px-3 py-2 text-xs text-white">{t(lang, "my.admin")}</Link>
-            )}
             <Link href="/mypage/edit" className="btn border-[1.5px] border-tomo-navy bg-white px-3 py-2 text-xs text-tomo-navy">{t(lang, "my.editProfile")}</Link>
-            <LogoutButton lang={lang} />
           </div>
         </div>
         <HeartGauge temp={Number(profile?.trust_temp ?? 36.5)} lang={lang} />
+        <Link href={`/profile/${me}`} className="press mt-3 block text-center text-[13px] font-bold text-tomo-navy">{t(lang, "my.profileLink")} →</Link>
       </div>
 
-      {/* 할 일 — 지금 내가 움직여야 하는 것만 */}
       <section aria-label={t(lang, "my.todo")} className="mb-8">
         <SectionHeader lang={lang} title={t(lang, "my.todo")} />
         {todos.length > 0 ? (
           <ul className="flex flex-col gap-1.5">
             {todos.map((td) => (
               <li key={td.text}>
-                <a href={td.href} className="press flex items-center justify-between rounded-card bg-tomo-coral-deep/10 px-3.5 py-3 text-[13px] font-bold text-tomo-coral-deep">
+                <Link href={td.href} className="press flex items-center justify-between rounded-card bg-tomo-coral-deep/10 px-3.5 py-3 text-[13px] font-bold text-tomo-coral-deep">
                   {td.text}
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden><path d="m9 5 7 7-7 7" /></svg>
-                </a>
+                </Link>
               </li>
             ))}
           </ul>
         ) : <Empty text={t(lang, "my.todoNone")} />}
       </section>
 
-      <section id="offers-in" aria-label={t(lang, "my.offersIn")}>
-        <SectionHeader lang={lang} title={t(lang, "my.offersIn")} />
-        <div className="flex flex-col gap-2">
-          {inRows.map((o) => (
-            <Row key={o.id} href={`/listings/${o.listings.id}`} image={o.listings.images?.[0]}
-              title={displayTitle(o.listings, lang)}
-              sub={`${o.profiles?.nickname ?? "—"} · ${t(lang, `offers.status.${o.status}`)}`}
-              right={formatPrice(o.price, o.listings.currency as Currency)} />
-          ))}
-          {inRows.length === 0 && <Empty text={t(lang, "my.noOffers")} />}
-        </div>
-      </section>
+      {notifs.length > 0 && (
+        <section aria-label={t(lang, "my.notif.title")} className="mb-8">
+          <SectionHeader lang={lang} title={t(lang, "my.notif.title")} href="/mypage/notifications" linkLabel={unread ? t(lang, "my.notif.unread", { n: unread }) : t(lang, "my.more")} />
+          <ul className="card divide-y divide-tomo-navy/5">
+            {notifs.map((n) => (
+              <li key={n.id}>
+                <Link href={notifHref(n)} className={`press block px-4 py-3 text-[13px] ${n.read_at ? "text-ink-soft" : "font-bold text-ink"}`}>{notifText(lang, n)}</Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
-      <section id="offers-out" className="mt-8" aria-label={t(lang, "my.offersOut")}>
-        <SectionHeader lang={lang} title={t(lang, "my.offersOut")} />
-        <div className="flex flex-col gap-2">
-          {outRows.map((o) => (
-            <Row key={o.id} href={`/listings/${o.listings!.id}`} image={o.listings!.images?.[0]}
-              title={displayTitle(o.listings!, lang)}
-              sub={t(lang, `offers.status.${o.status}`)}
-              right={formatPrice(o.price, o.listings!.currency as Currency)} />
-          ))}
-          {outRows.length === 0 && <Empty text={t(lang, "my.noOffers")} />}
-        </div>
-      </section>
-
-      <section id="support" className="mt-8" aria-label={t(lang, "my.support")}>
-        <SectionHeader lang={lang} title={t(lang, "my.support")} href="/help" linkLabel={t(lang, "support.cta")} />
-        <div className="flex flex-col gap-2">
-          {(tickets ?? []).map((k) => (
-            <div key={k.id} className="card p-3.5 text-[13px]">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-[11px] font-bold text-ink-soft">{new Date(k.created_at).toLocaleDateString(lang === "ja" ? "ja-JP" : "ko-KR")}</span>
-                <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${k.status === "open" ? "bg-tomo-coral-deep/10 text-tomo-coral-deep" : "bg-tomo-navy/5 text-ink-soft"}`}>
-                  {t(lang, k.status === "open" ? "my.supportOpen" : k.status === "answered" ? "my.supportAnswered" : "my.supportClosed")}
-                </span>
-              </div>
-              <p className="mt-1.5 whitespace-pre-wrap text-ink">{k.body}</p>
-              {k.reply && <p className="mt-2 rounded-card bg-tomo-navy/5 p-2.5 whitespace-pre-wrap text-ink"><span className="font-bold">TOMO</span> · {k.reply}</p>}
-            </div>
-          ))}
-          {(tickets ?? []).length === 0 && <Empty text={t(lang, "my.noSupport")} />}
-        </div>
-      </section>
-
-      <section className="mt-8" aria-label={t(lang, "my.proxy")}>
-        <SectionHeader lang={lang} title={t(lang, "my.proxy")} href="/global" linkLabel={t(lang, "my.proxyMore")} />
-        <div className="flex flex-col gap-2">
-          {(() => {
-            const seen = new Set<string>();
-            const rows: typeof proxies = [];
-            for (const p of proxies ?? []) {
-              if (!p.order_id) { rows.push(p); continue; }
-              if (seen.has(p.order_id)) continue;
-              seen.add(p.order_id);
-              rows.push(p);
-            }
-            return rows!.map((p) => {
-              const it = p.external_items as unknown as { source: string; title: string; title_translated: string | null; images: string[] } | null;
-              const n = p.order_id ? (proxies ?? []).filter((q) => q.order_id === p.order_id).length : 0;
-              return (
-                <Row key={p.id} href={p.order_id ? `/order/${p.order_id}` : `/proxy/${p.id}`} image={it?.images?.[0]}
-                  title={it?.title_translated || it?.title || t(lang, "my.item")}
-                  sub={`${it ? t(lang, `source.${it.source as MarketSource}`) : ""} · ${PROXY_STATUS[p.status] ? t(lang, PROXY_STATUS[p.status]) : p.status}`}
-                  right={p.order_id ? t(lang, "order.items", { n }) : p.quote_total ? formatPrice(p.quote_total, "JPY") : t(lang, "proxy.quoteWait")} />
-              );
-            });
-          })()}
-          {(proxies ?? []).length === 0 && <Empty text={t(lang, "my.noProxy")} />}
-        </div>
-      </section>
-
-      <section id="wishlist" className="mt-8" aria-label={t(lang, "my.wishlist")}>
-        <SectionHeader lang={lang} title={t(lang, "my.wishlist")} />
-        <div className="flex flex-col gap-2">
-          {wishRows.map((w) => {
-            const l = w.listings!;
-            const drop = w.price_at_wish && l.price < w.price_at_wish
-              ? `${t(lang, "my.priceDrop", { diff: formatPrice(w.price_at_wish - l.price, l.currency as Currency) })} · ` : "";
-            return (
-              <Row key={l.id} href={`/listings/${l.id}`} image={l.images?.[0]} title={displayTitle(l, lang)}
-                sub={drop + statusOf(l.status)} right={priceOf(l)}
-                extra={<UnwishButton listingId={l.id} lang={lang} />} />
-            );
-          })}
-          {wishRows.length === 0 && <Empty text={t(lang, "my.noWishlist")} />}
-        </div>
-      </section>
-
-      <section id="buying" className="mt-8" aria-label={t(lang, "my.buying")}>
-        <SectionHeader lang={lang} title={t(lang, "my.buying")} />
-        <div className="flex flex-col gap-2">
-          {(buying ?? []).map((tx) => {
-            const l = tx.listings as unknown as MiniListing | null;
-            return (
-              <Row key={tx.id} href={`/transactions/${tx.id}`}
-                image={l?.images?.[0]} title={l ? displayTitle(l, lang) : t(lang, "my.item")}
-                sub={TX_STATUS[tx.status] ? t(lang, TX_STATUS[tx.status]) : tx.status}
-                right={formatPrice(tx.item_price, tx.currency as Currency)} />
-            );
-          })}
-          {(buying ?? []).length === 0 && <Empty text={t(lang, "my.noBuying")} />}
-        </div>
-      </section>
-
-      <section id="selling" className="mt-8" aria-label={t(lang, "my.selling")}>
-        <SectionHeader lang={lang} title={t(lang, "my.selling")} href="/sell" linkLabel={t(lang, "my.sellNew")} />
-        <div className="flex flex-col gap-2">
-          {(selling ?? []).map((l) => (
-            <div key={l.id} className="card p-3">
-              <Row href={`/listings/${l.id}`} image={(l.images as string[])?.[0]} title={l.title} bare
-                sub={`${statusOf(l.status)}${l.hidden ? ` · ${t(lang, "own.hidden")}` : ""}`}
-                right={priceOf(l)} />
-              <ListingOwnerActions listingId={l.id} status={l.status} hidden={!!l.hidden} hiddenByAdmin={!!l.hidden_by_admin} lang={lang} />
-            </div>
-          ))}
-          {(selling ?? []).length === 0 && <Empty text={t(lang, "profile.noListings")} />}
-        </div>
-      </section>
-
-      <Link href={`/profile/${me}`} className="card mt-8 block p-3.5 text-center text-sm font-bold text-tomo-navy">
-        {t(lang, "my.profileLink")} →
-      </Link>
-      <div className="card mt-6 p-3.5"><PushToggle lang={lang} /></div>
-      <div className="mt-6"><DeactivateButton lang={lang} /></div>
+      <MyNav lang={lang} unread={unread} isAdmin={viewer.isAdmin} variant="list" />
     </main>
   );
-}
-
-function Row({ href, image, title, sub, right, extra, bare }: {
-  href: string; image?: string; title: string; sub: string; right: string; extra?: React.ReactNode; bare?: boolean;
-}) {
-  return (
-    <div className={`flex items-center gap-3 ${bare ? "" : "card p-3"}`}>
-      <Link href={href} className="flex min-w-0 flex-1 items-center gap-3">
-        <div className="h-11 w-11 shrink-0 overflow-hidden rounded-thumb bg-tomo-navy/5">
-          {image ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={image} alt="" loading="lazy" className="h-full w-full object-cover" />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center"><TomoSymbol className="h-5 w-8 opacity-60" /></div>
-          )}
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-[13px] text-ink">{title}</p>
-          <p className="truncate text-[12px] text-ink-soft">{sub}</p>
-        </div>
-        <span className="tnum shrink-0 text-[13px] font-extrabold text-ink">{right}</span>
-      </Link>
-      {extra}
-    </div>
-  );
-}
-
-function Empty({ text }: { text: string }) {
-  return <p className="rounded-card bg-tomo-navy/5 p-3 text-center text-xs text-ink-soft">{text}</p>;
 }

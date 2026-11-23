@@ -9,6 +9,8 @@ import OrderSummary from "@/components/OrderSummary";
 import OrderActions from "@/components/OrderActions";
 import PayNotice from "@/components/PayNotice";
 import { Suspense } from "react";
+import { rows as safeRows } from "@/lib/safe";
+import { formatPrice } from "@/lib/currency";
 
 export default async function OrderReceiptPage(props: { params: Promise<{ id: string }> }) {
   const { id } = await props.params;
@@ -17,10 +19,12 @@ export default async function OrderReceiptPage(props: { params: Promise<{ id: st
   if (!viewer) redirect(`/login?next=/order/${id}`);
   const lang = viewer.language;
 
-  const [{ data: o }, { data: reqs }] = await Promise.all([
+  const [{ data: o }, { data: reqs }, refundRes] = await Promise.all([
     supabase.from("proxy_orders").select("*").eq("id", id).maybeSingle(),
     supabase.from("proxy_requests").select("id, status, external_items(source, title, title_translated, images)").eq("order_id", id),
+    supabase.from("refunds").select("id, amount, currency, status, created_at").eq("proxy_order_id", id).order("created_at"),   // 0025 전이면 빈 목록
   ]);
+  const refunds = safeRows(refundRes) as { id: string; amount: number; currency: Currency; status: string; created_at: string }[];
   if (!o) notFound();
   const statusKey = `order.status.${o.status}` as I18nKey;
 
@@ -61,6 +65,18 @@ export default async function OrderReceiptPage(props: { params: Promise<{ id: st
           })}
         </ul>
       </section>
+
+      {refunds.length > 0 && (
+        <section className="card mb-4 p-4 text-[13px]">
+          <h2 className="mb-1 font-extrabold text-ink">{t(lang, "refund.history")}</h2>
+          {refunds.map((f) => (
+            <div key={f.id} className="mt-1 flex justify-between gap-3 first:mt-0">
+              <span className="text-ink-soft">{t(lang, f.status === "done" ? "refund.status.done" : "refund.status.pending")}</span>
+              <span className="tnum text-ink">{formatPrice(f.amount, f.currency)}</span>
+            </div>
+          ))}
+        </section>
+      )}
 
       {o.status === "pending_payment" && <OrderActions id={o.id} lang={lang} />}
     </main>
