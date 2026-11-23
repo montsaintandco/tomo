@@ -3,20 +3,26 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { NODES, ROOT, GREETING, PICK, MORE, type Lang } from "@/lib/support-tree";
 import { t } from "@/lib/i18n";
+import { AI_LIMITS, aiSegments, cleanAiText, type AiTurn } from "@/lib/support-ai";
 
 // 지원 봇 — 사조(채널톡 봇) 답변 구조: 봇 말풍선(인사+안내) → 대분류 버튼 → 질문 버튼 → 답변 말풍선 + "추가 질문?" + 관련 질문·바로가기·상담원 연결·처음으로.
 // "상담원 연결"도 사조처럼 바로 사람이 아니라 폼 카드(주문 전: 상품 URL·옵션·수량·내용 / 주문 후: 주문·내용 / 그 외: 내용) → 접수 → 마이페이지 문의에서 답변.
-// 버튼을 누르면 내 말풍선으로 남고 다음 봇 말풍선이 붙는다. 스크립트 트리라 서버·LLM 없음
-type Msg = { who: "bot" | "me"; lines: string[]; link?: { href: string; label: string }; form?: true };
+// 버튼을 누르면 내 말풍선으로 남고 다음 봇 말풍선이 붙는다. 트리는 서버 없이 동작한다.
+// ai=true(서버에 AI_GATEWAY_API_KEY 있음)면 아래 입력창으로 자유 질문 → /api/support-ai 스트림 답. 실패하면 입력창을 숨기고 트리만(조용히 폴백)
+type Msg = { who: "bot" | "me"; lines: string[]; link?: { href: string; label: string }; form?: true; ai?: true; id?: number };
 type Cat = "before" | "after" | "sell" | "travel";
 
-export default function SupportBot({ lang, compact = false, loggedIn = true }: { lang: Lang; compact?: boolean; loggedIn?: boolean }) {
+export default function SupportBot({ lang, compact = false, loggedIn = true, ai = false }: { lang: Lang; compact?: boolean; loggedIn?: boolean; ai?: boolean }) {
   const L = lang === "ja" ? 1 : 0;
   const [msgs, setMsgs] = useState<Msg[]>([{ who: "bot", lines: GREETING[L] }, { who: "bot", lines: [PICK[L]] }]);
   const [choices, setChoices] = useState<string[]>(ROOT);
   const [stack, setStack] = useState<string[]>([]); // 현재 위치(대분류/질문) — 이전으로
   const [form, setForm] = useState<{ cat: Cat } | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
+  const [aiOn, setAiOn] = useState(ai);
+  const [q, setQ] = useState("");
+  const [busy, setBusy] = useState(false);
+  const turnsRef = useRef<AiTurn[]>([]); // AI 와 주고받은 대화만(트리 버튼은 빼고)
   useEffect(() => { endRef.current?.scrollIntoView({ block: "end" }); }, [msgs, form]);
 
   function pick(id: string) {
@@ -62,6 +68,41 @@ export default function SupportBot({ lang, compact = false, loggedIn = true }: {
     setForm(null); setChoices(ROOT); setStack([]);
   }
 
+  async function ask(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const text = q.trim();
+    if (!text || busy) return;
+    const id = Date.now();
+    const turns: AiTurn[] = [...turnsRef.current, { role: "user" as const, content: text }].slice(-AI_LIMITS.maxTurns);
+    const put = (repl: Msg[]) => setMsgs((m) => m.flatMap((x) => (x.id === id ? repl : [x])));
+    const lines = (s: string) => s.split("\n").map((l) => l.trim()).filter(Boolean);
+    setQ(""); setBusy(true); setForm(null);
+    setMsgs((m) => [...m, { who: "me", lines: [text] }, { who: "bot", lines: [t(lang, "support.ai.thinking")], ai: true, id }]);
+    try {
+      const res = await fetch("/api/support-ai", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ lang, messages: turns }) });
+      if (!res.ok || !res.body || !(res.headers.get("content-type") ?? "").startsWith("text/plain")) throw new Error(String(res.status));
+      const reader = res.body.getReader();
+      const dec = new TextDecoder();
+      let raw = "";
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        raw += dec.decode(value, { stream: true });
+        const shown = cleanAiText(raw).text;
+        if (shown) put([{ who: "bot", lines: lines(shown), ai: true, id }]);
+      }
+      const { text: answer, agent } = cleanAiText(raw);
+      if (!answer) throw new Error("empty");
+      turnsRef.current = [...turns, { role: "assistant", content: answer }];
+      put([{ who: "bot", lines: lines(answer), ai: true }, ...(agent ? [{ who: "bot" as const, lines: [t(lang, "support.ai.agentHint")] }] : [])]);
+    } catch {
+      setAiOn(false); // 키 없음·한도·게이트웨이 오류 — 이 창에서는 트리만
+      put([{ who: "bot", lines: [t(lang, "support.ai.fallback")] }]);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   const field = "w-full rounded-[6px] border border-tomo-navy/15 bg-white px-2.5 py-2 text-base placeholder:text-ink-faint md:text-[13px]";
   return (
     <div className={`flex flex-col ${compact ? "h-[min(70dvh,560px)]" : "max-h-[70dvh]"}`}>{/* 패널은 고정 높이, 인라인은 내용만큼(최대 70dvh 스크롤) */}
@@ -69,7 +110,12 @@ export default function SupportBot({ lang, compact = false, loggedIn = true }: {
         {msgs.map((m, i) => (
           <div key={i} className={`flex ${m.who === "me" ? "justify-end" : "justify-start"}`}>
             <div className={`chat-bubble ${m.form ? "w-full" : "max-w-[85%]"} px-3.5 py-2.5 text-[13px] leading-relaxed ${m.who === "me" ? "chat-bubble-mine bg-tomo-coral-deep/10 text-ink" : "chat-bubble-theirs bg-tomo-navy/5 text-ink"}`}>
-              {m.lines.map((line, j) => <p key={j} className={j > 0 ? "mt-1.5" : ""}>{line}</p>)}
+              {m.ai && <p className="mb-1 text-[10px] font-bold text-ink-soft">{t(lang, "support.ai.badge")}</p>}
+              {m.lines.map((line, j) => (
+                <p key={j} className={j > 0 ? "mt-1.5" : ""}>
+                  {m.ai ? aiSegments(line).map((g, k) => ("to" in g ? <Link key={k} href={g.to} className="font-bold underline">{g.text}</Link> : <span key={k}>{g.text}</span>)) : line}
+                </p>
+              ))}
               {m.link && <Link href={m.link.href} className="btn mt-2.5 inline-block bg-tomo-navy px-3 py-1.5 text-[12px] text-white">{m.link.label} →</Link>}
               {m.form && form && (
                 <form onSubmit={submit} className="mt-2.5 flex flex-col gap-2">
@@ -104,6 +150,16 @@ export default function SupportBot({ lang, compact = false, loggedIn = true }: {
         {form && <div className="flex justify-end pt-1"><button type="button" onClick={home} className="press rounded-full border border-tomo-navy/15 bg-white px-3 py-1.5 text-[13px] font-bold text-ink-soft">{t(lang, "support.home")}</button></div>}
         <div ref={endRef} />
       </div>
+      {aiOn && !form && (
+        <form onSubmit={ask} className="border-t border-tomo-navy/10 px-3 pb-2 pt-2">
+          <div className="flex gap-2">
+            <input value={q} onChange={(e) => setQ(e.target.value)} maxLength={AI_LIMITS.maxChars} disabled={busy}
+              placeholder={t(lang, "support.ai.placeholder")} aria-label={t(lang, "support.ai.placeholder")} className={field} />
+            <button type="submit" disabled={busy || !q.trim()} className="btn shrink-0 bg-tomo-navy px-3.5 text-[13px] text-white disabled:opacity-40">{t(lang, "support.ai.send")}</button>
+          </div>
+          <p className="mt-1 text-[10px] text-ink-faint">{t(lang, "support.ai.note")}</p>
+        </form>
+      )}
     </div>
   );
 }

@@ -9,6 +9,7 @@ import BottomNav from "@/components/BottomNav";
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
 import SupportLauncher from "@/components/SupportLauncher";
+import { aiEnabled } from "@/lib/support-ai.server";
 import { company, bizLookupUrl, companyComplete } from "@/lib/company";
 import { SITE_URL } from "@/lib/site";
 import { Analytics } from "@vercel/analytics/next";
@@ -91,7 +92,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <div id="main">{children}</div>
         <SiteFooter lang={lang} company={{ name: company.name, ceo: company.ceo, bizNo: company.bizNo, mailOrderNo: company.mailOrderNo, address: company.address, phone: company.phone, email: company.email, hours: company.hours, hosting: company.hosting, bizLookupUrl }} />
         <BottomNav lang={lang} unread={unread} notif={notif} />
-        <SupportLauncher lang={lang} loggedIn={loggedIn} />
+        <SupportLauncher lang={lang} loggedIn={loggedIn} ai={aiEnabled()} />
         {/* 조직 구조화 데이터 — 사업자 정보가 채워졌을 때만 (날조 금지) */}
         {companyComplete && (
           <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({

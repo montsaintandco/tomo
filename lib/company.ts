@@ -23,3 +23,15 @@ export const companyComplete = !!(company.name && company.ceo && company.bizNo &
 export const bizLookupUrl = company.bizNo
   ? `https://www.ftc.go.kr/bizCommPop.do?wrkr_no=${company.bizNo.replace(/-/g, "")}`
   : null;
+
+// 약관·정책 문구의 {company}·{phone} 등을 사업자 정보로 채운다. 비어 있으면 「준비 중」 — LegalDoc 화면과 AI 상담이 같이 쓴다
+export function fillCompany(s: string, lang: "ko" | "ja"): string {
+  const na = lang === "ja" ? "準備中" : "준비 중";
+  return s
+    .replaceAll("{company}", company.name ?? (lang === "ja" ? "TOMO運営会社" : "TOMO 운영사"))
+    .replaceAll("{ceo}", company.ceo ?? na).replaceAll("{address}", company.address ?? na)
+    .replaceAll("{phone}", company.phone ?? na).replaceAll("{email}", company.email ?? na)
+    .replaceAll("{hours}", company.hours ?? na).replaceAll("{officer}", company.privacyOfficer ?? company.email ?? na)
+    .replaceAll("{returnAddress}", company.returnAddress ?? na).replaceAll("{bizNo}", company.bizNo ?? na)
+    .replaceAll("{mailOrderNo}", company.mailOrderNo ?? na);
+}

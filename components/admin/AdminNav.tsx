@@ -14,6 +14,7 @@ const GROUPS: { label: string; items: { href: string; label: string; count?: key
     { href: "/admin/orders", label: "주문" },
     { href: "/admin/center", label: "센터", count: "center" },
     { href: "/admin/support", label: "문의", count: "support" },
+    { href: "/admin/support-ai", label: "AI 답변 로그" },
   ] },
   { label: "정산", items: [
     { href: "/admin/refunds", label: "환불", count: "refunds" },
@@ -39,7 +40,7 @@ const GROUPS: { label: string; items: { href: string; label: string; count?: key
 // Linear식 사이드바 — 그룹 라벨·30px 항목·활성 배경·우측 카운트. 모바일은 가로 스크롤 탭
 export default function AdminNav({ counts, nickname }: { counts: NavCounts; nickname: string }) {
   const path = usePathname();
-  const active = (href: string) => (href === "/admin" ? path === "/admin" : path.startsWith(href));
+  const active = (href: string) => (href === "/admin" ? path === "/admin" : path === href || path.startsWith(`${href}/`));
   const item = (href: string, label: string, count?: number, compact = false) => (
     <Link key={href} href={href} aria-current={active(href) ? "page" : undefined}
       className={`flex items-center justify-between gap-2 rounded-md px-2.5 text-[13px] transition-colors ${compact ? "h-8 shrink-0" : "h-[30px]"} ${

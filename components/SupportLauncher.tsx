@@ -15,7 +15,7 @@ import { writeLangCookie } from "@/components/LangToggle";
 type Tab = "home" | "chat" | "settings";
 type Ticket = { id: string; category: string; body: string; status: string; reply: string | null; created_at: string };
 
-export default function SupportLauncher({ lang, loggedIn }: { lang: Lang; loggedIn: boolean }) {
+export default function SupportLauncher({ lang, loggedIn, ai = false }: { lang: Lang; loggedIn: boolean; ai?: boolean }) {
   const path = usePathname();
   const router = useRouter();
   const ref = useRef<HTMLDialogElement>(null);
@@ -74,7 +74,7 @@ export default function SupportLauncher({ lang, loggedIn }: { lang: Lang; logged
 
         <div className="min-h-0 flex-1 overflow-y-auto">
           {botOpen ? (
-            <SupportBot lang={lang} compact loggedIn={loggedIn} />
+            <SupportBot lang={lang} compact loggedIn={loggedIn} ai={ai} />
           ) : tab === "home" ? (
             <div className="flex flex-col gap-4 p-4">
               {/* 사조 홈: 커버 + 브랜드 + 인사 미리보기 + 큰 CTA. 운영시간은 정해진 게 없어 적지 않는다 */}

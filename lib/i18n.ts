@@ -4,6 +4,7 @@ import { REFUND_I18N } from "./i18n-port/refund";
 import { PAYOUT_I18N } from "./i18n-port/payout";
 import { MY_I18N } from "./i18n-port/my";
 import { CONTENT_I18N } from "./i18n-port/content";
+import { SUPPORT_AI_I18N } from "./i18n-port/support-ai";
 
 export type Lang = "ko" | "ja";
 
@@ -12,6 +13,7 @@ const D = {
   ...PAYOUT_I18N,
   ...MY_I18N,
   ...CONTENT_I18N,
+  ...SUPPORT_AI_I18N,
   "nav.home": ["홈", "ホーム"],
   "nav.global": ["해외직구", "海外購入"],
   "nav.sell": ["판매", "出品"],
