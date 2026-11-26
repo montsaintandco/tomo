@@ -223,3 +223,12 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=<Supabase 대시보드 → Project Settings → AP
 - 시험(테스트 모드): bob 계정으로 ₩50,000 결제 2회 → 결제창(카드·국내카드·Google Pay 표시) → `/transactions/<id>?pay=ok` 「決済が完了しました」, DB paid·PI·paid_krw 기록, 웹훅 전달 대기 0 → 관리자 취소로 Stripe 전액 환불 done. 운영 키로는 결제창(cs_live) 생성만 확인 후 만료·정리, 실결제는 안 함.
 - 같이 고친 것: standalone 서버에서 route handler 의 req.url 이 http://0.0.0.0:3000 → 결제 복귀·Google 로그인 콜백 리다이렉트를 SITE_URL 기준으로(5273129). 이전 전에는 Google 로그인 콜백도 0.0.0.0 으로 튕겼을 것(추정).
 - 시험 관리자 계정 tomo.test.center 메일 인증을 켬(로그인 막혀 있었음).
+## 2026-11-26 AAA 업데이트 (Ren 「키라팝·에어쉽 참조해 트리플A급으로」) — 정본: docs/aaa/index.md
+
+- 조사 4건(01 현황·02 에어쉽·03 키라팝·04 화면) → deep 설계 05-roadmap(트랙 13개) → 준비 커밋 P → 1차 T0~T5 → 2차 T6~T11 → QA 07 → 일본어 수정. 운영 버전 9d35791, 게이트·이미지·db-tests·스모크 모두 success.
+- 운영 흐름: master 푸시 → `server-image`(gate: tsc·lint·단위 테스트 → build → ghcr) → 서버 1분 감시 배포 → `smoke`(/api/health version 일치 대기 후 주요 화면). DB 테스트는 별도 `db-tests` 워크플로(로컬 Supabase 재생+seed, 운영 DB 안 씀, 아직 배포 게이트 아님).
+- DB 적용(운영): 0032 error_events · 0033 reports/blocks · 0034 external_items.origin(고객 입력 행 비공개) · 0035 주문 신선도 15분·직거래 배송비 DB 결정 · 0036 search_logs · 0037 admin_order_transitions/RPC 2개.
+- 새 운영 화면: /admin/errors, /admin/reports, 대시보드 「내 차례」·시스템 상태, 주문 상세 시트(항목 상태 변경), 상품 제목·가격 수정. /api/health.
+- env(선택): OPS_TELEGRAM_BOT_TOKEN·OPS_TELEGRAM_CHAT_ID(Coolify + GitHub Secrets) 넣으면 서버 오류·스모크 실패가 텔레그램으로 온다. SUPPORT_AI_DAILY_CAP·SUPPORT_AI_DAILY_PER_IP(기본 300·30).
+- worktree 주의: worktree 안 `next build` 가 `.next/standalone/node_modules` junction 을 만든다. 지울 때는 모든 ReparsePoint 를 먼저 끊는다(2026-11-26 메인 node_modules 2회 삭제 사고, docs/aaa/index.md).
+- 남은 것: 운영 실결제 1회(Ren 확인 필요), 외부 상품 찜(DB 필요), 브랜드 색 통일(04#11), 서치콘솔·네이버 새 도메인 등록, db-tests 게이트 승격, 판매자 본인 가격 수정 API 의 거래 중 가격 변경 차단(T8 지적).
