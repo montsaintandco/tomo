@@ -4,7 +4,12 @@ import Link from "next/link";
 
 // 서버 컴포넌트 예외(Supabase 장애·외부 마켓 타임아웃 등) — Next 기본 회색 화면 대신 브랜드 안내 + 다시 시도
 export default function Error({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
-  useEffect(() => { console.error(error); }, [error]);
+  useEffect(() => {
+    console.error(error);
+    // digest 있는 오류는 서버가 이미 적재했다(instrumentation.ts)
+    if (!error.digest) fetch("/api/client-error", { method: "POST", keepalive: true, headers: { "content-type": "application/json" },
+      body: JSON.stringify({ message: error.message, stack: error.stack, path: location.pathname }) }).catch(() => {});
+  }, [error]);
   const ja = typeof document !== "undefined" && document.documentElement.lang === "ja";
   return (
     <main className="mx-auto flex min-h-[70dvh] max-w-md flex-col items-center justify-center gap-4 px-6 text-center">

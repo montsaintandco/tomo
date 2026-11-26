@@ -1,0 +1,29 @@
+# 운영 스모크 — server-image 가 성공하면 새 이미지가 운영에 뜰 때까지 기다린 뒤 주요 화면·DB를 확인한다. 하루 1번(09:00 KST)도 돈다.
+# 실패하면 Actions 가 빨갛게 되고, 저장소 비밀값 OPS_TELEGRAM_BOT_TOKEN·OPS_TELEGRAM_CHAT_ID 가 있으면 텔레그램으로도 알린다.
+name: smoke
+on:
+  workflow_run:
+    workflows: [server-image]
+    types: [completed]
+    branches: [master]
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+permissions: { contents: read }
+# 연달아 배포되면 앞 커밋을 기다리던 스모크는 취소한다(뒤 커밋이 덮어써 「배포 미도착」 오탐이 나므로)
+concurrency: { group: smoke, cancel-in-progress: true }
+jobs:
+  smoke:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: node scripts/smoke.mjs
+        env:
+          SMOKE_BASE_URL: ${{ vars.NEXT_PUBLIC_SITE_URL }}
+          EXPECT_SHA: ${{ github.event.workflow_run.head_sha }}
+          OPS_TELEGRAM_BOT_TOKEN: ${{ secrets.OPS_TELEGRAM_BOT_TOKEN }}
+          OPS_TELEGRAM_CHAT_ID: ${{ secrets.OPS_TELEGRAM_CHAT_ID }}

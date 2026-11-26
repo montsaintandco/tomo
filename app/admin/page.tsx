@@ -1,6 +1,7 @@
 import { createServerSupabase } from "@/lib/supabase/server";
 import { PageHeader, Panel, Table, Pill, Kpi, TX_META, PROXY_META, fmtDate, money, todayIso } from "@/components/admin/ui";
 import Link from "next/link";
+import SystemHealth from "@/components/admin/SystemHealth";
 
 // 대시보드 — 숫자 6개 + "지금 처리해야 할 것" 인박스 (Linear Inbox 문법)
 export default async function AdminHome() {
@@ -48,6 +49,7 @@ export default async function AdminHome() {
         <Kpi label="센터 대기" value={centerWait} href="/admin/center" alert />
       </div>
 
+      <SystemHealth />
       {refundWait + payoutWait + cancelReq > 0 && (
         <div className="a-panel mb-4 flex flex-wrap items-center gap-x-5 gap-y-2 px-4 py-3 text-[13px]">
           <span className="font-semibold">돈 처리 대기</span>

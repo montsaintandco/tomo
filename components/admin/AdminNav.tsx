@@ -15,6 +15,7 @@ const GROUPS: { label: string; items: { href: string; label: string; count?: key
     { href: "/admin/center", label: "센터", count: "center" },
     { href: "/admin/support", label: "문의", count: "support" },
     { href: "/admin/support-ai", label: "AI 답변 로그" },
+    { href: "/admin/reports", label: "신고" },
   ] },
   { label: "정산", items: [
     { href: "/admin/refunds", label: "환불", count: "refunds" },
@@ -34,6 +35,7 @@ const GROUPS: { label: string; items: { href: string; label: string; count?: key
     { href: "/admin/rates", label: "환율" },
     { href: "/admin/notices", label: "공지" },
     { href: "/admin/activity", label: "활동 기록" },
+    { href: "/admin/errors", label: "오류" },
   ] },
 ];
 
