@@ -22,7 +22,7 @@ import type { MercariMore } from "@/lib/market/search";
 import ResultBar from "@/components/search/ResultBar";
 import RecentSearches from "@/components/search/RecentSearches";
 import MoreResults from "@/components/search/MoreResults";
-import { parseCat, catScope, catCrumbs, catParam, name as catName } from "@/lib/categories";
+import { parseCat, catScope, krCatIds, catCrumbs, catParam, name as catName } from "@/lib/categories";
 
 export const dynamic = "force-dynamic"; // 외부 검색은 요청 시점 조회
 
@@ -64,7 +64,7 @@ export default async function GlobalPage(props: {
   if (filters.sold) filterParams.set("sold", "1");
   // 카테고리(?cat=, lib/categories.ts) — 메루카리는 categoryId 로 거른다. 검색어 없이 카테고리만으로도 찾는다. 모든 링크·폼이 filterParams 로 이어 받는다
   const catRef = parseCat(searchParams.cat);
-  const scope = catRef ? catScope(catRef) : undefined;
+  const scope = catRef ? { ...catScope(catRef), ...krCatIds(catRef) } : undefined;
   const catKey = catRef ? (catRef.kind === "mercari" ? `m${catRef.root.id}` : catParam(catRef.major, catRef.sub)) : "";
   const catLabel = catRef ? catName(lang, catRef.kind === "mercari" ? catRef.root : catRef.sub ?? catRef.major) : "";
   if (catKey) filterParams.set("cat", catKey);

@@ -36,8 +36,8 @@ export const metadata: Metadata = {
   twitter: { card: "summary_large_image" },
   // 검색엔진 소유 확인 — 구글은 Search Console HTML 태그, 네이버는 서치어드바이저 태그(값을 Vercel env에 넣으면 출력)
   verification: {
-    google: "vMO5xOzy6MJQOfiOhntsK_EC-NdjUNjUHcLOBCmVDFo",
-    other: { "naver-site-verification": "28924c76b13ac458f1bd74d1499d2d673da52e11" },
+    google: ["vMO5xOzy6MJQOfiOhntsK_EC-NdjUNjUHcLOBCmVDFo", "a9L8hWLQEvBizz8RhjaBd-iHqFpGnoug6eS10E3-Kuw"], // 옛 tomo-delta 속성 + tomo.airship.click(예비, DNS 로도 확인됨)
+    other: { "naver-site-verification": "297445413c4670614a6a0b86e0560c1083305fad" }, // tomo.airship.click 사이트(2026-11-26 등록)
   },
   // PWA — 홈 화면에 추가하면 standalone 앱 (app/manifest.ts)
   icons: { icon: [{ url: "/icon.svg", type: "image/svg+xml" }, { url: "/icon-192.png", sizes: "192x192", type: "image/png" }], apple: "/apple-touch-icon.png" },

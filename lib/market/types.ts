@@ -8,6 +8,7 @@ export type SearchFilters = {
   cond?: "new" | "used";
   sold?: boolean; // true = 판매완료 포함
   catIds?: number[]; // 메루카리 categoryId(OR). 다른 소스는 무시한다(lib/categories.ts)
+  krCat?: number;    // 중고나라 categorySeq·당근 category_id(소스별로 search.ts 가 골라 넣는다)
 };
 
 export type MarketItem = {

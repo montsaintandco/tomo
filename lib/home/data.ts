@@ -6,7 +6,7 @@ import { tableMissing } from "@/lib/safe";
 import { mercariSearch } from "@/lib/market/mercari";
 import { joongnaSearch } from "@/lib/market/joongna";
 import type { MarketItem } from "@/lib/market/types";
-import { FEATURED, findMajor, krTerm, type MajorCategory } from "@/lib/categories";
+import { FEATURED, findMajor, krTerm, KR_MARKET_CAT, type MajorCategory } from "@/lib/categories";
 import { cleanPopular, countQueries } from "./popular";
 
 const DAY = 86_400_000;
@@ -42,7 +42,7 @@ async function limited<T>(fn: () => Promise<T>): Promise<T> {
 }
 
 async function searchFor(country: "KR" | "JP", c: MajorCategory): Promise<MarketItem[]> {
-  const items = await limited(() => (country === "KR" ? mercariSearch("", { catIds: c.mercari }) : joongnaSearch(krTerm(c))));
+  const items = await limited(() => (country === "KR" ? mercariSearch("", { catIds: c.mercari }) : joongnaSearch(krTerm(c), KR_MARKET_CAT[c.slug]?.[0] || undefined)));
   if (items.length === 0) throw new Error(`home-cat:${c.slug}: empty`); // 빈 결과는 캐시하지 않는다
   return items.slice(0, 12);
 }

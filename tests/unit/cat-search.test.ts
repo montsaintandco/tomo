@@ -19,6 +19,18 @@ const mk = (id: string, source: MarketItem["source"] = "mercari"): MarketItem =>
   ({ source, sourceId: id, url: "", title: id, price: 100, currency: source === "mercari" || source === "yahoo_flea" ? "JPY" : "KRW", thumb: "", soldOut: false });
 const scope = (v: string) => catScope(parseCat(v)!);
 
+describe("searchMarkets + 한국 마켓 카테고리 번호", () => {
+  it("krCatIds 가 있으면 중고나라·당근에 각자 번호를 넘긴다 (2026-11-26 실측 매핑)", async () => {
+    daangnSearch.mockClear(); joongnaSearch.mockClear();
+    const { searchMarkets } = await import("../../lib/market/search");
+    const { krCatIds } = await import("../../lib/categories");
+    const ids = krCatIds(parseCat("camera")!);
+    await searchMarkets("", ["daangn", "joongna"], {}, "JPY", 0.1, { ...scope("camera"), ...ids });
+    expect((joongnaSearch.mock.calls[0] as unknown[])[1]).toBe(ids.jn || undefined);
+    expect((daangnSearch.mock.calls[0] as unknown[])[1]).toBe(ids.dg || undefined);
+  });
+});
+
 describe("searchMarkets + 카테고리", () => {
   beforeEach(() => { mercariSearchPage.mockReset(); yahooFleaSearch.mockClear(); daangnSearch.mockClear(); joongnaSearch.mockClear(); });
 
@@ -61,8 +73,10 @@ describe("searchMarkets + 카테고리", () => {
     daangnSearch.mockResolvedValueOnce([mk("d1", "daangn")]);
     const { searchMarkets } = await import("../../lib/market/search");
     const r = await searchMarkets("", ["daangn", "joongna"], {}, "JPY", 0.1, scope("music.guitar"));
-    expect(daangnSearch).toHaveBeenCalledWith("일렉기타");
-    expect(joongnaSearch).toHaveBeenCalledWith("일렉기타");
+    // 번호 없는 범위(catScope 만)는 키워드만 — 두 번째 인자(카테고리 번호) 없음
+    expect((daangnSearch.mock.calls[0] as unknown[])[0]).toBe("일렉기타");
+    expect((joongnaSearch.mock.calls[0] as unknown[])[0]).toBe("일렉기타");
+    expect((daangnSearch.mock.calls[0] as unknown[])[1]).toBeUndefined();
     expect(r.items.map((i) => i.sourceId)).toEqual(["d1"]);
   });
 

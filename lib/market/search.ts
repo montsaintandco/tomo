@@ -17,8 +17,8 @@ const SEARCHERS: Record<MarketSource, (q: string, f: SearchFilters, token?: stri
   mercari: (q, f, token) => mercariSearchPage(q, f, token),
   yahoo_auction: (q, f) => yahooAuctionSearch(q, f).then((items) => ({ items })),
   yahoo_flea: (q, f) => yahooFleaSearch(q, f).then((items) => ({ items })),
-  daangn: (q) => daangnSearch(q).then((items) => ({ items })),
-  joongna: (q) => joongnaSearch(q).then((items) => ({ items })),
+  daangn: (q, f) => daangnSearch(q, f.krCat || undefined).then((items) => ({ items })),
+  joongna: (q, f) => joongnaSearch(q, f.krCat || undefined).then((items) => ({ items })),
 };
 
 // 같은 검색은 2분 동안 다시 부르지 않고, 마켓이 막히면 30분 안의 옛 결과로 버틴다(lib/scrape-cache). 그래도 실패면 빈 결과
@@ -101,6 +101,9 @@ export async function searchMarkets(q: string, source: MarketSource | "all" | Ma
     return {
       ...filters, min: filters.min ? conv(filters.min) : undefined, max: filters.max ? conv(filters.max) : undefined,
       ...(cat && s === "mercari" ? { catIds: cat.mercari } : {}),
+      // 한국 마켓 카테고리 번호(lib/categories.ts KR_MARKET_CAT, 2026-11-26 실측). 0·없음이면 키워드만
+      ...(cat && s === "joongna" && cat.jn ? { krCat: cat.jn } : {}),
+      ...(cat && s === "daangn" && cat.dg ? { krCat: cat.dg } : {}),
     };
   };
   const run = (srcs: MarketSource[], j: string, k: string) => Promise.all(srcs.map((s) => fetchSource(s, termOf(s, j, k), fOf(s))));

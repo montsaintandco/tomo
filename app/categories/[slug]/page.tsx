@@ -10,7 +10,7 @@ import { withTranslatedTitles } from "@/lib/market/translate-items";
 import { LIVE_SOURCES, SOURCE_CURRENCY, type MarketSource } from "@/lib/market/types";
 import ExternalItemCard, { type ExternalCardItem } from "@/components/ExternalItemCard";
 import type { Currency } from "@/lib/currency";
-import { CATEGORIES, MERCARI_ROOTS, findMajor, name, catScope, catSearchHref, type MajorCategory } from "@/lib/categories";
+import { CATEGORIES, MERCARI_ROOTS, findMajor, name, catScope, krCatIds, catSearchHref, type MajorCategory } from "@/lib/categories";
 
 export async function generateMetadata(props: { params: Promise<{ slug: string }>; searchParams: Promise<{ lang?: string }> }) {
   const { slug } = await props.params;
@@ -99,7 +99,7 @@ const GRID = "mt-3 grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3 md:grid-cols-
 
 async function Preview({ major, sources, lang, currency, rate }: { major: MajorCategory; sources: MarketSource[]; lang: Lang; currency: Currency; rate: number }) {
   const r = await Promise.race([
-    searchMarkets("", sources, {}, currency, rate, catScope({ kind: "tomo", major })).then((x) => x.items).catch(() => []),
+    searchMarkets("", sources, {}, currency, rate, { ...catScope({ kind: "tomo", major }), ...krCatIds({ kind: "tomo", major }) }).then((x) => x.items).catch(() => []),
     new Promise<[]>((res) => setTimeout(() => res([]), PREVIEW_TIMEOUT_MS)),
   ]);
   const items = (await withTranslatedTitles(r.slice(0, PREVIEW), lang).catch(() => r.slice(0, PREVIEW))) as ExternalCardItem[];

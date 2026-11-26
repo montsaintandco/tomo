@@ -95,6 +95,8 @@ export default function SellForm({ lang, hint, initial, prefill, importMsg, curr
         }),
       });
       const json = await res.json().catch(() => ({}));
+      // 409 = 가격 잠금(거래 중·예약중) — 서버가 화면 언어로 준 이유를 그대로 보여 준다(apiError)
+      if (res.status === 409 && typeof json.error === "string") throw new SellError(json.error);
       if (!res.ok) throw fail(res.status === 429 ? "sell.errRate" : res.status === 401 ? "sell.errLogin" : "sell.errSave");
       router.push(`/listings/${json.id}`);
       if (editing) router.refresh();
