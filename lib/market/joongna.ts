@@ -4,6 +4,7 @@
 
 import { fetchWithRetry } from "./http";
 import type { MarketItem, MarketItemDetail } from "./types";
+import { unbuyableReason } from "../unbuyable";
 
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36";
 
@@ -60,11 +61,14 @@ export async function joongnaSearch(keyword: string): Promise<MarketItem[]> {
 
     const thumb = chunk.match(/https:\/\/img\d*\.joongna\.com[^"'\s]+/)?.[0] ?? "";
     seen.add(id);
+    // 예약중 배지는 제목에서 지웠으므로 가격 앞 원문으로 판정
+    const unbuyable = unbuyableReason(text.slice(0, priceMatch.index ?? 0));
     items.push({
       source: "joongna", sourceId: id,
       url: `https://web.joongna.com/product/${id}`,
       title: title.slice(0, 120), price, currency: "KRW",
       thumb, soldOut: /판매완료/.test(text),
+      ...(unbuyable ? { unbuyable } : {}),
     });
   }
   return items;

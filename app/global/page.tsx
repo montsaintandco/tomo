@@ -8,9 +8,16 @@ import { LIVE_SOURCES, SOURCE_CURRENCY, type MarketSource, type SearchFilters } 
 import { t, otherCountry, type Lang } from "@/lib/i18n";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { parseMarketUrl } from "@/lib/market/url";
+import { resolveSearchInput, extractUrl } from "@/lib/search-input";
 import SourceLogo from "@/components/SourceLogo";
 import { withTranslatedTitles } from "@/lib/market/translate-items";
+import { titleForLang } from "@/lib/market/title";
+import { logSearch } from "@/lib/search-log";
+import { formatPrice } from "@/lib/currency";
+import type { MercariMore } from "@/lib/market/search";
+import ResultBar from "@/components/search/ResultBar";
+import RecentSearches from "@/components/search/RecentSearches";
+import MoreResults from "@/components/search/MoreResults";
 
 export const dynamic = "force-dynamic"; // 외부 검색은 요청 시점 조회
 
@@ -27,10 +34,10 @@ export default async function GlobalPage(props: {
   const viewer = await getViewerOrGuest(supabase);
   const lang: Lang = viewer.language;
   const q = searchParams.q?.trim() ?? "";
-  // SAZO식: 상품 URL을 붙여넣으면 검색 대신 바로 외부상품 상세로
-  const target = parseMarketUrl(q);
+  // SAZO식: 상품 URL(공유 문구 안의 링크·https 없는 링크·메루카리 ID 포함)을 넣으면 검색 대신 바로 외부상품 상세로
+  const target = resolveSearchInput(q);
   if (target) redirect(`/global/${target.source}/${target.id}`);
-  const looksLikeUrl = /^https?:\/\//i.test(q);
+  const looksLikeUrl = !!extractUrl(q);
   const mySources = sourcesFor(viewer.country);
   const TABS: (MarketSource | "all")[] = ["all", ...mySources];
   const source = (mySources.includes(searchParams.source as MarketSource) ? searchParams.source : "all") as MarketSource | "all";
@@ -52,26 +59,55 @@ export default async function GlobalPage(props: {
   if (filters.sold) filterParams.set("sold", "1");
 
   let items: ExternalCardItem[] = [];
+  let excluded: ExternalCardItem[] = [];
   let usedQueries: string[] = [];
+  let widenedFrom: string | undefined;
+  let mercariMore: MercariMore | undefined;
+  const live = !!q && liveSource && !looksLikeUrl;
 
-  if (q && liveSource && !looksLikeUrl) {
-    // 실시간 검색 — 소스별 언어로 번역해 조회
-    const { items: found, queries } = await searchMarkets(q, source === "all" ? mySources : source, filters, viewer.currency, viewer.rate);
-    items = (await withTranslatedTitles(found, lang)) as ExternalCardItem[]; // 상대국 소스 제목은 뷰어 언어로
-    usedQueries = Array.from(new Set(Object.values(queries).filter((s): s is string => !!s && s !== q)));
+  if (live) {
+    // 실시간 검색 — 소스별 언어로 번역해 조회. 살 수 없는 출품은 excluded 로 빠진다
+    const r = await searchMarkets(q, source === "all" ? mySources : source, filters, viewer.currency, viewer.rate);
+    // 상대국 소스 제목은 뷰어 언어로(한 요청). 검색 로그는 같은 시간에 적는다(최대 400ms, 실패해도 무시)
+    const [translated] = await Promise.all([
+      withTranslatedTitles([...r.items, ...r.excluded], lang),
+      logSearch(q, lang, source, r.items.length),
+    ]);
+    items = translated.slice(0, r.items.length) as ExternalCardItem[];
+    excluded = translated.slice(r.items.length) as ExternalCardItem[];
+    usedQueries = Array.from(new Set(Object.values(r.queries).filter((s): s is string => !!s && s !== q)));
+    widenedFrom = r.widenedFrom;
+    mercariMore = r.mercariMore;
   } else if (!looksLikeUrl) {
     // 검색어 없거나 한국 소스: 캐시된 상품 (어드민 수동 등록 포함). 미지원 URL은 빈 상태로 안내
-    let cache = supabase.from("external_items")
-      .select("source, source_id, title, title_translated, price, currency, images, status")
-      .eq("status", "active").not("images", "eq", "{}").order("fetched_at", { ascending: false }).limit(60); // 이미지 없는 행(테스트·파싱 실패)은 첫 화면에서 제외
-    cache = source !== "all" ? cache.eq("source", source) : cache.in("source", mySources);
-    const { data } = await cache;
-    items = (data ?? []).map((r) => ({
-      source: r.source as MarketSource, sourceId: r.source_id,
-      title: r.title_translated || r.title, price: r.price,
-      currency: r.currency as "KRW" | "JPY", thumb: (r.images as string[])[0] ?? "",
+    // 번역 제목은 화면 언어와 같을 때만(lib/market/title). title_translated_lang 열(0036)이 아직 없으면 그 열 없이 다시 읽는다
+    type Row = { source: string; source_id: string; title: string; title_translated: string | null; title_translated_lang?: string | null; price: number; currency: string; images: string[] };
+    const read = (cols: string) => {
+      const c = supabase.from("external_items").select(cols)
+        .eq("status", "active").not("images", "eq", "{}").order("fetched_at", { ascending: false }).limit(60); // 이미지 없는 행(테스트·파싱 실패)은 첫 화면에서 제외
+      return source !== "all" ? c.eq("source", source) : c.in("source", mySources);
+    };
+    const base = "source, source_id, title, title_translated, price, currency, images";
+    let res = await read(`${base}, title_translated_lang`);
+    if (res.error) res = await read(base);
+    const cached = ((res.data ?? []) as unknown as Row[]).map((r) => ({
+      source: r.source as MarketSource, sourceId: r.source_id, url: "", soldOut: false,
+      ...titleForLang(r.title, r.title_translated, r.title_translated_lang, lang), price: r.price,
+      currency: r.currency as "KRW" | "JPY", thumb: r.images[0] ?? "",
     }));
+    items = (await withTranslatedTitles(cached, lang)) as ExternalCardItem[]; // 화면 언어 번역이 없는 상대국 제목은 지금 번역
   }
+
+  // 결과 줄(건수·정렬·필터 칩)에 쓸 지금 검색의 쿼리와 걸린 조건
+  const searchParamsNow = new URLSearchParams(filterParams);
+  if (q) searchParamsNow.set("q", q);
+  if (source !== "all") searchParamsNow.set("source", source);
+  const chips = [
+    filters.min ? { key: ["min"], label: t(lang, "search.chipPriceMin", { v: formatPrice(filters.min, viewer.currency) }) } : null,
+    filters.max ? { key: ["max"], label: t(lang, "search.chipPriceMax", { v: formatPrice(filters.max, viewer.currency) }) } : null,
+    filters.cond ? { key: ["cond"], label: t(lang, filters.cond === "new" ? "filter.condNew" : "filter.condUsed") } : null,
+    filters.sold ? { key: ["sold"], label: t(lang, "filter.sold") } : null,
+  ].filter((c): c is { key: string[]; label: string } => !!c);
 
   const clearHref = source !== "all" ? `/global?source=${source}` : "/global";
 
@@ -172,8 +208,10 @@ export default async function GlobalPage(props: {
       </header>
 
       <div className="min-h-[70dvh] px-4 pb-6 pt-2 md:px-0 md:pb-16">
-        {q && usedQueries.length > 0 && (
-          <p className="mb-3 text-[12px] text-ink-soft">{t(lang, "global.translatedAs", { q: usedQueries.join(" · ") })}</p>
+        <RecentSearches lang={lang} q={live ? q : ""} source={source !== "all" ? source : undefined} />
+        {live && (
+          <ResultBar lang={lang} params={searchParamsNow} count={items.length} more={!!mercariMore}
+            sort={filters.sort ?? "rec"} chips={chips} translated={usedQueries} widenedFrom={widenedFrom} />
         )}
 
         {items.length > 0 ? (
@@ -183,7 +221,7 @@ export default async function GlobalPage(props: {
                 rate={viewer.rate} viewerCurrency={viewer.currency} lang={lang} />
             ))}
           </div>
-        ) : (
+        ) : excluded.length > 0 ? null : (
           <div className="mt-12 flex flex-col items-center px-6 text-center">
             <TomoSymbol />
             <p className="mt-3 text-sm text-ink-soft">
@@ -193,6 +231,28 @@ export default async function GlobalPage(props: {
               {looksLikeUrl ? t(lang, "global.urlHint") : q ? t(lang, "global.emptySearchSub") : t(lang, "global.emptyIdleSub")}
             </p>
           </div>
+        )}
+
+        {live && mercariMore && (
+          <MoreResults lang={lang} rate={viewer.rate} viewerCurrency={viewer.currency} more={mercariMore}
+            seen={[...items, ...excluded].filter((i) => i.source === "mercari").map((i) => i.sourceId)} />
+        )}
+
+        {/* 살 수 없는 출품(専用·取り置き·예약중 등)은 목록에서 빼고, 원하면 펼쳐 본다 — 필터가 잘못 지웠을 때 되살리는 길 */}
+        {excluded.length > 0 && (
+          <details className="group mt-8 border-t border-tomo-navy/10 pt-4">
+            <summary className="press flex min-h-11 cursor-pointer list-none flex-wrap items-center gap-x-2 text-[12px] text-ink-soft md:text-[13px] [&::-webkit-details-marker]:hidden">
+              <span>{t(lang, "search.excluded", { n: excluded.length })}</span>
+              <span className="font-bold text-ink underline underline-offset-2 group-open:hidden">{t(lang, "search.excludedShow")}</span>
+              <span className="hidden font-bold text-ink underline underline-offset-2 group-open:inline">{t(lang, "search.excludedHide")}</span>
+            </summary>
+            <h2 className="sr-only">{t(lang, "search.excludedTitle")}</h2>
+            <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-5 opacity-70 sm:grid-cols-3 md:grid-cols-4 md:gap-x-5 md:gap-y-7 lg:grid-cols-5">
+              {excluded.map((it) => (
+                <ExternalItemCard key={`${it.source}-${it.sourceId}`} item={it} rate={viewer.rate} viewerCurrency={viewer.currency} lang={lang} />
+              ))}
+            </div>
+          </details>
         )}
       </div>
     </main>

@@ -5,6 +5,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { fetchWithRetry } from "./http";
 import type { SearchFilters, MarketItem, MarketItemDetail } from "./types";
+import { unbuyableReason, UNBUYABLE_AUCTION } from "../unbuyable";
 
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36";
 
@@ -66,8 +67,9 @@ export async function yahooAuctionSearch(keyword: string, f: SearchFilters = {},
       url: `https://auctions.yahoo.co.jp/jp/auction/${id}`,
       title, price, currency: "JPY",
       thumb: attr(block, "img"), soldOut: false,
-      // 즉시구매가도 플리마도 아니면 입찰형 — 표시가는 현재가(낙찰가 미확정)
+      // 즉시구매가도 플리마도 아니면 입찰형 — 표시가는 현재가(낙찰가 미확정). 입찰 대행은 안 하므로 「구경만」(unbuyable)
       auction: !isFlea && buyNow === 0,
+      ...(!isFlea && buyNow === 0 ? { unbuyable: UNBUYABLE_AUCTION } : unbuyableReason(title) ? { unbuyable: unbuyableReason(title) } : {}),
     });
   }
   return items;

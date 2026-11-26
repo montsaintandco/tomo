@@ -6,6 +6,7 @@ import { unstable_cache } from "next/cache";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { fetchWithRetry } from "./http";
 import type { SearchFilters, MarketItem, MarketItemDetail } from "./types";
+import { unbuyableReason, unbuyableDetail } from "../unbuyable";
 
 const API_BASE = "https://api.mercari.jp";
 
@@ -42,8 +43,10 @@ async function makeDpop(method: string, htu: string): Promise<string> {
 }
 
 // DPoP 헤더(jti·iat)가 호출마다 달라 Next fetch 캐시 키가 매번 바뀌므로 fetch 캐시 대신 unstable_cache(키 = method+path+body). 실패는 throw → 캐시 안 됨
+// searchSessionId 는 호출마다 무작위라 키에서 뺀다(넣으면 캐시가 한 번도 안 맞는다)
 export function mercariFetch(method: "GET" | "POST", path: string, body?: unknown): Promise<any> {
-  return unstable_cache(() => mercariFetchLive(method, path, body), ["mercari", "v1", method, path, JSON.stringify(body ?? null)], { revalidate: 60 })();
+  const key = JSON.stringify(body ?? null, (k, v) => (k === "searchSessionId" ? undefined : v));
+  return unstable_cache(() => mercariFetchLive(method, path, body), ["mercari", "v1", method, path, key], { revalidate: 60 })();
 }
 
 async function mercariFetchLive(method: "GET" | "POST", path: string, body?: unknown): Promise<any> {
@@ -64,13 +67,32 @@ async function mercariFetchLive(method: "GET" | "POST", path: string, body?: unk
 
 // 메루카리 상태 id: 1 新品未使用 2 未使用に近い 3 目立った傷なし 4 やや傷あり 5 傷あり 6 状態が悪い
 const MERCARI_SORT = { rec: ["SORT_SCORE", "ORDER_DESC"], new: ["SORT_CREATED_TIME", "ORDER_DESC"], price_asc: ["SORT_PRICE", "ORDER_ASC"], price_desc: ["SORT_PRICE", "ORDER_DESC"] } as const;
-export async function mercariSearch(keyword: string, f: SearchFilters = {}, page = 1): Promise<MarketItem[]> {
+const CONDITION: Record<string, string> = { "1": "新品、未使用", "2": "未使用に近い", "3": "目立った傷や汚れなし", "4": "やや傷や汚れあり", "5": "傷や汚れあり", "6": "全体的に状態が悪い" };
+
+// v2 검색 응답 항목 → 카드. shippingPayerId 2 = 送料込み(出品者負担)
+export function toSearchItem(it: any): MarketItem {
+  const name = String(it.name ?? "");
+  const unbuyable = unbuyableReason(name);
+  return {
+    source: "mercari", sourceId: it.id,
+    url: `https://jp.mercari.com/item/${it.id}`,
+    title: name, price: Number(it.price), currency: "JPY",
+    thumb: it.thumbnails?.[0] ?? "", soldOut: it.status !== "ITEM_STATUS_ON_SALE",
+    ...(it.shippingPayerId != null ? { shippingIncluded: String(it.shippingPayerId) === "2" } : {}),
+    ...(CONDITION[String(it.itemConditionId)] ? { condition: CONDITION[String(it.itemConditionId)] } : {}),
+    ...(unbuyable ? { unbuyable } : {}),
+  };
+}
+
+export async function mercariSearch(keyword: string, f: SearchFilters = {}): Promise<MarketItem[]> {
+  return (await mercariSearchPage(keyword, f)).items;
+}
+
+// 한 페이지 36건 + 다음 페이지 토큰(meta.nextPageToken, 없으면 ""). 토큰을 그대로 다시 넘기면 다음 36건
+export async function mercariSearchPage(keyword: string, f: SearchFilters = {}, pageToken = ""): Promise<{ items: MarketItem[]; next: string }> {
   const [sort, order] = MERCARI_SORT[f.sort ?? "rec"];
-  // pageToken 기반이지만 단순 오프셋 페이지 흉내: v2 검색은 pageToken "v1:{page}" 포맷 미보장 → 첫 페이지만 사용
-  // ponytail: 페이지네이션은 첫 페이지 36건으로 충분, 무한스크롤 필요 시 pageToken 배선
-  void page;
   const data = await mercariFetch("POST", "/v2/entities:search", {
-    userId: "", pageSize: 36, pageToken: "",
+    userId: "", pageSize: 36, pageToken: pageToken.slice(0, 200),
     searchSessionId: crypto.randomUUID().replace(/-/g, ""),
     indexRouting: "INDEX_ROUTING_UNSPECIFIED", thumbnailTypes: [],
     searchCondition: {
@@ -81,12 +103,7 @@ export async function mercariSearch(keyword: string, f: SearchFilters = {}, page
     },
     defaultDatasets: ["DATASET_TYPE_MERCARI"], serviceFrom: "suruga",
   });
-  return (data.items ?? []).map((it: any): MarketItem => ({
-    source: "mercari", sourceId: it.id,
-    url: `https://jp.mercari.com/item/${it.id}`,
-    title: it.name, price: Number(it.price), currency: "JPY",
-    thumb: it.thumbnails?.[0] ?? "", soldOut: it.status !== "ITEM_STATUS_ON_SALE",
-  }));
+  return { items: (data.items ?? []).map(toSearchItem), next: String(data.meta?.nextPageToken ?? "") };
 }
 
 // 판매자의 판매중 상품 — 구 API(get_items)가 seller_id 필터를 지원한다 (v2 검색의 sellerIds는 무시됨)
@@ -133,5 +150,7 @@ export async function mercariItem(id: string): Promise<MarketItemDetail> {
     sellerUrl: s.id ? `https://jp.mercari.com/user/profile/${s.id}` : undefined,
     sellerItems,
     tradeTags: [d.is_anonymous_shipping ? "匿名配送" : "", d.shipping_payer?.name ?? ""].filter(Boolean),
+    ...(d.shipping_payer?.id != null ? { shippingIncluded: Number(d.shipping_payer.id) === 2 } : {}),
+    unbuyable: unbuyableDetail(String(d.name ?? ""), d.description),
   };
 }

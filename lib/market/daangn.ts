@@ -6,6 +6,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { fetchWithRetry } from "./http";
 import type { MarketItem, MarketItemDetail } from "./types";
+import { unbuyableReason } from "../unbuyable";
 
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36";
 
@@ -115,6 +116,7 @@ export async function daangnSearch(keyword: string): Promise<MarketItem[]> {
       price, currency: "KRW",
       thumb: typeof image === "string" ? image : "",
       soldOut: /SoldOut|Discontinued/i.test(String(p.offers?.availability ?? "")),
+      ...(unbuyableReason(String(p.name)) ? { unbuyable: unbuyableReason(String(p.name)) } : {}),
     });
     if (items.length >= 40) break;
   }

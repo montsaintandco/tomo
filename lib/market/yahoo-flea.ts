@@ -3,17 +3,23 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { fetchWithRetry } from "./http";
 import type { SearchFilters, MarketItem, MarketItemDetail } from "./types";
+import { unbuyableReason, unbuyableDetail } from "../unbuyable";
 
 const BASE = "https://paypayfleamarket.yahoo.co.jp";
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36";
 const HEADERS = { "User-Agent": UA, "Accept-Language": "ja-JP,ja;q=0.9" };
 
 // 검색 API 응답 항목 → 카드. itemStatus SOLD = 판매완료. 옥션 아님(정액)
-function toItem(it: any): MarketItem {
+// 야후 플리마는 전 상품 판매자 배송비 부담(送料出品者負担)
+export function toItem(it: any): MarketItem {
+  const title = String(it.title ?? "");
+  const unbuyable = unbuyableReason(title);
   return {
     source: "yahoo_flea", sourceId: String(it.id), url: `${BASE}/item/${it.id}`,
-    title: String(it.title ?? ""), price: Number(it.price) || 0, currency: "JPY",
+    title, price: Number(it.price) || 0, currency: "JPY",
     thumb: String(it.thumbnailImageUrl ?? ""), soldOut: it.itemStatus === "SOLD",
+    shippingIncluded: true,
+    ...(unbuyable ? { unbuyable } : {}),
   };
 }
 
@@ -83,7 +89,8 @@ export async function yahooFleaItem(id: string): Promise<MarketItemDetail> {
   return {
     source: "yahoo_flea", sourceId: String(item.id ?? id), url: `${BASE}/item/${item.id ?? id}`,
     title: String(item.title), price: Number(item.price) || 0, currency: "JPY",
-    thumb: images[0] ?? "", soldOut: sold, auction: false,
+    thumb: images[0] ?? "", soldOut: sold, auction: false, shippingIncluded: true,
+    unbuyable: unbuyableDetail(String(item.title), item.description),
     description: String(item.description ?? "").slice(0, 1500),
     images, sellerName: String(seller.nickname ?? seller.id ?? ""),
     condition: String(item.condition?.text ?? ""),
