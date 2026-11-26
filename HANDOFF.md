@@ -216,3 +216,10 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=<Supabase 대시보드 → Project Settings → AP
 - 환불(`lib/refunds.ts`): Stripe refunds, 같은 refund_id 환불이 이미 있으면 다시 안 보냄, 키 `<refund_id>:<amount>`. 토스 결제(pi_ 아님)는 `LEGACY_TOSS`로 실패 → 토스 상점관리자에서 직접.
 - 필요한 서버 env(Coolify `tomo-image`): `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`(엔드포인트 https://tomo.airship.click/api/stripe/webhook). 없으면 결제 버튼이 「결제 준비 중」(503).
 - 리뷰: deep 서브에이전트 지적(높음 3·중간 6) 반영. 실제 결제·웹훅은 키가 없어 아직 미시험.
+### Stripe 계정·운영사 (2026-11-26, Ren 「같이쓰고 토모 운영사정보 에어쉽으로 변경」)
+- 계정: 에어쉽 Stripe(일본, acct_1UEg3mKrvmPnPbYC, 실결제). Coolify `tomo-image`의 `STRIPE_SECRET_KEY`=sk_live(에어쉽 integration_secrets와 같은 키), `STRIPE_WEBHOOK_SECRET`=tomo 전용 운영 웹훅 `we_1UfrC7KrvmPnPbYCv36Xbov4`의 서명 비밀. 시험용 테스트 웹훅 `we_1Ufr1dKrvmPnPbYCGokhdU9n`(테스트 모드)도 남겨 둠.
+- 에어쉽 웹훅은 tomo 세션(kind tx/po, checkout_version 없음)을 「우리 앱 세션 아님」으로 건너뛴다(src/routes/api/stripe/webhook.ts settle). tomo 웹훅은 metadata.app 이 다르면 무시. 결제창 상호는 「AirShip」으로 보인다.
+- 운영사 표기: 몽상앤코 · 대표 정회승 · 762-25-00775 · 통신판매 제2019-광주서구-0159호 · help@airship.click(Actions vars + Coolify env + .env.local). 운영시간 문구는 예전 값 유지.
+- 시험(테스트 모드): bob 계정으로 ₩50,000 결제 2회 → 결제창(카드·국내카드·Google Pay 표시) → `/transactions/<id>?pay=ok` 「決済が完了しました」, DB paid·PI·paid_krw 기록, 웹훅 전달 대기 0 → 관리자 취소로 Stripe 전액 환불 done. 운영 키로는 결제창(cs_live) 생성만 확인 후 만료·정리, 실결제는 안 함.
+- 같이 고친 것: standalone 서버에서 route handler 의 req.url 이 http://0.0.0.0:3000 → 결제 복귀·Google 로그인 콜백 리다이렉트를 SITE_URL 기준으로(5273129). 이전 전에는 Google 로그인 콜백도 0.0.0.0 으로 튕겼을 것(추정).
+- 시험 관리자 계정 tomo.test.center 메일 인증을 켬(로그인 막혀 있었음).
