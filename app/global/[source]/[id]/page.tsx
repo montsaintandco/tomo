@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { wishFor } from "@/components/search/wish-server";
 import TrackView from "@/components/home/TrackView";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { createAdminSupabase } from "@/lib/supabase/admin";
@@ -181,7 +182,7 @@ export default async function ExternalItemPage(props: {
 
   const similar = (
     <Suspense fallback={<SimilarSkeleton />}>
-      <Similar source={source} id={params.id} title={item.title} rate={viewer.rate} viewerCurrency={viewer.currency} lang={lang} />
+      <Similar source={source} id={params.id} title={item.title} rate={viewer.rate} viewerCurrency={viewer.currency} lang={lang} viewer={viewer} />
     </Suspense>
   );
 
@@ -364,7 +365,7 @@ export default async function ExternalItemPage(props: {
         {sellerItems.length > 0 && (
           <section aria-label={t(lang, "ext.sellerItems")} className="pt-1">
             <h2 className="mb-2 text-[15px] font-extrabold text-ink">{t(lang, "ext.sellerItems")}</h2>
-            <MarketCarousel items={sellerItems} rate={viewer.rate} viewerCurrency={viewer.currency} lang={lang} label={t(lang, "ext.sellerItems")} />
+            <MarketCarousel items={sellerItems} rate={viewer.rate} viewerCurrency={viewer.currency} lang={lang} label={t(lang, "ext.sellerItems")} viewer={viewer} />
           </section>
         )}
 
@@ -396,16 +397,17 @@ function similarQuery(title: string): string {
   return title.replace(/[【】\[\]()（）★☆◆■●※!！?？"'「」『』]/g, " ").replace(/\s+/g, " ").trim().split(" ").slice(0, 3).join(" ");
 }
 
-async function Similar({ source, id, title, rate, viewerCurrency, lang }: {
-  source: MarketSource; id: string; title: string; rate: number; viewerCurrency: "KRW" | "JPY"; lang: Lang;
+async function Similar({ source, id, title, rate, viewerCurrency, lang, viewer }: {
+  source: MarketSource; id: string; title: string; rate: number; viewerCurrency: "KRW" | "JPY"; lang: Lang; viewer?: { id: string | null; guest?: boolean };
 }) {
   const q = similarQuery(title);
   const items = q ? await withTranslatedTitles((await searchSource(source, q)).filter((i) => i.sourceId !== id && !i.soldOut).slice(0, 8), lang) : [];
   if (items.length === 0) return <p className="text-[13px] text-ink-soft">{t(lang, "ext.similarNone")}</p>;
+  const wish = await wishFor(viewer, items);
   return (
     <ul className="grid grid-cols-2 gap-3 md:grid-cols-4">
       {items.map((it) => (
-        <li key={it.sourceId}><ExternalItemCard item={it} rate={rate} viewerCurrency={viewerCurrency} lang={lang} /></li>
+        <li key={it.sourceId}><ExternalItemCard item={it} rate={rate} viewerCurrency={viewerCurrency} lang={lang} wish={wish?.(it)} /></li>
       ))}
     </ul>
   );

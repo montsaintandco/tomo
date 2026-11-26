@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { wishFor } from "@/components/search/wish-server";
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { pageMeta, langUrl } from "@/lib/seo";
@@ -94,7 +95,7 @@ export default async function CategoryPage(props: { params: Promise<{ slug: stri
         <Link href={catSearchHref(major)} className="press shrink-0 py-1 text-[13px] font-bold text-tomo-navy underline underline-offset-2">{t(lang, "cats.seeAll")} ›</Link>
       </div>
       <Suspense fallback={<PreviewSkeleton />}>
-        <Preview major={major} sources={sources} lang={lang} currency={viewer.currency} rate={viewer.rate} />
+        <Preview major={major} sources={sources} lang={lang} currency={viewer.currency} rate={viewer.rate} viewer={viewer} />
       </Suspense>
 
       {viewer.country === "KR" && <MercariTree lang={lang} major={major} />}
@@ -111,16 +112,17 @@ export default async function CategoryPage(props: { params: Promise<{ slug: stri
 
 const GRID = "mt-3 grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3 md:grid-cols-4 md:gap-x-5 lg:grid-cols-5";
 
-async function Preview({ major, sources, lang, currency, rate }: { major: MajorCategory; sources: MarketSource[]; lang: Lang; currency: Currency; rate: number }) {
+async function Preview({ major, sources, lang, currency, rate, viewer }: { major: MajorCategory; sources: MarketSource[]; lang: Lang; currency: Currency; rate: number; viewer?: { id: string | null; guest?: boolean } }) {
   const r = await Promise.race([
     searchMarkets("", sources, {}, currency, rate, { ...catScope({ kind: "tomo", major }), ...krCatIds({ kind: "tomo", major }) }).then((x) => x.items).catch(() => []),
     new Promise<[]>((res) => setTimeout(() => res([]), PREVIEW_TIMEOUT_MS)),
   ]);
   const items = (await withTranslatedTitles(r.slice(0, PREVIEW), lang).catch(() => r.slice(0, PREVIEW))) as ExternalCardItem[];
+  const wish = await wishFor(viewer, items);
   if (items.length === 0) return <p className="mt-3 rounded-card bg-tomo-ivory px-4 py-6 text-center text-[13px] text-ink-soft">{t(lang, "cats.previewEmpty")}</p>;
   return (
     <div className={GRID}>
-      {items.map((it) => <ExternalItemCard key={`${it.source}-${it.sourceId}`} item={it} rate={rate} viewerCurrency={currency} lang={lang} />)}
+      {items.map((it) => <ExternalItemCard key={`${it.source}-${it.sourceId}`} item={it} rate={rate} viewerCurrency={currency} lang={lang} wish={wish?.(it)} />)}
     </div>
   );
 }

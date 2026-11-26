@@ -26,7 +26,7 @@ export default async function DomesticFallback({ viewer, message }: { viewer: Vi
         <section aria-label={t(lang, "home.fallbackTitle", { market: t(lang, `market.${other}`) })}>
           <SectionHeader lang={lang} title={t(lang, "home.fallbackTitle", { market: t(lang, `market.${other}`) })}
             sub={t(lang, "home.fallbackSub")} href="/global" linkLabel={t(lang, "empty.globalCta")} />
-          <MarketCarousel items={row.items} rate={viewer.rate} viewerCurrency={viewer.currency} lang={lang} />
+          <MarketCarousel items={row.items} rate={viewer.rate} viewerCurrency={viewer.currency} lang={lang} viewer={viewer} />
         </section>
       )}
     </div>

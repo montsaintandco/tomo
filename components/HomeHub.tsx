@@ -25,7 +25,7 @@ function ThemeBlock({ section, viewer }: { section: TrendingSection; viewer: Vie
   return (
     <div>
       <SectionHeader level={3} lang={lang} title={label} href={`/global?q=${encodeURIComponent(label)}`} />
-      <MarketCarousel items={section.items} rate={viewer.rate} viewerCurrency={viewer.currency} lang={lang} />
+      <MarketCarousel items={section.items} rate={viewer.rate} viewerCurrency={viewer.currency} lang={lang} viewer={viewer} />
     </div>
   );
 }
