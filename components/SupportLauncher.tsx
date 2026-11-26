@@ -82,7 +82,7 @@ export default function SupportLauncher({ lang, loggedIn: loggedInGuess, ai = fa
           ) : tab === "home" ? (
             <div className="flex flex-col gap-4 p-4">
               {/* 사조 홈: 커버 + 브랜드 + 인사 미리보기 + 큰 CTA. 운영시간은 정해진 게 없어 적지 않는다 */}
-              <div className="rounded-card bg-[#eef2ff] px-4 py-5">
+              <div className="rounded-card bg-accent-tint px-4 py-5">
                 <Wordmark className="text-xl" />
                 <p className="mt-1 text-[13px] text-ink-soft">{t(lang, "footer.thesis")}</p>
               </div>
@@ -111,7 +111,7 @@ export default function SupportLauncher({ lang, loggedIn: loggedInGuess, ai = fa
               ) : tickets.map((k) => (
                 <div key={k.id} className="rounded-card border border-tomo-navy/10 p-3 text-[13px]">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="flex items-center gap-1.5 text-[11px] font-bold text-ink-soft"><span className="flex h-5 w-5 items-center justify-center rounded-full bg-tomo-navy text-[9px] font-extrabold text-white" aria-hidden>T</span>TOMO · {new Date(k.created_at).toLocaleDateString(lang === "ja" ? "ja-JP" : "ko-KR")}</span>
+                    <span className="flex items-center gap-1.5 text-[11px] font-bold text-ink-soft"><span className="flex h-5 w-5 items-center justify-center rounded-full bg-tomo-navy text-[11px] font-extrabold text-white" aria-hidden>T</span>TOMO · {new Date(k.created_at).toLocaleDateString(lang === "ja" ? "ja-JP" : "ko-KR")}</span>
                     <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${k.status === "open" ? "bg-tomo-coral-deep/10 text-tomo-coral-deep" : "bg-tomo-navy/5 text-ink-soft"}`}>{STATUS[k.status] ?? k.status}</span>
                   </div>
                   <p className="mt-1.5 line-clamp-2 text-ink">{k.body}</p>

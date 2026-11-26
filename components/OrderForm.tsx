@@ -161,7 +161,7 @@ export default function OrderForm({ lang, rows: initialRows, totals: initialTota
         <p className="text-[11px] text-ink-soft">{t(lang, "order.agree")}</p>
         {/* 필수 동의 — 심사 항목: 결제 전 약관·개인정보·환불정책 동의 */}
         <label className="flex items-start gap-2 rounded-card border border-tomo-navy/10 p-3 text-[12px] leading-relaxed text-ink">
-          <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} required className="mt-0.5 h-4 w-4 shrink-0 accent-[#1d4ed8]" />
+          <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} required className="mt-0.5 h-4 w-4 shrink-0 accent-accent" />
           <span>{t(lang, "order.consent")} <Link href="/terms" className="underline" target="_blank">{t(lang, "footer.terms")}</Link> · <Link href="/privacy" className="underline" target="_blank">{t(lang, "footer.privacy")}</Link> · <Link href="/refund" className="underline" target="_blank">{t(lang, "footer.refund")}</Link></span>
         </label>
       </div>

@@ -189,7 +189,7 @@ export default function SellForm({ lang, hint, initial, prefill, importMsg, curr
             </div>
           </div>
           <label className={`-mt-2 flex items-center gap-2 ${LABEL}`}>
-            <input type="checkbox" className="h-4 w-4 accent-[#1D4ED8]" checked={free} onChange={(e) => setFree(e.target.checked)} />
+            <input type="checkbox" className="h-4 w-4 accent-accent" checked={free} onChange={(e) => setFree(e.target.checked)} />
             {t(lang, "sell.free")}
           </label>
           <label className={LABEL}>{t(lang, "sell.condition")}
@@ -235,12 +235,12 @@ export default function SellForm({ lang, hint, initial, prefill, importMsg, curr
             </>
           )}
           <label className={`flex items-center gap-2 ${LABEL}`}>
-            <input type="checkbox" className="h-4 w-4 accent-[#1D4ED8]" checked={crossBorder} onChange={(e) => setCrossBorder(e.target.checked)} />
+            <input type="checkbox" className="h-4 w-4 accent-accent" checked={crossBorder} onChange={(e) => setCrossBorder(e.target.checked)} />
             {t(lang, "sell.crossBorder")}
           </label>
           {!free && (
             <label className={`flex items-center gap-2 ${LABEL}`}>
-              <input type="checkbox" className="h-4 w-4 accent-[#1D4ED8]" checked={allowOffers} onChange={(e) => setAllowOffers(e.target.checked)} />
+              <input type="checkbox" className="h-4 w-4 accent-accent" checked={allowOffers} onChange={(e) => setAllowOffers(e.target.checked)} />
               {t(lang, "sell.allowOffers")}
             </label>
           )}

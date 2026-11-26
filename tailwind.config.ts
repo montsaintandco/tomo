@@ -27,8 +27,8 @@ const config: Config = {
         "accent-ink": "var(--accent-ink)", // 액센트 틴트 위 작은 글자·링크 (#EEF2FF 위 8:1)
         "accent-tint": "#EEF2FF",
         ink: "#111827",
-        "ink-soft": "#6B7280",
-        "ink-faint": "#9CA3AF",
+        "ink-soft": "#4B5563",
+        "ink-faint": "#6B7280",
       },
       borderRadius: { card: "8px", thumb: "8px" },
       // 네이비 틴트 섀도우 토큰 — shadow-[var(...)] 임의값은 box-shadow로 생성되지 않음

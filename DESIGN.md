@@ -4,8 +4,8 @@ description: Korea–Japan secondhand market. v3 "정제된 마켓" — white gr
 colors:
   white: "#FFFFFF"
   ink: "#111827"
-  ink-soft: "#6B7280"
-  ink-faint: "#9CA3AF"
+  ink-soft: "#4B5563"
+  ink-faint: "#6B7280"
   accent: "#1D4ED8"
   danger: "#DC2626"
   tint: "#F5F5F7"
@@ -107,6 +107,12 @@ components:
 - **Accent `#1D4ED8`** 단일 액센트 — 주요 CTA·링크·활성 상태·판매 FAB·찜 채움·후기 하트·신뢰 게이지 바·내 채팅 말풍선(10% 틴트)·크로스보더 강조 필(`#EEF2FF`). 한 화면에 액센트 CTA는 하나.
 - **Danger `#DC2626`** 오류·분쟁·파괴적 액션·정지.
 - **나라는 색이 아니라 글자**: `KR`/`JP` 중립 칩(`#F3F4F6` 위 `#374151`, 4px). 채팅 말풍선은 언어가 아니라 나/상대로 구분(내 것 액센트 틴트, 상대 잉크 5%).
+
+**색 규칙 (2026-11-23, W2)** — 화면에 쓰는 색은 아래 4가지 역할뿐이다. 새 hex를 쓰지 않고 토큰 클래스를 쓴다.
+- **행동** = accent 하나(g-accent·	ext-accent·ccent-accent, 틴트 g-accent-tint, 틴트 위 작은 글자 	ext-accent-ink). 다른 파랑(#3B82F6 등)과 호박색 안내 박스는 쓰지 않는다.
+- **글자 3단** = 	ext-ink #111827(본문·제목, 흰 바탕 17.7:1) · 	ext-ink-soft #4B5563(보조, 7.6:1) · 	ext-ink-faint #6B7280(힌트·시간·캡션, 4.8:1). 4.5:1 미만 회색(#9CA3AF 2.5:1 등)은 글자에 쓰지 않는다. 글자 크기 하한 11px.
+- **배경 2단** = 흰색 · 틴트 	omo-ivory #F5F5F7. 어드민 바탕도 같은 틴트.
+- **경고** = rose #DC2626(	omo-rose) 하나. 옛 토큰 	omo-coral*(=액센트)·	omo-navy(=잉크)·	omo-blue/pink(=중립 필)는 값만 규칙에 맞춰 두고 남긴다.
 
 **Named Rules** — *One Accent*: 액센트는 한 색, 행동·활성·소유(내 것)에만. *No Nation Color*: 국가·언어를 색으로 표시하지 않는다. *Tint Is Not Ground*: 틴트는 필드 3곳에만.
 

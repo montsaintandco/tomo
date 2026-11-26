@@ -192,7 +192,7 @@ export default function HomeHub({ viewer, listings, travel }: {
           </ul>
         ) : (
           /* 직거래 상품이 아직 없어도 차별점은 보여준다 — 여행 일정 등록으로 유도하는 한 줄 카드 */
-          <Link href="/travel" className="press flex items-center gap-3 rounded-card bg-[#eef2ff] px-4 py-4">
+          <Link href="/travel" className="press flex items-center gap-3 rounded-card bg-accent-tint px-4 py-4">
             <span className="min-w-0 flex-1">
               <span className="block text-[14px] font-bold text-ink">{t(lang, "hub.travelEmpty", { market: otherName })}</span>
               <span className="block text-[12px] text-ink-soft">{t(lang, "hub.travelEmptySub")}</span>

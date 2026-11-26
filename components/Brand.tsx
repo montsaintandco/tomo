@@ -11,7 +11,7 @@ export function Wordmark({ className = "text-2xl" }: { className?: string }) {
 export function TomoSymbol({ className = "h-16 w-24" }: { className?: string }) {
   return (
     <svg viewBox="0 0 96 64" className={className} aria-hidden fill="none" stroke="currentColor" strokeWidth={1.6}
-      strokeLinecap="round" strokeLinejoin="round" style={{ color: "#9CA3AF" }}>
+      strokeLinecap="round" strokeLinejoin="round" style={{ color: "#6B7280" }}>
       <rect x="20" y="10" width="56" height="44" rx="6" />
       <circle cx="38" cy="26" r="5" />
       <path d="M20 46l16-14 12 10 10-8 18 14" />

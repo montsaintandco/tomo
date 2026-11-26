@@ -33,16 +33,16 @@ export default function InAppNotice({ lang }: { lang: Lang }) {
 
   return (
     <aside role="note" aria-label={t(lang, "shell.inapp.label")}
-      className="mx-auto mt-4 w-[calc(100%-2rem)] max-w-md rounded-card border border-amber-300 bg-amber-50 p-3.5 text-[14px] leading-relaxed text-[#3b2f00]">
+      className="mx-auto mt-4 w-[calc(100%-2rem)] max-w-md rounded-card border border-accent/30 bg-accent-tint p-3.5 text-[14px] leading-relaxed text-ink">
       <p className="font-bold">{t(lang, "shell.inapp.title", { app: name })}</p>
       <p className="mt-1">
         {t(lang, info.platform === "ios" ? "shell.inapp.bodyIos" : "shell.inapp.bodyAndroid")}
         {!open && <> {t(lang, "shell.inapp.manual")}</>}
       </p>
       <div className="mt-2.5 flex flex-wrap gap-2">
-        {open && <a href={open} className={`${btn} bg-[#3b2f00] text-white`}>{t(lang, "shell.inapp.open")}</a>}
-        <button type="button" onClick={copy} className={`${btn} border border-[#3b2f00]/40 bg-white`}>{t(lang, "shell.inapp.copy")}</button>
-        <button type="button" onClick={hide} className={`${btn} text-[#3b2f00]/70 underline underline-offset-2`}>{t(lang, "shell.inapp.close")}</button>
+        {open && <a href={open} className={`${btn} bg-accent text-white`}>{t(lang, "shell.inapp.open")}</a>}
+        <button type="button" onClick={copy} className={`${btn} border border-ink/20 bg-white`}>{t(lang, "shell.inapp.copy")}</button>
+        <button type="button" onClick={hide} className={`${btn} text-ink-soft underline underline-offset-2`}>{t(lang, "shell.inapp.close")}</button>
       </div>
       {copied && <p role="status" className="mt-2 text-[13px]">{t(lang, copied === "ok" ? "shell.inapp.copied" : "shell.inapp.copyFail")}</p>}
     </aside>

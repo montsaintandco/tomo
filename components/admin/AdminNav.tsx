@@ -58,7 +58,7 @@ export default function AdminNav({ counts, nickname }: { counts: NavCounts; nick
   return (
     <>
       {/* 데스크톱 사이드바 */}
-      <aside className="sticky top-0 hidden h-screen w-[232px] shrink-0 flex-col border-r border-[var(--a-border)] bg-[#f9fafb] px-3 py-4 md:flex">
+      <aside className="sticky top-0 hidden h-screen w-[232px] shrink-0 flex-col border-r border-[var(--a-border)] bg-tomo-ivory px-3 py-4 md:flex">
         <div className="mb-5 flex items-center justify-between px-1.5">
           <Link href="/admin" className="flex items-center gap-2"><Wordmark className="text-lg" /><span className="a-muted text-[11px] font-semibold">운영</span></Link>
         </div>
@@ -77,7 +77,7 @@ export default function AdminNav({ counts, nickname }: { counts: NavCounts; nick
       </aside>
 
       {/* 모바일 탭 스트립 */}
-      <div className="sticky top-0 z-20 border-b border-[var(--a-border)] bg-[#f9fafb] md:hidden">
+      <div className="sticky top-0 z-20 border-b border-[var(--a-border)] bg-tomo-ivory md:hidden">
         <div className="flex items-center gap-2 px-3 pt-2.5">
           <Link href="/admin"><Wordmark className="text-base" /></Link>
           <span className="a-muted text-[11px] font-semibold">운영</span>
