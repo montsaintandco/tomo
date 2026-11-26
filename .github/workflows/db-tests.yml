@@ -19,23 +19,25 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm }
+      # CLI 는 고정한다. latest 는 config.toml 키 변경(inbucket→local_smtp)으로 갑자기 깨진 적이 있다. 올릴 때 이 작업으로 확인한다
       - uses: supabase/setup-cli@v1
-        with: { version: latest }
+        with: { version: 3.4.0 }
+      # supabase start 가 migrations·seed 를 직접 적용하지 않게 잠깐 치웠다가 되돌린다(테스트 일부가 migrations 파일을 읽는다)
       - name: 임시 Supabase 띄우기
         run: |
-          supabase --version
           mkdir -p "$RUNNER_TEMP/sb"
           mv supabase/migrations supabase/seed.sql "$RUNNER_TEMP/sb/"
           supabase start
+          mv "$RUNNER_TEMP/sb/migrations" "$RUNNER_TEMP/sb/seed.sql" supabase/
       - name: 마이그레이션 0001~ 재생 + 시드
         run: |
           set -euo pipefail
           eval "$(supabase status -o env)"
-          for f in $(LC_ALL=C ls "$RUNNER_TEMP"/sb/migrations/*.sql); do
+          for f in $(LC_ALL=C ls supabase/migrations/*.sql); do
             echo "== $(basename "$f")"
             psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f "$f"
           done
-          psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f "$RUNNER_TEMP/sb/seed.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f supabase/seed.sql
           psql "$DB_URL" -q -c "notify pgrst, 'reload schema'"
           sleep 3
       - run: npm install --no-audit --no-fund
