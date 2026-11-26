@@ -9,14 +9,17 @@ const PushToggle = dynamic(() => import("@/components/PushToggle"), { ssr: false
 import { Wordmark } from "@/components/Brand";
 import { t, type Lang } from "@/lib/i18n";
 import { writeLangCookie } from "@/components/LangToggle";
+import { useMe } from "@/components/shell/HeaderCounts";
+import { hideSupportLauncher } from "@/components/shell/session";
 
 // 플로팅 문의 패널 — 사조(채널톡 메신저) 첫 화면 구조 그대로: 홈(브랜드·인사 미리보기·"문의하기" CTA) / 대화(내 문의 목록·새 문의) / 설정(언어·알림·연락처).
-// 문의하기를 누르면 봇 채팅으로. 채팅방·인증·어드민·고객센터(인라인 봇)에서는 숨김
+// 문의하기를 누르면 봇 채팅으로. 채팅·결제(장바구니·주문)·인증·어드민·고객센터(인라인 봇)에서는 숨김(components/shell/session)
 type Tab = "home" | "chat" | "settings";
 type Ticket = { id: string; category: string; body: string; status: string; reply: string | null; created_at: string };
 
-export default function SupportLauncher({ lang, loggedIn, ai = false }: { lang: Lang; loggedIn: boolean; ai?: boolean }) {
+export default function SupportLauncher({ lang, loggedIn: loggedInGuess, ai = false }: { lang: Lang; loggedIn: boolean; ai?: boolean }) {
   const path = usePathname();
+  const { loggedIn } = useMe(loggedInGuess);
   const router = useRouter();
   const ref = useRef<HTMLDialogElement>(null);
   const [tab, setTab] = useState<Tab>("home");
@@ -30,8 +33,9 @@ export default function SupportLauncher({ lang, loggedIn, ai = false }: { lang: 
     fetch("/api/support/tickets").then((r) => r.json()).then((j) => setTickets(j.tickets ?? [])).catch(() => setTickets([]));
   }, [open, tab, loggedIn, tickets]);
 
-  if (/^\/(login|onboarding|admin|help)/.test(path) || /^\/chat\/./.test(path)) return null;
-  const onDetail = /^\/(listings|global)\/./.test(path); // 상세는 모바일 하단 고정 구매 바가 있어 그 위로
+  if (hideSupportLauncher(path)) return null;
+  // 모바일: 상세는 하단 고정 구매 바 위로, 그 밖은 하단 탭 위로. 아이콘만 둬서 카드를 덜 가린다(라벨은 데스크톱)
+  const onDetail = /^\/(listings|global)\/./.test(path);
 
   const show = () => { setOpen(true); setTab("home"); setBotOpen(false); ref.current?.showModal(); };
   const close = () => { ref.current?.close(); setOpen(false); };
@@ -47,9 +51,9 @@ export default function SupportLauncher({ lang, loggedIn, ai = false }: { lang: 
   return (
     <>
       <button type="button" onClick={show} aria-label={t(lang, "support.title")}
-        className={`press fixed right-4 z-30 flex h-12 items-center gap-2 rounded-full bg-tomo-navy pl-4 pr-5 text-sm font-bold text-white shadow-lift md:bottom-6 md:right-6 ${onDetail ? "bottom-[88px] standalone:bottom-[150px]" : "bottom-4 standalone:bottom-[74px]"}`}>
+        className={`press fixed right-3 z-30 flex h-12 w-12 items-center justify-center gap-2 rounded-full bg-tomo-navy text-sm font-bold text-white shadow-lift md:bottom-6 md:right-6 md:w-auto md:pl-4 md:pr-5 ${onDetail ? "bottom-[88px] standalone:bottom-[150px]" : "bottom-[calc(5rem+env(safe-area-inset-bottom))]"}`}>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden><path d="M4 5.5h16v10H9l-4 3.5v-3.5H4z" /></svg>
-        {t(lang, "support.cta")}
+        <span className="hidden md:inline">{t(lang, "support.cta")}</span>
       </button>
 
       <dialog ref={ref} onClose={() => setOpen(false)} aria-label={t(lang, "support.title")}

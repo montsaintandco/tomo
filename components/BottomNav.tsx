@@ -2,31 +2,39 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { t, type Lang } from "@/lib/i18n";
+import { useMe } from "@/components/shell/HeaderCounts";
+import { hasOwnBottomBar } from "@/components/shell/session";
 
 // 단순 기하 아이콘 (Lucide 기본값 대신 자체 SVG — 브랜드 라운드감 유지, 1.7/2.1 스트로크 통일)
 const ICONS: Record<string, React.ReactNode> = {
   home: <path d="M3 10.5 12 4l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" />,
-  globe: <><circle cx="12" cy="12" r="8.5" /><path d="M3.5 12h17M12 3.5c2.2 2.4 3.3 5.3 3.3 8.5S14.2 18.1 12 20.5c-2.2-2.4-3.3-5.3-3.3-8.5S9.8 5.9 12 3.5z" /></>,
+  search: <><circle cx="11" cy="11" r="6.5" /><path d="M16 16l4.5 4.5" /></>,
   chat: <path d="M4 5.5h16a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1h-7.5L8 20v-4.5H4a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1z" />,
   user: <><circle cx="12" cy="8.5" r="3.8" /><path d="M4.5 20c1.2-3.6 4-5.4 7.5-5.4s6.3 1.8 7.5 5.4" /></>,
 };
 
 const items = [
   { href: "/", label: "nav.home", icon: "home" },
-  { href: "/global", label: "nav.global", icon: "globe" },
+  { href: "/global", label: "shell.search", icon: "search" },
   { href: "/sell", label: "nav.sell", icon: "sell" },
   { href: "/chat", label: "nav.chat", icon: "chat" },
   { href: "/mypage", label: "nav.my", icon: "user" },
 ] as const;
 
-export default function BottomNav({ lang = "ko", unread = 0, notif = -1 }: { lang?: Lang; unread?: number; notif?: number }) {
+export default function BottomNav({ lang = "ko", loggedIn = false }: { lang?: Lang; loggedIn?: boolean }) {
   const path = usePathname();
+  const { unread, notif } = useMe(loggedIn);
   if (path.startsWith("/login") || path.startsWith("/onboarding") || path.startsWith("/admin")) return null;
+  // 자기 하단 고정 바(구매·결제·채팅 입력)가 있는 화면은 브라우저에서 탭을 숨긴다 — 바를 가리지 않게. 설치된 앱에서는 예전처럼 보인다
+  const bar = hasOwnBottomBar(path);
 
   return (
-    // 설치된 앱(standalone)에서만 — 브라우저에서는 SiteHeader가 내비다. 노치 기기 안전영역만큼 아래 여백
+    // 모바일(브라우저·설치된 앱) 하단 탭. 데스크톱은 SiteHeader가 내비다. 노치 기기 안전영역만큼 아래 여백
+    <>
+    {/* 브라우저 모바일: 탭 높이만큼 페이지 끝 여백(설치된 앱은 body 의 standalone:pb-24 가 맡는다) */}
+    {!bar && <div aria-hidden className="hidden h-[calc(4.5rem+env(safe-area-inset-bottom))] shrink-0 browser:block md:!hidden" />}
     <nav aria-label={t(lang, "nav.main")}
-      className="fixed bottom-0 left-0 right-0 z-30 mx-auto hidden max-w-md border-t border-tomo-navy/5 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur standalone:block md:hidden">
+      className={`fixed bottom-0 left-0 right-0 z-30 mx-auto max-w-md border-t border-tomo-navy/5 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden ${bar ? "hidden standalone:block" : ""}`}>
       <ul className="flex items-end">
         {items.map((i) => {
           const active = i.href === "/" ? path === "/" : path.startsWith(i.href);
@@ -76,5 +84,6 @@ export default function BottomNav({ lang = "ko", unread = 0, notif = -1 }: { lan
         })}
       </ul>
     </nav>
+    </>
   );
 }

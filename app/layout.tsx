@@ -17,7 +17,9 @@ import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { getRequestLang } from "@/lib/locale";
 import { t } from "@/lib/i18n";
-import { createServerSupabase } from "@/lib/supabase/server";
+import { cookies } from "next/headers";
+import { hasAuthCookie } from "@/components/shell/session";
+import InAppNotice from "@/components/shell/InAppNotice";
 import { preconnect } from "react-dom";
 
 export const metadata: Metadata = {
@@ -50,26 +52,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // 홈 히어로·캐러셀 썸네일은 외부 마켓 CDN — 모바일 LCP를 끄는 첫 이미지의 DNS·TLS를 HTML 단계에서 미리 연다
   preconnect("https://static.mercdn.net");
   preconnect("https://auc-pctr.c.yimg.jp");
-  // 안읽은 채팅 수 — 로그인 시에만, 실패(미적용 마이그레이션 등)면 0
-  let unread = 0;
-  let cartCount = 0;
-  let loggedIn = false;
-  let notif = -1; // 안 읽은 알림(0027). -1 = 없음·오류 → 벨 숨김
-  try {
-    const supabase = await createServerSupabase();
-    const { data: auth } = await supabase.auth.getUser();
-    if (auth.user) {
-      loggedIn = true;
-      // 두 쿼리는 서로 무관 — 직렬이면 RTT가 두 배
-      const [u, c, n] = await Promise.all([
-        supabase.rpc("unread_count"),
-        supabase.from("cart_items").select("*", { count: "exact", head: true }),
-        supabase.rpc("unread_notifications"),
-      ]);
-      unread = Number(u.data ?? 0); cartCount = c.count ?? 0;
-      notif = n.error ? -1 : Number(n.data ?? 0);
-    }
-  } catch { unread = 0; }
+  // 레이아웃은 DB를 기다리지 않는다(01#8). 로그인 여부는 세션 쿠키 유무로만 추정하고,
+  // 안읽은 채팅·장바구니·알림 수는 화면이 뜬 뒤 /api/me/summary 로 받는다(components/shell/HeaderCounts).
+  const loggedIn = hasAuthCookie((await cookies()).getAll().map((c) => c.name));
   return (
     <html lang={lang} className={`${notoKR.variable} ${notoJP.variable}`}>
       <body className="flex min-h-dvh flex-col bg-white text-ink standalone:pb-24 md:pb-0">{/* 세로 플렉스 + 푸터 mt-auto: 짧은 페이지에서도 푸터가 바닥에 */}
@@ -89,10 +74,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-full focus:bg-tomo-navy focus:px-4 focus:py-2 focus:text-sm focus:font-bold focus:text-white">
           {t(lang, "skip.main")}
         </a>
-        <SiteHeader lang={lang} unread={unread} cartCount={cartCount} loggedIn={loggedIn} notif={notif} />
+        <SiteHeader lang={lang} loggedIn={loggedIn} />
+        <InAppNotice lang={lang} />
         <div id="main">{children}</div>
         <SiteFooter lang={lang} company={{ name: company.name, ceo: company.ceo, bizNo: company.bizNo, mailOrderNo: company.mailOrderNo, address: company.address, phone: company.phone, email: company.email, hours: company.hours, hosting: company.hosting, bizLookupUrl }} />
-        <BottomNav lang={lang} unread={unread} notif={notif} />
+        <BottomNav lang={lang} loggedIn={loggedIn} />
         <SupportLauncher lang={lang} loggedIn={loggedIn} ai={aiEnabled()} />
         {/* 조직 구조화 데이터 — 사업자 정보가 채워졌을 때만 (날조 금지) */}
         {companyComplete && (

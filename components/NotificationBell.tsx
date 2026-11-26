@@ -13,12 +13,12 @@ export default function NotificationBell({ lang, count, active = false, classNam
   return (
     <Link href="/mypage/notifications" aria-current={active ? "page" : undefined}
       aria-label={count > 0 ? t(lang, "my.notif.unread", { n: count }) : t(lang, "my.notif.title")}
-      className={`press relative flex h-11 w-9 items-center justify-center rounded-full md:w-10 ${active ? "text-tomo-navy" : "text-ink-soft hover:text-ink"} ${className}`}>
+      className={`press relative flex h-11 w-11 items-center justify-center rounded-full ${active ? "text-tomo-navy" : "text-ink-soft hover:text-ink"} ${className}`}>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.1 : 1.7} strokeLinecap="round" strokeLinejoin="round" className="h-[22px] w-[22px]" aria-hidden>
         <path d="M6 10a6 6 0 0 1 12 0c0 4.5 1.8 6 1.8 6H4.2S6 14.5 6 10z" /><path d="M10 19.5a2.2 2.2 0 0 0 4 0" />
       </svg>
       {count > 0 && (
-        <span className="tnum absolute -right-0.5 top-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-tomo-coral-deep px-1 text-[11px] font-bold text-white">{count > 9 ? "9+" : count}</span>
+        <span className="tnum absolute right-0.5 top-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-tomo-coral-deep px-1 text-[11px] font-bold text-white">{count > 9 ? "9+" : count}</span>
       )}
     </Link>
   );

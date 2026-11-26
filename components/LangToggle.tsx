@@ -21,7 +21,7 @@ export default function LangToggle({ lang, label }: { lang: Lang; label: string 
     return (
       // 44px 히트영역, 시각은 작은 말풍선 칩 그대로
       <button type="button" onClick={() => set(value)} aria-pressed={active} disabled={pending}
-        className="press flex h-11 min-w-8 items-center justify-center">
+        className="press flex h-11 min-w-11 items-center justify-center">
         <span className={`${code === "KR" ? "bubble-kr" : "bubble-jp"} px-2 py-1 text-[11px] font-bold leading-none transition-opacity ${active ? "opacity-100" : "opacity-40 hover:opacity-70"}`}>
           {code}
         </span>
