@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import TrackView from "@/components/home/TrackView";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { createAdminSupabase } from "@/lib/supabase/admin";
 import { getViewerOrGuest } from "@/lib/listings";
@@ -177,6 +178,7 @@ export default async function ExternalItemPage(props: {
 
   return (
     <main className="mx-auto max-w-md pb-24 standalone:pb-28 md:grid md:max-w-5xl md:grid-cols-2 md:items-start md:gap-10 md:px-6 md:pb-16 md:pt-8">
+      <TrackView item={{ href: `/global/${source}/${params.id}`, title: shownTitle, thumb: images[0] ?? "", price: item.price, currency: item.currency }} />
       {/* 이동 경로 구조화 데이터(01#13) — 홈 › 해외직구 › 상품 */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd({
         "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [

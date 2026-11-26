@@ -1,4 +1,5 @@
 import { createServerSupabase } from "@/lib/supabase/server";
+import TrackView from "@/components/home/TrackView";
 import { jsonLd } from "@/lib/json-ld";
 import { getViewerOrGuest } from "@/lib/listings";
 import { convertPrice, formatPrice, type Currency } from "@/lib/currency";
@@ -145,6 +146,7 @@ export default async function ListingDetail(props: { params: Promise<{ id: strin
 
   return (
     <main className="mx-auto max-w-md pb-24 standalone:pb-36 md:grid md:max-w-5xl md:grid-cols-2 md:items-start md:gap-10 md:px-6 md:pb-16 md:pt-8">
+      <TrackView item={{ href: `/listings/${l.id}`, title: l.title, thumb: (l.images as string[] | null)?.[0] ?? "", price: l.price, currency: l.currency }} />
       {/* Product 구조화 데이터 — 검색 결과에 가격·재고 리치 스니펫 */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd({
         "@context": "https://schema.org", "@type": "Product", name: l.title, image: images.slice(0, 5),
