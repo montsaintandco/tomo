@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { jsonLd } from "@/lib/json-ld";
 import "./globals.css";
 import { Noto_Sans_KR, Noto_Sans_JP } from "next/font/google";
 
@@ -95,7 +96,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <SupportLauncher lang={lang} loggedIn={loggedIn} ai={aiEnabled()} />
         {/* 조직 구조화 데이터 — 사업자 정보가 채워졌을 때만 (날조 금지) */}
         {companyComplete && (
-          <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+          <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd({
             "@context": "https://schema.org", "@type": "Organization", name: "TOMO", legalName: company.name, url: SITE_URL, logo: `${SITE_URL}/icon-512.png`,
             address: { "@type": "PostalAddress", streetAddress: company.address, addressCountry: "KR" },
             contactPoint: { "@type": "ContactPoint", contactType: "customer service", email: company.email, ...(company.phone ? { telephone: company.phone } : {}) },

@@ -1,4 +1,5 @@
 import { getRequestLang } from "@/lib/locale";
+import { jsonLd } from "@/lib/json-ld";
 import { pageMeta, langFromSearch } from "@/lib/seo";
 import SupportBot from "@/components/SupportBot";
 import { createServerSupabase } from "@/lib/supabase/server";
@@ -25,7 +26,7 @@ export default async function HelpPage() {
   };
   return (
     <main className="mx-auto max-w-3xl px-4 py-8 md:px-6 md:py-12">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(faqLd) }} />
       <h1 className="text-[22px] font-extrabold text-ink md:text-3xl">{c.h1}</h1>
       <p className="mt-2 text-sm text-ink-soft">{c.sub}</p>
       {/* 사조식 봇을 고객센터 첫 화면에 — 버튼 트리로 답하고, 특정 주문은 상담원(채팅)으로 */}

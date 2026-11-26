@@ -1,4 +1,5 @@
 import { createServerSupabase } from "@/lib/supabase/server";
+import { jsonLd } from "@/lib/json-ld";
 import { getViewerOrGuest } from "@/lib/listings";
 import { convertPrice, formatPrice, type Currency } from "@/lib/currency";
 import { t, type Lang } from "@/lib/i18n";
@@ -138,7 +139,7 @@ export default async function ListingDetail(props: { params: Promise<{ id: strin
   return (
     <main className="mx-auto max-w-md pb-24 standalone:pb-36 md:grid md:max-w-5xl md:grid-cols-2 md:items-start md:gap-10 md:px-6 md:pb-16 md:pt-8">
       {/* Product 구조화 데이터 — 검색 결과에 가격·재고 리치 스니펫 */}
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd({
         "@context": "https://schema.org", "@type": "Product", name: l.title, image: images.slice(0, 5),
         description: String(l.description ?? "").slice(0, 500),
         itemCondition: `https://schema.org/${l.condition === "new" ? "NewCondition" : "UsedCondition"}`,

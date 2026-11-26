@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { jsonLd } from "@/lib/json-ld";
 import { pageMeta, langFromSearch } from "@/lib/seo";
 import { getRequestLang } from "@/lib/locale";
 import { SITE_URL } from "@/lib/site";
@@ -27,7 +28,7 @@ export default async function GuidePage() {
   };
   return (
     <main className="mx-auto max-w-3xl px-4 py-8 md:px-6 md:py-12">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify([faqLd, howLd]) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd([faqLd, howLd]) }} />
       <h1 className="text-[22px] font-extrabold leading-tight text-ink md:text-3xl">{c.h1}</h1>
       <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-ink-soft">{c.lead}</p>
       <div className="mt-5 flex flex-wrap gap-2">
