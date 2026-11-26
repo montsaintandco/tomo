@@ -33,4 +33,9 @@ export const DETAIL_I18N = {
   // 갤러리 확대
   "detail.zoom": ["사진 크게 보기", "写真を拡大"],
   "detail.close": ["닫기", "閉じる"],
-} as const satisfies Record<string, readonly [string, string]>;
+  // 상세 부가정보 라벨 — 파서가 원문 키(메루카리 한국어·야후 일본어)로 주는 것을 화면 언어로 (2026-11-26 QA)
+  "detail.extra.shipPayer": ["배송비 부담", "配送料の負担"],
+  "detail.extra.shipFrom": ["발송지", "発送元"],
+  "detail.extra.shipDays": ["발송까지", "発送までの日数"],
+  "detail.extra.shipMethod": ["배송 방법", "配送方法"],
+  "detail.extra.brand": ["브랜드", "ブランド"],} as const satisfies Record<string, readonly [string, string]>;

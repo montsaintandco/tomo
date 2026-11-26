@@ -36,7 +36,7 @@ export default function PriceChangedDialog({ lang, changes, newTotal, onAgree, o
               <p className="mt-0.5 flex flex-wrap items-baseline justify-between gap-2">
                 <span className={c.kind === "down" ? "text-ink-soft" : "text-tomo-rose"}>{c.kind === "down" ? "" : label(c)}</span>
                 {(c.kind === "up" || c.kind === "down") && (
-                  <span className="tnum text-ink"><s className="text-ink-soft">{formatPrice(c.from, c.currency)}</s> → <b>{formatPrice(c.to, c.currency)}</b></span>
+                  <span className="tnum text-ink"><s className="text-ink-soft">{formatPrice(c.from, c.currency, lang)}</s> → <b>{formatPrice(c.to, c.currency, lang)}</b></span>
                 )}
               </p>
             </li>
@@ -45,7 +45,7 @@ export default function PriceChangedDialog({ lang, changes, newTotal, onAgree, o
         {!hard && onAgree && newTotal && (
           <p className="mt-3 flex items-baseline justify-between gap-3 border-t border-tomo-navy/10 pt-3 text-[13px]">
             <span className="font-bold text-ink">{t(lang, "pay.recheck.newTotal")}</span>
-            <span className="tnum text-[17px] font-extrabold text-tomo-navy">{formatPrice(newTotal.total, newTotal.currency)}</span>
+            <span className="tnum text-[17px] font-extrabold text-tomo-navy">{formatPrice(newTotal.total, newTotal.currency, lang)}</span>
           </p>
         )}
         {(hard || !onAgree) && <p className="mt-3 text-[12px] leading-relaxed text-ink-soft">{hint ?? t(lang, "pay.recheck.blockedHint")}</p>}

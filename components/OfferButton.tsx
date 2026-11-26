@@ -62,7 +62,7 @@ export default function OfferButton({ listingId, price, currency, initial, guest
     <div>
       {offer?.status === "pending" ? (
         <p className="flex flex-wrap items-center gap-x-2 text-[13px] text-ink">
-          <span className="tnum font-bold">{t(lang, "offer.pending", { price: formatPrice(offer.price, currency) })}</span>
+          <span className="tnum font-bold">{t(lang, "offer.pending", { price: formatPrice(offer.price, currency, lang) })}</span>
           <button type="button" onClick={withdraw} disabled={busy} className="press text-[12px] text-ink-soft underline underline-offset-2">
             {t(lang, "offer.withdraw")}
           </button>
@@ -88,7 +88,7 @@ export default function OfferButton({ listingId, price, currency, initial, guest
             {tiers(price, currency).map((tier) => (
               <button key={tier.pct} type="button" disabled={busy} onClick={() => send(tier.amount)}
                 className="btn flex flex-1 flex-col items-center bg-white py-2.5 text-ink shadow-soft">
-                <span className="tnum text-[13px] font-extrabold">{formatPrice(tier.amount, currency)}</span>
+                <span className="tnum text-[13px] font-extrabold">{formatPrice(tier.amount, currency, lang)}</span>
                 <span className="text-[11px] font-bold text-tomo-coral-deep">{t(lang, "offer.off", { p: tier.pct })}</span>
               </button>
             ))}

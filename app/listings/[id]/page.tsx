@@ -100,8 +100,8 @@ export default async function ListingDetail(props: { params: Promise<{ id: strin
   const method = (METHODS as readonly string[]).includes(l.trade_method) ? l.trade_method as (typeof METHODS)[number] : "both";
 
   const buyerPrice = free ? t(lang, "price.free") : foreign
-    ? `${t(lang, "price.approx")} ${formatPrice(convertPrice(l.price, l.currency, viewer.rate), viewer.currency)}`
-    : formatPrice(l.price, l.currency);
+    ? `${t(lang, "price.approx")} ${formatPrice(convertPrice(l.price, l.currency, viewer.rate), viewer.currency, lang)}`
+    : formatPrice(l.price, l.currency, lang);
   const condition = (["new", "like_new", "good", "fair", "poor"] as const).find((c) => c === l.condition) ?? "good";
   const payer = l.shipping_payer === "buyer" ? "buyer" : "seller";
   const shipDays = (["1_2", "2_3", "4_7"] as const).find((d) => d === l.ship_days) ?? "2_3";
@@ -136,7 +136,7 @@ export default async function ListingDetail(props: { params: Promise<{ id: strin
         <span className="tnum text-[17px] font-extrabold leading-tight text-ink">{buyerPrice}</span>
         <span className="text-xs text-ink-soft">{shipNote}</span>
       </p>
-      {foreign && !free && <p className="tnum mt-0.5 text-xs font-bold text-ink-soft">{formatPrice(l.price, l.currency)}</p>}
+      {foreign && !free && <p className="tnum mt-0.5 text-xs font-bold text-ink-soft">{formatPrice(l.price, l.currency, lang)}</p>}
       {/* 당근식 카운터 — 관심 · 조회 · 채팅 */}
       <p className="tnum mt-1.5 text-[12px] text-ink-soft">
         {t(lang, "stat.wish", { n: wishCount })} · {t(lang, "stat.view", { n: l.view_count ?? 0 })} · {t(lang, "stat.chat", { n: chatCount })}

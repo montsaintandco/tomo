@@ -42,8 +42,8 @@ export default async function ChatDetailPage(props: { params: Promise<{ id: stri
   const l = convo.listings;
   const foreign = l.currency !== viewer.currency;
   const price = foreign
-    ? `${t(lang, "price.approx")} ${formatPrice(convertPrice(l.price, l.currency, viewer.rate), viewer.currency)}`
-    : formatPrice(l.price, l.currency);
+    ? `${t(lang, "price.approx")} ${formatPrice(convertPrice(l.price, l.currency, viewer.rate), viewer.currency, lang)}`
+    : formatPrice(l.price, l.currency, lang);
 
   // 차단: iBlocked = 내가 건 차단(해제 버튼용), anyBlocked = 어느 쪽이든(입력창 잠금). 0033 미적용이면 둘 다 false
   const [{ data: messages }, myBlocks, anyBlock] = await Promise.all([

@@ -22,7 +22,7 @@ export default async function MySales(props: { searchParams: Promise<{ tab?: str
   const tab = sp.tab === "tx" ? "tx" : "listings";
   const { n, limit } = pageLimit(sp.page);
   const more = (has: boolean) => (has ? `/mypage/sales?tab=${tab}&page=${n + 1}` : null);
-  const priceOf = (l: { price: number; currency: string }) => l.price === 0 ? t(lang, "price.free") : formatPrice(l.price, l.currency as Currency);
+  const priceOf = (l: { price: number; currency: string }) => l.price === 0 ? t(lang, "price.free") : formatPrice(l.price, l.currency as Currency, lang);
   const statusOf = (s: string) => t(lang, s === "active" ? "status.selling" : s === "reserved" ? "badge.reserved" : "status.soldDone");
 
   let body: React.ReactNode;
@@ -59,7 +59,7 @@ export default async function MySales(props: { searchParams: Promise<{ tab?: str
             return (
               <Row key={tx.id} href={`/transactions/${tx.id}`} image={l?.images?.[0]} title={l ? displayTitle(l, lang) : t(lang, "my.item")}
                 sub={TX_STATUS[tx.status] ? t(lang, TX_STATUS[tx.status]) : tx.status}
-                right={formatPrice(tx.item_price, tx.currency as Currency)} />
+                right={formatPrice(tx.item_price, tx.currency as Currency, lang)} />
             );
           })}
           {list.length === 0 && <Empty text={t(lang, "my.noSalesTx")} />}

@@ -120,7 +120,7 @@ export default async function TransactionPage(props: { params: Promise<{ id: str
           {refund && (
             <p className="mt-1 flex justify-between gap-3">
               <span className="text-ink-soft">{t(lang, "refund.amountLine")} · {t(lang, refund.status === "done" ? "refund.status.done" : "refund.status.pending")}</span>
-              <span className="tnum font-bold text-tomo-navy">{formatPrice(refund.amount, refund.currency)}</span>
+              <span className="tnum font-bold text-tomo-navy">{formatPrice(refund.amount, refund.currency, lang)}</span>
             </p>
           )}
         </div>
@@ -128,26 +128,26 @@ export default async function TransactionPage(props: { params: Promise<{ id: str
 
       {/* 금액 — 결제 금액은 구매자 통화가 큰 숫자 */}
       <div className="card mb-4 p-4 text-[13px]">
-        <Row label={t(lang, "ext.item")} value={formatPrice(tx.item_price, tx.currency)} />
-        {tx.is_cross_border && <Row label={t(lang, "tx.intlShipping")} value={formatPrice(tx.intl_shipping_fee, tx.currency)} />}
+        <Row label={t(lang, "ext.item")} value={formatPrice(tx.item_price, tx.currency, lang)} />
+        {tx.is_cross_border && <Row label={t(lang, "tx.intlShipping")} value={formatPrice(tx.intl_shipping_fee, tx.currency, lang)} />}
         <div className="mt-2 flex items-baseline justify-between gap-3 border-t border-tomo-navy/10 pt-2">
           <span className="font-bold text-ink">{t(lang, role === "seller" ? "tx.payout" : "tx.total")}</span>
           <span className="text-right">
             <span className="tnum block text-[15px] font-extrabold text-tomo-navy">
               {role === "seller"
-                ? formatPrice(sellerPayout(tx.item_price), tx.currency)
+                ? formatPrice(sellerPayout(tx.item_price), tx.currency, lang)
                 : foreign
-                  ? `${t(lang, "price.approx")} ${formatPrice(convertPrice(total, tx.currency, viewer.rate), viewer.currency)}`
-                  : formatPrice(total, tx.currency)}
+                  ? `${t(lang, "price.approx")} ${formatPrice(convertPrice(total, tx.currency, viewer.rate), viewer.currency, lang)}`
+                  : formatPrice(total, tx.currency, lang)}
             </span>
             {role !== "seller" && foreign && (
-              <span className="tnum block text-[11px] font-bold text-ink-soft">{formatPrice(total, tx.currency)}</span>
+              <span className="tnum block text-[11px] font-bold text-ink-soft">{formatPrice(total, tx.currency, lang)}</span>
             )}
           </span>
         </div>
         {role === "seller" && (
           <p className="mt-1 text-right text-[11px] text-ink-faint">
-            {t(lang, "tx.feeNote", { fee: formatPrice(platformFee(tx.item_price), tx.currency) })}
+            {t(lang, "tx.feeNote", { fee: formatPrice(platformFee(tx.item_price), tx.currency, lang) })}
           </p>
         )}
       </div>

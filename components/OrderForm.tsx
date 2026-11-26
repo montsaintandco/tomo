@@ -96,7 +96,7 @@ export default function OrderForm({ lang, rows: initialRows, totals: initialTota
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   {r.image && <img src={r.image} alt="" className="h-10 w-10 rounded-thumb object-cover" />}
                   <span className="line-clamp-1 flex-1 text-ink">{r.title}</span>
-                  <span className="tnum font-bold text-ink">{formatPrice(r.currency === totals.currency ? r.price : convertPrice(r.price, r.currency, rate), totals.currency)}</span>
+                  <span className="tnum font-bold text-ink">{formatPrice(r.currency === totals.currency ? r.price : convertPrice(r.price, r.currency, rate), totals.currency, lang)}</span>
                 </li>
               ))}
             </ul>

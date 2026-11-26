@@ -37,7 +37,7 @@ export default async function MyOrders(props: { searchParams: Promise<{ tab?: st
             return (
               <Row key={tx.id} href={`/transactions/${tx.id}`} image={l?.images?.[0]} title={l ? displayTitle(l, lang) : t(lang, "my.item")}
                 sub={TX_STATUS[tx.status] ? t(lang, TX_STATUS[tx.status]) : tx.status}
-                right={formatPrice(tx.item_price, tx.currency as Currency)} />
+                right={formatPrice(tx.item_price, tx.currency as Currency, lang)} />
             );
           })}
           {list.length === 0 && <Empty text={t(lang, "my.noBuying")} />}
@@ -63,7 +63,7 @@ export default async function MyOrders(props: { searchParams: Promise<{ tab?: st
               <Row key={p.id} href={p.order_id ? `/order/${p.order_id}` : `/proxy/${p.id}`} image={it?.images?.[0]}
                 title={it?.title_translated || it?.title || t(lang, "my.item")}
                 sub={`${it ? t(lang, `source.${it.source as MarketSource}`) : ""} · ${PROXY_STATUS[p.status] ? t(lang, PROXY_STATUS[p.status]) : p.status}`}
-                right={p.order_id ? t(lang, "order.items", { n: cnt }) : p.quote_total ? formatPrice(p.quote_total, "JPY") : t(lang, "proxy.quoteWait")} />
+                right={p.order_id ? t(lang, "order.items", { n: cnt }) : p.quote_total ? formatPrice(p.quote_total, "JPY", lang) : t(lang, "proxy.quoteWait")} />
             );
           })}
           {list.length === 0 && <Empty text={t(lang, "my.noProxy")} />}

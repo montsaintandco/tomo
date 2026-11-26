@@ -7,7 +7,7 @@ import { formatPrice, convertPrice } from "@/lib/currency";
 import PreorderCheck from "@/components/PreorderCheck";
 import { loadItem } from "@/lib/market/item";
 import { SOURCE_LABEL, LIVE_SOURCES, SOURCE_CURRENCY, type MarketSource, type MarketItemDetail } from "@/lib/market/types";
-import { t, type Lang } from "@/lib/i18n";
+import { t, type Lang, type I18nKey } from "@/lib/i18n";
 import ProxyRequestButton from "@/components/ProxyRequestButton";
 import CartButtons from "@/components/CartButtons";
 import MarketCarousel from "@/components/MarketCarousel";
@@ -36,6 +36,13 @@ import { ProxyTotalBox } from "@/components/detail/TotalBox";
 import ItemInsight from "@/components/detail/ItemInsight";
 import EndedRescue from "@/components/detail/EndedRescue";
 
+// 파서가 원문 키로 주는 부가정보 라벨 → 화면 언어 키. 모르는 키는 원문 그대로 보인다
+const EXTRA_LABEL: Record<string, I18nKey> = {
+  "배송부담": "detail.extra.shipPayer", "配送料の負担": "detail.extra.shipPayer",
+  "발송지": "detail.extra.shipFrom", "発送元": "detail.extra.shipFrom",
+  "발송까지": "detail.extra.shipDays", "発送まで": "detail.extra.shipDays",
+  "配送方法": "detail.extra.shipMethod", "ブランド": "detail.extra.brand",
+};
 export const dynamic = "force-dynamic";
 
 // 외부 마켓 스크랩 콘텐츠 — 색인 안 함(가격·품절은 진입 시점 확인). hreflang 은 언어 변형을 묶어만 둔다(01#13)
@@ -127,8 +134,8 @@ export default async function ExternalItemPage(props: {
   // 구매자 통화가 큰 숫자 — 같은 통화면 환산 없이
   const foreign = item.currency !== viewer.currency;
   const buyerPrice = foreign
-    ? formatPrice(convertPrice(item.price, item.currency, viewer.rate), viewer.currency)
-    : formatPrice(item.price, item.currency);
+    ? formatPrice(convertPrice(item.price, item.currency, viewer.rate), viewer.currency, lang)
+    : formatPrice(item.price, item.currency, lang);
   // 살 수 없는 출품(T2 unbuyable: 専用·주문 페이지·입찰형 경매) — 구매·대행 버튼을 막고 사유를 보인다
   const blocked = unbuyableKind(item);
   // 예상 합계 — 주문서와 같은 함수(proxyOrderTotal). 이 상품만 주문할 때의 금액
@@ -258,7 +265,7 @@ export default async function ExternalItemPage(props: {
         <div>
           <p className="flex flex-wrap items-baseline gap-x-2">
             <span className="tnum text-[17px] font-extrabold leading-tight text-ink">{buyerPrice}</span>
-            {foreign && <span className="tnum text-[14px] font-bold text-ink-soft">{formatPrice(item.price, item.currency)}</span>}
+            {foreign && <span className="tnum text-[14px] font-bold text-ink-soft">{formatPrice(item.price, item.currency, lang)}</span>}
           </p>
           {item.auction && <p className="mt-1 text-[12px] text-ink-soft">{t(lang, "ext.auctionNote")}</p>}
         </div>
@@ -288,7 +295,7 @@ export default async function ExternalItemPage(props: {
                 </ul>
               </div>
             </div>
-            <ProxyTotalBox lang={lang} totals={totals} original={formatPrice(item.price, item.currency)} shippingIncluded={item.shippingIncluded} />
+            <ProxyTotalBox lang={lang} totals={totals} original={formatPrice(item.price, item.currency, lang)} shippingIncluded={item.shippingIncluded} />
             <PreorderCheck lang={lang} />
           </>
         )}
@@ -315,7 +322,7 @@ export default async function ExternalItemPage(props: {
             <div className="flex items-center gap-3">
               <div className="min-w-0 shrink-0 md:hidden">{/* 데스크톱은 바로 위 합계 박스가 있다 */}
                 <p className="text-[11px] font-bold text-ink-soft">{t(lang, "detail.totalShort")}</p>
-                <p className="tnum text-[15px] font-extrabold leading-tight text-ink">{formatPrice(totals.total, totals.currency)}</p>
+                <p className="tnum text-[15px] font-extrabold leading-tight text-ink">{formatPrice(totals.total, totals.currency, lang)}</p>
               </div>
               <div className="min-w-0 flex-1">
                 {viewer.guest ? (
@@ -342,7 +349,7 @@ export default async function ExternalItemPage(props: {
         {extra.some(([, v]) => v) && (
           <dl className="card grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 p-3.5 text-xs text-ink-soft">
             {extra.filter(([, v]) => v).map(([k, v]) => (
-              <Fragment key={k}><dt className="font-bold text-ink" lang={sourceLang}>{k}</dt><dd lang={tr ? lang : sourceLang}>{v}</dd></Fragment>
+              <Fragment key={k}><dt className="font-bold text-ink" lang={EXTRA_LABEL[k] ? lang : sourceLang}>{EXTRA_LABEL[k] ? t(lang, EXTRA_LABEL[k]) : k}</dt><dd lang={tr ? lang : sourceLang}>{v}</dd></Fragment>
             ))}
           </dl>
         )}

@@ -59,11 +59,11 @@ export default async function PayoutsPage() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <p className="text-[12px] font-bold text-ink-soft">{t(lang, "payout.available")}</p>
-                    <p className="tnum mt-0.5 text-[22px] font-extrabold text-ink">{formatPrice(balance, c)}</p>
+                    <p className="tnum mt-0.5 text-[22px] font-extrabold text-ink">{formatPrice(balance, c, lang)}</p>
                   </div>
                   <div>
                     <p className="text-[12px] font-bold text-ink-soft">{t(lang, "payout.pending")}</p>
-                    <p className="tnum mt-0.5 text-[22px] font-extrabold text-ink-soft">{formatPrice(pending, c)}</p>
+                    <p className="tnum mt-0.5 text-[22px] font-extrabold text-ink-soft">{formatPrice(pending, c, lang)}</p>
                   </div>
                 </div>
                 <PayoutRequestForm lang={lang} currency={c} balance={balance} bankName={acc?.bank_name ?? null}
@@ -92,7 +92,7 @@ export default async function PayoutsPage() {
                         {p.status === "rejected" && p.admin_note ? ` · ${p.admin_note}` : ""}
                       </p>
                     </div>
-                    <span className="tnum shrink-0 font-bold text-ink">{formatPrice(p.amount, p.currency)}</span>
+                    <span className="tnum shrink-0 font-bold text-ink">{formatPrice(p.amount, p.currency, lang)}</span>
                   </li>
                 ))}
               </ul>
@@ -110,7 +110,7 @@ export default async function PayoutsPage() {
                       <p className="truncate text-[12px] text-ink-soft">{date(l.created_at)}{l.kind === "adjust" && l.memo ? ` · ${l.memo}` : ""}</p>
                     </div>
                     <span className={`tnum shrink-0 font-bold ${l.amount < 0 ? "text-ink-soft" : "text-tomo-navy"}`}>
-                      {signed(l.amount, (n) => formatPrice(n, l.currency))}
+                      {signed(l.amount, (n) => formatPrice(n, l.currency, lang))}
                     </span>
                   </li>
                 ))}

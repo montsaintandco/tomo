@@ -99,7 +99,7 @@ export default async function ProfilePage(props: { params: Promise<{ id: string 
                       )}
                     </div>
                     <p className={`tnum mt-1 truncate text-[13px] font-extrabold ${inactive ? "text-ink-faint" : "text-ink"}`}>
-                      {formatPrice(l.price, l.currency as Currency)}
+                      {formatPrice(l.price, l.currency as Currency, lang)}
                     </p>
                   </Link>
                 </li>

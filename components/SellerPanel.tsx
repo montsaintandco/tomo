@@ -69,7 +69,7 @@ export default function SellerPanel({ listingId, currency, bumpedAt, active, off
           {offers.map((o) => (
             <li key={o.id} className="flex items-center justify-between gap-3 py-2.5">
               <span className="min-w-0">
-                <span className="tnum block text-[15px] font-extrabold text-ink">{formatPrice(o.price, currency)}</span>
+                <span className="tnum block text-[15px] font-extrabold text-ink">{formatPrice(o.price, currency, lang)}</span>
                 <span className="block truncate text-[12px] text-ink-soft">
                   {o.profiles?.nickname ?? "—"} · {t(lang, `offers.status.${o.status}`)}
                 </span>

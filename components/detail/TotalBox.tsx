@@ -17,7 +17,7 @@ function Line({ k, v, sub }: { k: string; v: string; sub?: string }) {
 export function ProxyTotalBox({ lang, totals, original, shippingIncluded }: {
   lang: Lang; totals: ProxyOrderTotal; original?: string; shippingIncluded?: boolean;
 }) {
-  const f = (n: number) => formatPrice(n, totals.currency);
+  const f = (n: number) => formatPrice(n, totals.currency, lang);
   return (
     <section aria-label={t(lang, "detail.totalTitle")} className="rounded-card border border-tomo-navy/10 p-3.5 text-[13px]">
       <Line k={t(lang, "detail.itemPrice")} v={original ? `${f(totals.subtotal)} (${original})` : f(totals.subtotal)} />
@@ -37,9 +37,9 @@ export function ProxyTotalBox({ lang, totals, original, shippingIncluded }: {
 export function DirectTotalBox({ lang, totals, viewerCurrency, rate }: {
   lang: Lang; totals: DirectDetailTotal; viewerCurrency: "KRW" | "JPY"; rate: number;
 }) {
-  const f = (n: number) => formatPrice(n, totals.currency);
+  const f = (n: number) => formatPrice(n, totals.currency, lang);
   const approx = totals.currency !== viewerCurrency
-    ? `${t(lang, "price.approx")} ${formatPrice(convertPrice(totals.total, totals.currency, rate), viewerCurrency)}` : "";
+    ? `${t(lang, "price.approx")} ${formatPrice(convertPrice(totals.total, totals.currency, rate), viewerCurrency, lang)}` : "";
   return (
     <section aria-label={t(lang, "detail.directTotalTitle")} className="rounded-card border border-tomo-navy/10 p-3.5 text-[13px]">
       <Line k={t(lang, "detail.itemPrice")} v={f(totals.item)} />

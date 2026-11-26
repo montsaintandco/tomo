@@ -24,7 +24,7 @@ export default function PayoutRequestForm({ lang, currency, balance, bankName, h
     const n = Number(amount);
     const err = payoutAmountError(n, balance);
     if (err) { setMsg({ key: err, ok: false }); return; }
-    if (!confirm(t(lang, "payout.confirm", { amount: formatPrice(n, currency), bank: bankName! }))) return;
+    if (!confirm(t(lang, "payout.confirm", { amount: formatPrice(n, currency, lang), bank: bankName! }))) return;
     setBusy(true); setMsg(null);
     const { error } = await createBrowserSupabase().rpc("request_payout", { p_currency: currency, p_amount: n });
     setBusy(false);

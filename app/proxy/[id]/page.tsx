@@ -62,8 +62,8 @@ export default async function ProxyDetailPage(props: { params: Promise<{ id: str
   const cur = Math.max(0, STEPS.findIndex((s) => s === r.status));
   const cancelled = r.status === "cancelled";
   const totalBuyer = r.quote_total != null && viewer.currency === "KRW"
-    ? `${t(lang, "price.approx")} ${formatPrice(convertPrice(r.quote_total, "JPY", viewer.rate), "KRW")}`
-    : r.quote_total != null ? formatPrice(r.quote_total, "JPY") : "";
+    ? `${t(lang, "price.approx")} ${formatPrice(convertPrice(r.quote_total, "JPY", viewer.rate), "KRW", lang)}`
+    : r.quote_total != null ? formatPrice(r.quote_total, "JPY", lang) : "";
 
   return (
     <main className="mx-auto max-w-md p-4 pb-8 standalone:pb-24 md:max-w-2xl md:px-6 md:pb-16 md:pt-8">
@@ -82,7 +82,7 @@ export default async function ProxyDetailPage(props: { params: Promise<{ id: str
           <div className="min-w-0 flex-1">
             <p className="line-clamp-2 text-sm text-ink">{item.title_translated || item.title}</p>
             <p className="mt-0.5 text-xs text-ink-soft">
-              {t(lang, `source.${item.source as MarketSource}`)} · <span className="tnum font-bold text-ink">{formatPrice(item.price, item.currency)}</span>
+              {t(lang, `source.${item.source as MarketSource}`)} · <span className="tnum font-bold text-ink">{formatPrice(item.price, item.currency, lang)}</span>
             </p>
           </div>
         </Link>
@@ -98,7 +98,7 @@ export default async function ProxyDetailPage(props: { params: Promise<{ id: str
             {refund && (
               <div className="mt-2 flex justify-between gap-3 text-[13px]">
                 <span className="text-ink-soft">{t(lang, "refund.amountLine")} · {t(lang, refund.status === "done" ? "refund.status.done" : "refund.status.pending")}</span>
-                <span className="tnum font-bold text-tomo-navy">{formatPrice(refund.amount, refund.currency)}</span>
+                <span className="tnum font-bold text-tomo-navy">{formatPrice(refund.amount, refund.currency, lang)}</span>
               </div>
             )}
           </>
@@ -128,14 +128,14 @@ export default async function ProxyDetailPage(props: { params: Promise<{ id: str
       {r.quote_total != null ? (
         <div className="card mb-4 p-4 text-[13px]">
           <p className="mb-2 font-bold text-tomo-navy">{t(lang, "proxy.quote")}</p>
-          <Line label={t(lang, "ext.item")} value={formatPrice(r.quote_item_price ?? 0, "JPY")} />
-          <Line label={t(lang, "ext.fee")} value={formatPrice(r.quote_fee ?? 0, "JPY")} />
-          <Line label={t(lang, "tx.intlShipping")} value={formatPrice(r.quote_shipping ?? 0, "JPY")} />
+          <Line label={t(lang, "ext.item")} value={formatPrice(r.quote_item_price ?? 0, "JPY", lang)} />
+          <Line label={t(lang, "ext.fee")} value={formatPrice(r.quote_fee ?? 0, "JPY", lang)} />
+          <Line label={t(lang, "tx.intlShipping")} value={formatPrice(r.quote_shipping ?? 0, "JPY", lang)} />
           <div className="mt-2 flex items-baseline justify-between gap-3 border-t border-tomo-navy/10 pt-2">
             <span className="font-bold text-ink">{t(lang, "ext.total")}</span>
             <span className="text-right">
               <span className="tnum block text-[15px] font-extrabold text-tomo-navy">{totalBuyer}</span>
-              {viewer.currency === "KRW" && <span className="tnum block text-[11px] font-bold text-ink-soft">{formatPrice(r.quote_total, "JPY")}</span>}
+              {viewer.currency === "KRW" && <span className="tnum block text-[11px] font-bold text-ink-soft">{formatPrice(r.quote_total, "JPY", lang)}</span>}
             </span>
           </div>
         </div>

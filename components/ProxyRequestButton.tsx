@@ -26,7 +26,7 @@ export default function ProxyRequestButton({ lang = "ko", auction = false, total
     try {
       const parts = [
         bundle ? t(lang, "ext.bundleTag") : "",
-        auction && maxBid ? t(lang, "ext.maxBidTag", { v: formatPrice(Number(maxBid), props.currency) }) : "",
+        auction && maxBid ? t(lang, "ext.maxBidTag", { v: formatPrice(Number(maxBid), props.currency, lang) }) : "",
         note.trim(),
       ].filter(Boolean);
       const res = await fetch("/api/proxy", {

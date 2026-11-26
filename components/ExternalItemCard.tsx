@@ -24,7 +24,9 @@ export default function ExternalItemCard({ item, rate, viewerCurrency, lang = "k
 }) {
   const originalLang = item.currency === "JPY" ? "ja" : "ko";
   // 번역 제목이 있으면 그것만 보이고 원문은 title 속성(호버)에 — 카드 한 장에 제목은 한 묶음 (04T4)
-  const title = item.titleTranslated || item.title;
+  // 화면 언어가 원문 언어와 같으면 번역을 쓰지 않는다(한국 거주 계정이 일본어 화면으로 볼 때 일본 상품이 한국어 제목으로 뜨던 문제, 2026-11-26 QA)
+  const translated = originalLang !== lang ? item.titleTranslated : undefined;
+  const title = translated || item.title;
   const extra = (item.shippingIncluded || (item.likes ?? 0) > 0) ? (
     <>
       {item.shippingIncluded && t(lang, "price.shipIncluded")}
@@ -35,7 +37,7 @@ export default function ExternalItemCard({ item, rate, viewerCurrency, lang = "k
     </>
   ) : undefined;
   return (
-    <Link href={`/global/${item.source}/${item.sourceId}`} title={item.titleTranslated ? item.title : undefined}
+    <Link href={`/global/${item.source}/${item.sourceId}`} title={translated ? item.title : undefined}
       className="press group flex flex-col">
       <div className="relative aspect-square overflow-hidden rounded-thumb bg-tomo-navy/5">
         {item.thumb ? (
@@ -58,7 +60,7 @@ export default function ExternalItemCard({ item, rate, viewerCurrency, lang = "k
         )}
       </div>
       <div className="mt-1.5 flex min-w-0 flex-col gap-0.5">
-        <p className="line-clamp-1 text-[13px] leading-snug text-ink" lang={item.titleTranslated ? undefined : originalLang}>
+        <p className="line-clamp-1 text-[13px] leading-snug text-ink" lang={translated ? undefined : originalLang}>
           {title}
         </p>
         <Price amount={item.price} currency={item.currency} viewerCurrency={viewerCurrency} rate={rate} lang={lang}

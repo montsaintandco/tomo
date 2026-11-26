@@ -59,7 +59,7 @@ export default function CartList({ lang, rows, viewerCurrency, rate }: { lang: L
                 {r.stale && <p className="mb-0.5 text-[11px] font-bold text-tomo-coral-deep">{t(lang, "cart.changed")}</p>}
                 <p className="line-clamp-2 text-[13px] text-ink">{r.title}</p>
                 <p className="mt-0.5 text-[12px] text-ink-soft">{t(lang, `source.${r.source}`)} · <span className="tnum font-bold text-ink">
-                  {formatPrice(r.currency === viewerCurrency ? r.price : convertPrice(r.price, r.currency, rate), viewerCurrency)}</span></p>
+                  {formatPrice(r.currency === viewerCurrency ? r.price : convertPrice(r.price, r.currency, rate), viewerCurrency, lang)}</span></p>
               </div>
               <button type="button" onClick={() => remove([r.id])} disabled={busy} aria-label={t(lang, "cart.removeOne")}
                 className="press flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink-soft">

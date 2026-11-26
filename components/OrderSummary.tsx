@@ -14,7 +14,7 @@ export default function OrderSummary({ lang, totals, cta }: {
   lang: Lang; totals: ProxyOrderTotal;
   cta?: { label: string; href?: string; onClick?: () => void; disabled?: boolean; busy?: boolean };
 }) {
-  const f = (n: number) => formatPrice(n, totals.currency);
+  const f = (n: number) => formatPrice(n, totals.currency, lang);
   return (
     <section aria-label={t(lang, "order.summary")} className="card flex flex-col gap-1.5 p-4">
       <h2 className="mb-1 text-[15px] font-extrabold text-ink">{t(lang, "order.summary")}</h2>

@@ -142,7 +142,7 @@ export default function ProxyActions({ id, status, isOwner, isAdmin, lang = "ko"
                 <input type="number" min={0} max={refundPreview.cap} step={1} value={refundAmount} onChange={(e) => setRefundAmount(e.target.value)}
                   className="tnum w-full rounded-full bg-white px-3 py-1.5 text-sm shadow-soft" />
                 <span className="mt-0.5 block text-[11px] text-ink-soft">
-                  {t(lang, "refund.capNote", { amount: formatPrice(refundPreview.amount, refundPreview.currency), cap: formatPrice(refundPreview.cap, refundPreview.currency) })}
+                  {t(lang, "refund.capNote", { amount: formatPrice(refundPreview.amount, refundPreview.currency, lang), cap: formatPrice(refundPreview.cap, refundPreview.currency, lang) })}
                 </span>
               </label>
             ) : (

@@ -35,7 +35,7 @@ export default function PriceHint({ title, currency, lang, onApply }: {
           {stats.count > 0 && stats.median != null ? (
             <>
               <span className="tnum text-ink">
-                {t(lang, "sell.priceResult", { n: stats.count, median: formatPrice(stats.median, currency), min: formatPrice(stats.min!, currency), max: formatPrice(stats.max!, currency) })}
+                {t(lang, "sell.priceResult", { n: stats.count, median: formatPrice(stats.median, currency, lang), min: formatPrice(stats.min!, currency, lang), max: formatPrice(stats.max!, currency, lang) })}
               </span>
               {stats.sources.length > 0 && <span> · {t(lang, "sell.priceSrc", { sources: stats.sources.map((s) => t(lang, `source.${s}`)).join("·") })}</span>}
               <button type="button" onClick={() => onApply(stats.median!)}

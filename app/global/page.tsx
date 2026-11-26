@@ -103,8 +103,8 @@ export default async function GlobalPage(props: {
   if (q) searchParamsNow.set("q", q);
   if (source !== "all") searchParamsNow.set("source", source);
   const chips = [
-    filters.min ? { key: ["min"], label: t(lang, "search.chipPriceMin", { v: formatPrice(filters.min, viewer.currency) }) } : null,
-    filters.max ? { key: ["max"], label: t(lang, "search.chipPriceMax", { v: formatPrice(filters.max, viewer.currency) }) } : null,
+    filters.min ? { key: ["min"], label: t(lang, "search.chipPriceMin", { v: formatPrice(filters.min, viewer.currency, lang) }) } : null,
+    filters.max ? { key: ["max"], label: t(lang, "search.chipPriceMax", { v: formatPrice(filters.max, viewer.currency, lang) }) } : null,
     filters.cond ? { key: ["cond"], label: t(lang, filters.cond === "new" ? "filter.condNew" : "filter.condUsed") } : null,
     filters.sold ? { key: ["sold"], label: t(lang, "filter.sold") } : null,
   ].filter((c): c is { key: string[]; label: string } => !!c);

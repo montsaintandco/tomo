@@ -74,7 +74,7 @@ export default async function OrderReceiptPage(props: { params: Promise<{ id: st
           {refunds.map((f) => (
             <div key={f.id} className="mt-1 flex justify-between gap-3 first:mt-0">
               <span className="text-ink-soft">{t(lang, f.status === "done" ? "refund.status.done" : "refund.status.pending")}</span>
-              <span className="tnum text-ink">{formatPrice(f.amount, f.currency)}</span>
+              <span className="tnum text-ink">{formatPrice(f.amount, f.currency, lang)}</span>
             </div>
           ))}
         </section>

@@ -40,7 +40,7 @@ export default async function MyOffers(props: { searchParams: Promise<{ tab?: st
           {list.map((o) => (
             <Row key={o.id} href={`/listings/${o.listings.id}`} image={o.listings.images?.[0]} title={displayTitle(o.listings, lang)}
               sub={`${o.profiles?.nickname ?? "—"} · ${t(lang, `offers.status.${o.status}`)}`}
-              right={formatPrice(o.price, o.listings.currency as Currency)} />
+              right={formatPrice(o.price, o.listings.currency as Currency, lang)} />
           ))}
           {list.length === 0 && <Empty text={t(lang, "my.noOffers")} />}
         </div>
@@ -58,7 +58,7 @@ export default async function MyOffers(props: { searchParams: Promise<{ tab?: st
         <div className="flex flex-col gap-2">
           {list.map((o) => (
             <Row key={o.id} href={`/listings/${o.listings!.id}`} image={o.listings!.images?.[0]} title={displayTitle(o.listings!, lang)}
-              sub={t(lang, `offers.status.${o.status}`)} right={formatPrice(o.price, o.listings!.currency as Currency)} />
+              sub={t(lang, `offers.status.${o.status}`)} right={formatPrice(o.price, o.listings!.currency as Currency, lang)} />
           ))}
           {list.length === 0 && <Empty text={t(lang, "my.noOffers")} />}
         </div>
