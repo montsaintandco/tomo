@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { TomoSymbol } from "@/components/Brand";
+import { hrefWith, pageItems, type Params } from "@/components/admin/paging";
+import { ageText, type AgingLevel } from "@/lib/admin-aging";
 
 // 어드민 프리미티브 (서버 컴포넌트) — Linear 문법: 패널·테이블·상태 필·KPI 타일. 한국어 고정
 
@@ -65,13 +67,15 @@ export function Kpi({ label, value, sub, href, alert }: { label: string; value: 
   return href ? <Link href={href} className="block">{body}</Link> : body;
 }
 
-export function FilterTabs({ base, param, options, current }: {
-  base: string; param: string; options: { value: string; label: string; count?: number }[]; current: string;
+// keep 을 주면 다른 URL 값(검색어 등)을 유지하고 page·open 은 지운다. 없으면 예전처럼 base?param=value
+export function FilterTabs({ base, param, options, current, keep }: {
+  base: string; param: string; options: { value: string; label: string; count?: number }[]; current: string; keep?: Params;
 }) {
   return (
     <nav className="mb-3 flex flex-wrap gap-1" aria-label="필터">
       {options.map((o) => {
-        const href = o.value ? `${base}?${param}=${encodeURIComponent(o.value)}` : base;
+        const href = keep ? hrefWith(base, keep, { [param]: o.value || undefined, page: undefined, open: undefined })
+          : o.value ? `${base}?${param}=${encodeURIComponent(o.value)}` : base;
         const on = current === o.value;
         return (
           <Link key={o.value} href={href} aria-current={on ? "page" : undefined}
@@ -82,6 +86,37 @@ export function FilterTabs({ base, param, options, current }: {
       })}
     </nav>
   );
+}
+
+/** 페이지 넘김 — 서버 링크라 주소에 ?page= 가 남는다. total 을 모르면(null) 이전·다음만 */
+export function Pager({ base, params, page, size, total, shown }: {
+  base: string; params: Params; page: number; size: number; total: number | null; shown: number;
+}) {
+  const pages = total == null ? null : Math.max(1, Math.ceil(total / size));
+  const hasNext = pages == null ? shown >= size : page < pages;
+  if (page === 1 && !hasNext) return total != null && total > 0 ? <p className="a-faint px-3 py-2 text-[12px]">{total}건</p> : null;
+  const go = (p: number) => hrefWith(base, params, { page: p === 1 ? undefined : String(p), open: undefined });
+  const cls = "inline-flex h-7 min-w-7 items-center justify-center rounded-md px-2 text-[12px]";
+  return (
+    <nav className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--a-border)] px-3 py-2" aria-label="페이지 이동">
+      <span className="a-faint tnum text-[12px]">{total != null ? `${total}건 · ` : ""}{page}{pages ? ` / ${pages}` : ""}쪽</span>
+      <span className="flex items-center gap-1">
+        {page > 1 ? <Link href={go(page - 1)} className={`${cls} a-muted hover:bg-[var(--a-hover)]`}>이전</Link> : <span className={`${cls} a-faint`}>이전</span>}
+        {pages && pageItems(page, pages).map((it, i) => it === "gap" ? <span key={`g${i}`} className="a-faint px-1">…</span> : (
+          <Link key={it} href={go(it)} aria-current={it === page ? "page" : undefined}
+            className={`${cls} tnum ${it === page ? "bg-[var(--a-active)] font-semibold" : "a-muted hover:bg-[var(--a-hover)]"}`}>{it}</Link>
+        ))}
+        {hasNext ? <Link href={go(page + 1)} className={`${cls} a-muted hover:bg-[var(--a-hover)]`}>다음</Link> : <span className={`${cls} a-faint`}>다음</span>}
+      </span>
+    </nav>
+  );
+}
+
+/** 경과 배지 — 지연은 빨강, 주의는 호박, 보통은 회색 글자 */
+export function AgeBadge({ since, level, now }: { since: string; level: AgingLevel | null; now?: number }) {
+  const text = ageText(since, now);
+  if (!level) return <span className="a-faint tnum whitespace-nowrap text-[12px]">{text}</span>;
+  return <span className="a-pill tnum" data-tone={level === "late" ? "red" : "amber"}>{level === "late" ? "지연" : "주의"} {text}</span>;
 }
 
 export function Thumb({ src, size = 32 }: { src?: string | null; size?: number }) {

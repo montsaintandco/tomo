@@ -6,6 +6,7 @@ import ProxyActions from "@/components/ProxyActions";
 import Link from "next/link";
 import { rows as safeRows } from "@/lib/safe";
 import { loadCancelPreviews } from "@/lib/refunds";
+import AutoRefresh from "@/components/admin/AutoRefresh";
 
 const OPEN = ["requested", "quoted", "approved", "paid", "purchasing", "center_received", "shipped_international", "delivered"];
 const FILTERS = [
@@ -50,6 +51,7 @@ export default async function AdminProxyPage(props: { searchParams: Promise<{ f?
 
   return (
     <>
+      <AutoRefresh />
       <PageHeader title="대행 요청" sub="접수순. 견적 → 고객 승인 → 결제 확인 → 현지 구매 → 센터 입고 → 국제 발송 → 배송" />
       <FilterTabs base="/admin/proxy" param="f" options={FILTERS} current={f} />
       <Panel>

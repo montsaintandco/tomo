@@ -2,14 +2,16 @@ import { createServerSupabase } from "@/lib/supabase/server";
 import { PageHeader, Panel, Table, Pill, Kpi, TX_META, PROXY_META, fmtDate, money, todayIso } from "@/components/admin/ui";
 import Link from "next/link";
 import SystemHealth from "@/components/admin/SystemHealth";
+import MyTurnQueue from "@/components/admin/MyTurnQueue";
+import AutoRefresh from "@/components/admin/AutoRefresh";
 
-// 대시보드 — 숫자 6개 + "지금 처리해야 할 것" 인박스 (Linear Inbox 문법)
+// 대시보드 — 숫자 6개 + 「내 차례」(오래된 순 처리 큐) + 대기 줄 + 시스템 상태 + 단계별 패널. 60초마다 자동 갱신
 export default async function AdminHome() {
   const supabase = await createServerSupabase();
   const today = todayIso();
   const cnt = (q: PromiseLike<{ count: number | null }>) => q.then((r) => r.count ?? 0);
 
-  const [activeListings, users, openTx, disputes, proxyWait, centerWait, newListings, newUsers, paidOrders, disputeRows, proxyRows, centerRows, refundWait, payoutWait, cancelReq] = await Promise.all([
+  const [activeListings, users, openTx, disputes, proxyWait, centerWait, newListings, newUsers, paidOrders, disputeRows, proxyRows, centerRows, refundWait, payoutWait, cancelReq, reportWait] = await Promise.all([
     cnt(supabase.from("listings").select("id", { count: "exact", head: true }).eq("status", "active").eq("hidden", false)),
     cnt(supabase.from("profiles").select("id", { count: "exact", head: true }).eq("suspended", false)),
     cnt(supabase.from("transactions").select("id", { count: "exact", head: true }).not("status", "in", "(completed,cancelled,pending_payment)")),
@@ -29,6 +31,7 @@ export default async function AdminHome() {
     cnt(supabase.from("refunds").select("id", { count: "exact", head: true }).in("status", ["pending", "failed"])),
     cnt(supabase.from("payouts").select("id", { count: "exact", head: true }).eq("status", "requested")),
     cnt(supabase.from("proxy_requests").select("id", { count: "exact", head: true }).eq("status", "paid").not("cancel_requested_at", "is", null)),
+    cnt(supabase.from("reports").select("id", { count: "exact", head: true }).eq("status", "open")),   // 0033 미적용이면 0
   ]);
 
   type Row = { id: string; status: string; updated_at?: string; created_at?: string; item_price?: number; currency?: string; center?: string | null; dispute_reason?: string | null;
@@ -39,6 +42,7 @@ export default async function AdminHome() {
 
   return (
     <>
+      <AutoRefresh />
       <PageHeader title="대시보드" sub={`오늘 신규 상품 ${newListings} · 신규 가입 ${newUsers} · 결제된 주문 ${paidOrders}`} />
       <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
         <Kpi label="판매중 상품" value={activeListings} href="/admin/listings" />
@@ -49,15 +53,17 @@ export default async function AdminHome() {
         <Kpi label="센터 대기" value={centerWait} href="/admin/center" alert />
       </div>
 
-      <SystemHealth />
-      {refundWait + payoutWait + cancelReq > 0 && (
+      <MyTurnQueue />
+      {refundWait + payoutWait + cancelReq + reportWait > 0 && (
         <div className="a-panel mb-4 flex flex-wrap items-center gap-x-5 gap-y-2 px-4 py-3 text-[13px]">
-          <span className="font-semibold">돈 처리 대기</span>
+          <span className="font-semibold">처리 대기</span>
           {refundWait > 0 && <Link href="/admin/refunds" className="a-link">환불 대기·실패 {refundWait}건 →</Link>}
           {payoutWait > 0 && <Link href="/admin/payouts" className="a-link">출금 신청 {payoutWait}건 →</Link>}
           {cancelReq > 0 && <Link href="/admin/proxy?f=cancelreq" className="a-link">대행 취소 요청 {cancelReq}건 →</Link>}
+          {reportWait > 0 && <Link href="/admin/reports" className="a-link">신고 확인 {reportWait}건 →</Link>}
         </div>
       )}
+      <SystemHealth />
       <div className="grid gap-4 lg:grid-cols-2">
         <Panel title="분쟁" count={disputes} actions={<Link href="/admin/disputes" className="a-link text-[12px]">전체 →</Link>}>
           <Table head={["상품", "구매자", "금액", "사유", "갱신"]} empty="처리할 분쟁이 없어요">

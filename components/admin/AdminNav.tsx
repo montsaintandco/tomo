@@ -3,19 +3,22 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Wordmark } from "@/components/Brand";
 
-export type NavCounts = { disputes: number; proxy: number; center: number; support: number; refunds: number; payouts: number };
+export type NavCounts = { disputes: number; proxy: number; center: number; support: number; refunds: number; payouts: number; reports: number; errors: number };
 
+// 그룹 순서 = 하루 일 순서: 주문 진행 → 고객 응대 → 돈 → 상품 → 사람 → 설정·시스템
 const GROUPS: { label: string; items: { href: string; label: string; count?: keyof NavCounts }[] }[] = [
   { label: "운영", items: [
     { href: "/admin", label: "대시보드" },
-    { href: "/admin/disputes", label: "분쟁", count: "disputes" },
-    { href: "/admin/transactions", label: "거래" },
-    { href: "/admin/proxy", label: "대행 요청", count: "proxy" },
     { href: "/admin/orders", label: "주문" },
+    { href: "/admin/proxy", label: "대행 요청", count: "proxy" },
+    { href: "/admin/transactions", label: "거래" },
     { href: "/admin/center", label: "센터", count: "center" },
+    { href: "/admin/disputes", label: "분쟁", count: "disputes" },
+  ] },
+  { label: "고객", items: [
     { href: "/admin/support", label: "문의", count: "support" },
     { href: "/admin/support-ai", label: "AI 답변 로그" },
-    { href: "/admin/reports", label: "신고" },
+    { href: "/admin/reports", label: "신고", count: "reports" },
   ] },
   { label: "정산", items: [
     { href: "/admin/refunds", label: "환불", count: "refunds" },
@@ -31,11 +34,11 @@ const GROUPS: { label: string; items: { href: string; label: string; count?: key
     { href: "/admin/users", label: "사용자" },
     { href: "/admin/reviews", label: "후기" },
   ] },
-  { label: "설정", items: [
+  { label: "설정·시스템", items: [
     { href: "/admin/rates", label: "환율" },
     { href: "/admin/notices", label: "공지" },
     { href: "/admin/activity", label: "활동 기록" },
-    { href: "/admin/errors", label: "오류" },
+    { href: "/admin/errors", label: "오류", count: "errors" },
   ] },
 ];
 

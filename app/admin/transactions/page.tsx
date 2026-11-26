@@ -1,5 +1,6 @@
 import { createServerSupabase } from "@/lib/supabase/server";
-import { PageHeader, Panel, Table, Pill, FilterTabs, TX_META, fmtDate, money } from "@/components/admin/ui";
+import { PageHeader, Panel, Table, Pill, FilterTabs, Pager, TX_META, fmtDate, money } from "@/components/admin/ui";
+import { pageOf } from "@/components/admin/paging";
 import Link from "next/link";
 import TxActions from "@/components/TxActions";
 import { rows as safeRows } from "@/lib/safe";
@@ -17,15 +18,18 @@ const FILTERS = [
 ];
 
 // 전체 거래 — 에스크로 상태 전부. 행은 거래 상세(운영자는 0010 RLS로 열람·센터 액션)
-export default async function AdminTransactionsPage(props: { searchParams: Promise<{ status?: string }> }) {
-  const { status = "" } = await props.searchParams;
+export default async function AdminTransactionsPage(props: { searchParams: Promise<{ status?: string; page?: string }> }) {
+  const sp = await props.searchParams;
+  const status = FILTERS.some((f) => f.value === sp.status) ? sp.status ?? "" : "";
+  const { page, from, to, size } = pageOf(sp.page);
+  const params = { status: status || undefined, page: page > 1 ? String(page) : undefined };
   const supabase = await createServerSupabase();
   let q = supabase.from("transactions")
-    .select("id, status, is_cross_border, meetup, center, item_price, currency, updated_at, listings(title), buyer:profiles!transactions_buyer_id_fkey(nickname), seller:profiles!transactions_seller_id_fkey(nickname)")
-    .order("updated_at", { ascending: false }).limit(100);
+    .select("id, status, is_cross_border, meetup, center, item_price, currency, updated_at, listings(title), buyer:profiles!transactions_buyer_id_fkey(nickname), seller:profiles!transactions_seller_id_fkey(nickname)", { count: "exact" })
+    .order("updated_at", { ascending: false }).range(from, to);
   if (status === "open") q = q.in("status", OPEN);
   else if (status) q = q.eq("status", status);
-  const { data } = await q;
+  const { data, count } = await q;
   const rows = (data ?? []) as unknown as {
     id: string; status: string; is_cross_border: boolean; meetup: boolean; center: string | null; item_price: number; currency: string; updated_at: string;
     listings: { title: string } | null; buyer: { nickname: string } | null; seller: { nickname: string } | null;
@@ -38,8 +42,8 @@ export default async function AdminTransactionsPage(props: { searchParams: Promi
 
   return (
     <>
-      <PageHeader title="거래" sub="에스크로 거래 전체. 최근 갱신순 100건" />
-      <FilterTabs base="/admin/transactions" param="status" options={FILTERS} current={status} />
+      <PageHeader title="거래" sub="에스크로 거래 전체. 최근 갱신순" />
+      <FilterTabs base="/admin/transactions" param="status" options={FILTERS} current={status} keep={params} />
       <Panel>
         <Table head={["상품", "구매자 → 판매자", "금액", "유형", "상태", "갱신", ""]}>
           {rows.map((r) => (
@@ -64,6 +68,7 @@ export default async function AdminTransactionsPage(props: { searchParams: Promi
             </tr>
           ))}
         </Table>
+        <Pager base="/admin/transactions" params={params} page={page} size={size} total={count} shown={rows.length} />
       </Panel>
     </>
   );
