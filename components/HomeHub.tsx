@@ -1,29 +1,30 @@
-import { Suspense, cache } from "react";
+import { Suspense } from "react";
 import Link from "next/link";
 import type { ViewerOrGuest } from "@/lib/listings";
-import { getFixedSections, type TrendingSection } from "@/lib/market/trending";
-import { heroImage } from "@/lib/hero-image";
+import type { TrendingSection } from "@/lib/market/trending";
 import { getThemes } from "@/lib/market/themes";
-import { t, otherCountry, type Lang } from "@/lib/i18n";
-import { convertPrice, formatPrice } from "@/lib/currency";
+import { t, otherCountry } from "@/lib/i18n";
 import type { FeedListing } from "@/components/ListingRow";
 import SectionHeader from "@/components/SectionHeader";
 import MarketCarousel, { CarouselSkeleton } from "@/components/MarketCarousel";
 import ListingCard from "@/components/ListingCard";
 import { TomoSymbol } from "@/components/Brand";
-import CategoryChips from "@/components/CategoryChips";
 import BannerStrip from "@/components/BannerStrip";
+import CategoryCircles, { CategoryCirclesSkeleton } from "@/components/home/CategoryCircles";
+import RecentViewed from "@/components/home/RecentViewed";
+import { getHomeRows } from "@/lib/home/rows";
+import { getPopularTerms } from "@/lib/home/data";
+import { mergeKeywords } from "@/lib/home/popular";
 
-// 한 요청 안에서 두 Suspense 블록이 같은 프로미스를 공유한다 (테마 캐시는 별도로 1h)
-// 홈 키워드는 고정(코드 테이블). 어드민 큐레이션은 /global·카테고리 페이지에서만
-const getSections = cache((country: "KR" | "JP") => getFixedSections(country));
+// 홈 순서(04T7·03#7): 짧은 히어로(제목·인기 검색어) → 원형 카테고리 → 첫 인기 줄(첫 화면에 걸친다) → 최근 본 상품 → 배너 → 토모 상품 → 팔기 → 여행 → 나머지 인기 줄.
+// 검색창은 하나다: 데스크톱은 헤더(GNB), 모바일은 페이지 위 검색창. 인기 줄은 lib/home/rows 가 거르고 중복을 뺀다.
 
 function ThemeBlock({ section, viewer }: { section: TrendingSection; viewer: ViewerOrGuest }) {
-  const lang: Lang = viewer.language;
+  const lang = viewer.language;
+  const label = lang === "ja" ? section.theme.labelJa : section.theme.label;
   return (
     <div>
-      <SectionHeader level={3} lang={lang} title={lang === "ja" ? section.theme.labelJa : section.theme.label}
-        href={`/global?q=${encodeURIComponent(lang === "ja" ? section.theme.labelJa : section.theme.label)}`} />
+      <SectionHeader level={3} lang={lang} title={label} href={`/global?q=${encodeURIComponent(label)}`} />
       <MarketCarousel items={section.items} rate={viewer.rate} viewerCurrency={viewer.currency} lang={lang} />
     </div>
   );
@@ -42,104 +43,57 @@ function ThemeSkeleton({ rows }: { rows: number }) {
   );
 }
 
-// 히어로 — 검색이 히어로(에어비앤비식): 키워드든 상대국 마켓 URL이든 여기 한 칸. 밑에 인기 검색어 칩 + 테마 타일 4장(대표 사진·테마명·최저가, 탭하면 그 테마 검색).
-// 사진이 랜덤 상품이 아니라 "여기서 살 수 있는 것"의 지도. 로그인·게스트 공통
+// 히어로 — 제목 한 줄과 인기 검색어만. 큰 사진 타일은 없앴다(첫 화면을 상품 줄에 준다, 04T7)
 function HomeHero({ viewer }: { viewer: ViewerOrGuest }) {
   const lang = viewer.language;
-  const other = otherCountry(viewer.country);
-  const otherName = t(lang, `market.${other}`);
+  const otherName = t(lang, `market.${otherCountry(viewer.country)}`);
   const [line1, line2] = t(lang, "hero.title", { other: otherName }).split("\n");
   return (
-    <section className="md:py-4" aria-label={line1}>
-      <h1 className="text-[26px] font-extrabold leading-[1.25] tracking-[-0.015em] text-ink md:text-[34px]">{line1} <br className="md:hidden" />{line2}</h1>
-      <p className="mt-2 text-[14px] text-ink-soft md:text-[15px]">{t(lang, "hero.sub")}</p>
-      <form action="/global" role="search" className="relative mt-5 hidden md:block">{/* 모바일은 헤더 검색창이 바로 위에 있어 중복 — 칩·타일만 */}
-        <label htmlFor="hero-q" className="sr-only">{t(lang, "search.label")}</label>
-        <svg aria-hidden viewBox="0 0 24 24" className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-ink-soft" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
-        <input id="hero-q" name="q" type="search" enterKeyHint="search" autoComplete="off" placeholder={t(lang, "hero.searchPlaceholder", { other: otherName })}
-          className="w-full rounded-card border border-tomo-navy/15 bg-white py-3.5 pl-12 pr-28 text-[15px] shadow-soft placeholder:text-ink-soft focus:border-tomo-coral-deep focus:outline-none focus:ring-2 focus:ring-tomo-coral-deep/25 md:py-4 md:text-base" />
-        <button type="submit" className="btn absolute right-1.5 top-1/2 -translate-y-1/2 bg-tomo-coral-deep px-4 py-2 text-sm text-white md:px-5">{t(lang, "hero.search")}</button>
-      </form>
-      {/* 인기 검색어·테마 타일만 외부 마켓 캐시를 기다린다 — 콜드 스타트에서도 헤드라인·검색은 즉시 */}
-      <Suspense fallback={<div className="mt-5 grid grid-cols-2 gap-2 md:grid-cols-4 md:gap-3" aria-hidden>{[0,1,2,3].map((i) => <div key={i} className="skeleton aspect-[4/3] rounded-card md:aspect-square" />)}</div>}>
-        <HeroTiles viewer={viewer} />
-      </Suspense>
+    <section aria-label={`${line1} ${line2}`} className="md:pt-6">
+      <h1 className="text-[20px] font-extrabold leading-[1.3] tracking-[-0.015em] text-ink md:text-[28px]">{line1} {line2}</h1>
+      <p className="mt-1 text-[13px] leading-snug text-ink-soft md:text-[14px]">{t(lang, "hero.sub")}</p>
+      {/* 한 줄 높이를 미리 잡는다 — 검색어가 늦게 와도 아래가 밀리지 않는다 */}
+      <div className="mt-2 min-h-[1.75rem]">
+        <Suspense fallback={null}><Keywords viewer={viewer} /></Suspense>
+      </div>
     </section>
   );
 }
 
-async function HeroTiles({ viewer }: { viewer: ViewerOrGuest }) {
+// 인기 검색어 — 관리자 큐레이션(/admin/trending) 먼저, 그 뒤에 검색 로그 집계(정제·최소 건수). 한 줄만 보이고 넘치면 옆으로 넘긴다
+async function Keywords({ viewer }: { viewer: ViewerOrGuest }) {
   const lang = viewer.language;
-  const other = otherCountry(viewer.country);
-  const otherName = t(lang, `market.${other}`);
-  const sections = await getSections(viewer.country);
-  const label = (s: TrendingSection) => (lang === "ja" ? s.theme.labelJa : s.theme.label);
-  const tiles = sections.map((s) => {
-    const items = s.items.filter((it) => it.thumb && !it.soldOut && !it.auction && it.price > 0); // 0원(나눔·미정)은 최저가에서 제외
-    const min = items.reduce((m, it) => Math.min(m, it.price), Infinity);
-    const cover = items[0] ?? s.items.find((it) => it.thumb);
-    const fixed = heroImage(s.theme.key); // 지정 사진이 있으면 상품이 없어도 타일을 만든다
-    if (!cover && !fixed) return null;
-    return { key: s.theme.key, label: label(s), href: `/global?q=${encodeURIComponent(label(s))}`, thumb: fixed ?? cover!.thumb, min: Number.isFinite(min) ? min : null, currency: cover?.currency ?? "JPY" as const };
-  }).filter((x): x is NonNullable<typeof x> => !!x).slice(0, 4);
+  const [themes, popular] = await Promise.all([getThemes(viewer.country).catch(() => []), getPopularTerms(lang)]);
+  const words = mergeKeywords(themes.map((th) => (lang === "ja" ? th.labelJa : th.label)), popular);
+  if (words.length === 0) return null;
   return (
-    <>
-      {sections.length > 0 && (
-        <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-ink-soft">
-          <span>{t(lang, "hero.trendingKw")}</span>
-          {sections.map((s) => (
-            <Link key={s.theme.key} href={`/global?q=${encodeURIComponent(label(s))}`} className="font-bold text-ink underline-offset-2 fine:hover:underline">{label(s)}</Link>
-          ))}
-        </p>
-      )}
-      {tiles.length >= 2 && (
-        <ul className="mt-5 grid grid-cols-2 gap-2 md:grid-cols-4 md:gap-3" aria-label={t(lang, "hero.photosAria", { other: otherName })}>
-          {tiles.map((tile, i) => (
-            <li key={tile.key}>
-              <Link href={tile.href} className="press group relative block aspect-[4/3] overflow-hidden rounded-card bg-tomo-navy/5 md:aspect-square">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={tile.thumb} alt="" loading={i < 2 ? "eager" : "lazy"} fetchPriority={i < 2 ? "high" : "auto"} decoding="async" className="h-full w-full object-cover transition-transform duration-200 ease-out fine:group-hover:scale-[1.03]" />
-                <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/65 to-transparent px-3 pb-2.5 pt-8 text-white">
-                  <span className="block text-[15px] font-extrabold leading-tight">{tile.label}</span>
-                  {tile.min !== null && <span className="block text-[12px] opacity-90">{t(lang, "hero.from", { price: formatPrice(tile.currency === viewer.currency ? tile.min : convertPrice(tile.min, tile.currency, viewer.rate), viewer.currency) })}</span>}
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
-    </>
+    <p className="-mx-4 flex items-center gap-x-3 overflow-x-auto whitespace-nowrap px-4 text-[13px] text-ink-soft [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:mx-0 md:px-0">
+      <span className="shrink-0">{t(lang, "hero.trendingKw")}</span>
+      {words.map((w) => (
+        <Link key={w} href={`/global?q=${encodeURIComponent(w)}`} className="shrink-0 py-1 font-bold text-ink underline-offset-2 fine:hover:underline">{w}</Link>
+      ))}
+    </p>
   );
 }
 
-function HeroSkeleton() {
-  return (
-    <div className="md:py-4" aria-hidden>
-      <div className="skeleton h-8 w-3/4 rounded md:h-10" /><div className="skeleton mt-3 h-4 w-1/2 rounded" />
-      <div className="skeleton mt-5 hidden h-[52px] w-full rounded-card md:block" />
-      <div className="mt-5 grid grid-cols-2 gap-2 md:grid-cols-4 md:gap-3">{[0,1,2,3].map((i) => <div key={i} className="skeleton aspect-[4/3] rounded-card md:aspect-square" />)}</div>
-    </div>
-  );
-}
-
-// 첫 테마 하나 — TOMO 상품 위에 "상대국에서 지금 인기"의 맛보기 (사기)
+// 첫 인기 줄 — 첫 화면 안에 걸린다
 async function TrendingLead({ viewer }: { viewer: ViewerOrGuest }) {
-  const sections = (await getSections(viewer.country)).filter((s) => s.items.length > 0);
+  const sections = (await getHomeRows(viewer.country)).filter((s) => s.items.length > 0);
   if (sections.length === 0) return null;
   const lang = viewer.language;
   const other = otherCountry(viewer.country);
   const title = t(lang, "hub.trending", { market: t(lang, `market.${other}`) });
   return (
-    <section className="mt-8" aria-label={title}>
+    <section className="mt-6 md:mt-8" aria-label={title}>
       <SectionHeader lang={lang} title={title} sub={t(lang, "hub.trendingSub", { sources: t(lang, `sources.${other}`) })} />
       <ThemeBlock section={sections[0]} viewer={viewer} />
     </section>
   );
 }
 
-// 나머지 테마 — TOMO 상품·팔기·여행 직거래 아래
+// 나머지 인기 줄 — 토모 상품·팔기·여행 직거래 아래
 async function TrendingRest({ viewer }: { viewer: ViewerOrGuest }) {
-  const sections = (await getSections(viewer.country)).filter((s) => s.items.length > 0).slice(1);
+  const sections = (await getHomeRows(viewer.country)).filter((s) => s.items.length > 0).slice(1);
   if (sections.length === 0) return null;
   const lang = viewer.language;
   return (
@@ -185,15 +139,15 @@ export default function HomeHub({ viewer, listings, travel }: {
   const otherName = t(lang, `market.${other}`);
   return (
     <div className="px-4 pb-6 pt-1 md:px-0 md:pb-16">
-      <div className="mb-6 md:mb-8">
-        <Suspense fallback={<HeroSkeleton />}><HomeHero viewer={viewer} /></Suspense>
+      <HomeHero viewer={viewer} />
+      <div className="mt-4 md:mt-6">
+        <Suspense fallback={<CategoryCirclesSkeleton lang={lang} />}>
+          <CategoryCircles country={viewer.country} lang={lang} />
+        </Suspense>
       </div>
-      <CategoryChips lang={lang} />
-      {/* 어드민 배너 띠 — Suspense 밖(최대 1.5초 대기)이라 나중에 끼어들어 아래를 밀지 않는다. 0건·오류면 없음 */}
-      <BannerStrip country={viewer.country} lang={lang} />
 
       <Suspense fallback={
-        <section className="mt-8" aria-hidden>
+        <section className="mt-6 md:mt-8" aria-hidden>
           <SectionHeader lang={lang} title={t(lang, "hub.trending", { market: otherName })}
             sub={t(lang, "hub.trendingSub", { sources: t(lang, `sources.${other}`) })} />
           <ThemeSkeleton rows={1} />
@@ -201,6 +155,10 @@ export default function HomeHub({ viewer, listings, travel }: {
       }>
         <TrendingLead viewer={viewer} />
       </Suspense>
+
+      <RecentViewed lang={lang} rate={viewer.rate} viewerCurrency={viewer.currency} />
+      {/* 어드민 배너 띠 — 첫 인기 줄 아래. 0건·오류면 없음 */}
+      <BannerStrip country={viewer.country} lang={lang} />
 
       <section className="mt-8" aria-label={t(lang, "hub.own")}>
         {/* 게스트에게 "내 동네"는 로그인 벽 — 게스트는 전체 리스트로 */}

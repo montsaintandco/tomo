@@ -10,10 +10,13 @@ import { parseMarketUrl } from "@/lib/market/url";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { pageMeta, langFromSearch } from "@/lib/seo";
+import { Suspense } from "react";
+import DomesticFallback from "@/components/home/DomesticFallback";
 
 // 구매 루트: 전체 / 내 동네 직거래 / 상대국 여행 중 직거래 (해외 대행구매는 /global)
 const TABS = [["all", "tab.all"], ["local", "tab.local"], ["travel", "tab.travel"]] as const;
 const FEED_LIMIT = 40;
+const FEED_MAX_PAGES = 5; // 더 보기는 40개씩 200개까지 — 그 뒤는 검색·카테고리로 좁힌다
 const FEED_SELECT = "id, title, price, currency, source_language, country, region, status, images, created_at, trade_method, cross_border_enabled, listing_translations(language, title)";
 
 export async function generateMetadata(props: { searchParams: Promise<{ lang?: string }> }) {
@@ -22,7 +25,7 @@ export async function generateMetadata(props: { searchParams: Promise<{ lang?: s
   return { alternates: m.alternates, openGraph: m.openGraph }; // 홈 제목·설명은 루트 레이아웃 기본값 유지
 }
 
-export default async function Home(props: { searchParams: Promise<{ tab?: string; q?: string; cat?: string }> }) {
+export default async function Home(props: { searchParams: Promise<{ tab?: string; q?: string; cat?: string; p?: string }> }) {
   const searchParams = await props.searchParams;
   const supabase = await createServerSupabase();
   const viewer = await getViewerOrGuest(supabase);
@@ -36,13 +39,15 @@ export default async function Home(props: { searchParams: Promise<{ tab?: string
   const lang = viewer.language;
   // 파라미터 없는 첫 진입 = 허브. 검색·탭·카테고리는 기존 리스트 모드
   const hub = !q && !searchParams.tab && !cat;
+  const page = Math.min(FEED_MAX_PAGES, Math.max(1, Math.floor(Number(searchParams.p)) || 1));
+  const feedLimit = FEED_LIMIT * page;
 
   // 판매중 → 예약중 → 거래완료 순으로 노출 (당근·메루카리 관행: 끝난 거래는 뒤로)
   let query = supabase.from("listings")
     .select(FEED_SELECT)
     .order("status", { ascending: true })   // active < reserved < sold (enum 정의 순)
     .order("bumped_at", { ascending: false })
-    .limit(FEED_LIMIT);
+    .limit(feedLimit);
 
   if (cat) query = query.eq("category", cat);
   if (tab === "local" && !viewer.guest) {
@@ -55,8 +60,8 @@ export default async function Home(props: { searchParams: Promise<{ tab?: string
   if (q) {
     const pattern = `%${q.replace(/[%_]/g, (m) => `\\${m}`)}%`;
     const [tRes, oRes] = await Promise.all([
-      supabase.from("listing_translations").select("listing_id").ilike("title", pattern).limit(60),
-      supabase.from("listings").select("id").ilike("title", pattern).limit(60),
+      supabase.from("listing_translations").select("listing_id").ilike("title", pattern).limit(200),
+      supabase.from("listings").select("id").ilike("title", pattern).limit(200),
     ]);
     const ids = Array.from(new Set([
       ...(tRes.data ?? []).map((t) => t.listing_id),
@@ -94,7 +99,7 @@ export default async function Home(props: { searchParams: Promise<{ tab?: string
           )}
         </div>
       </div>
-      <header className={`z-20 bg-white/95 px-4 pb-3 pt-2 backdrop-blur md:static md:bg-transparent md:px-0 md:pb-4 md:pt-8 md:backdrop-blur-0 ${hub ? "" : "sticky top-0"}`}>
+      <header className={`z-20 bg-white/95 px-4 pb-3 pt-2 backdrop-blur md:static md:bg-transparent md:px-0 md:pb-4 md:pt-8 md:backdrop-blur-0 ${hub ? "md:hidden" : "sticky top-0"}`}>
         {/* 데스크톱은 GNB 검색창이 담당 — 중복 제거 */}
         <form className="mb-3 md:hidden" role="search">
           <label htmlFor="feed-q" className="sr-only">{t(lang, "search.label")}</label>
@@ -188,6 +193,9 @@ export default async function Home(props: { searchParams: Promise<{ tab?: string
             <Link href="/login?next=/?tab=local" className="btn bg-tomo-navy px-6 py-2.5 text-sm text-white">
               {t(lang, "empty.localCta")}
             </Link>
+            <div className="mt-8 w-full text-left">
+              <Suspense fallback={null}><DomesticFallback viewer={viewer} message={t(lang, "empty.sellFirst")} /></Suspense>
+            </div>
           </div>
         ) : (listings ?? []).length > 0 ? (
           <>
@@ -196,15 +204,28 @@ export default async function Home(props: { searchParams: Promise<{ tab?: string
                 <ListingRow key={l.id} listing={l as unknown as FeedListing} viewer={viewer} />
               ))}
             </ul>
-            {/* 엔드캡 — 마지막 인상이 회색 거래완료 행이 아니라 브랜드로 끝난다.
-                ponytail: 40개 캡에 걸리면 "다 봤어요"는 거짓이므로 정직하게 캡을 말한다 — 상품이 40개를 넘기면 커서 페이지네이션 */}
+            {/* 엔드캡 — 더 있으면 「더 보기」(40개씩, 200개까지). 캡에 걸리면 "다 봤어요"는 거짓이므로 정직하게 캡을 말한다 */}
             <div className="mb-4 mt-10 flex flex-col items-center gap-2">
-              <TomoSymbol className="h-12 w-[4.5rem] opacity-70" />
-              <p className="text-xs font-bold text-ink-soft">
-                {(listings ?? []).length < FEED_LIMIT ? t(lang, "feed.end") : t(lang, "feed.cap", { n: FEED_LIMIT })}
-              </p>
+              {(listings ?? []).length >= feedLimit && page < FEED_MAX_PAGES ? (
+                <Link href={`/?${new URLSearchParams({ ...(tab !== "all" && { tab }), ...(q && { q }), ...(cat && { cat }), p: String(page + 1) })}`}
+                  scroll={false} className="btn bg-tomo-navy px-6 py-2.5 text-sm text-white">{t(lang, "home.feedMore")}</Link>
+              ) : (
+                <>
+                  <TomoSymbol className="h-12 w-[4.5rem] opacity-70" />
+                  <p className="text-xs font-bold text-ink-soft">
+                    {(listings ?? []).length < feedLimit ? t(lang, "feed.end") : t(lang, "feed.cap", { n: feedLimit })}
+                  </p>
+                </>
+              )}
             </div>
           </>
+        ) : !q && tab !== "travel" ? (
+          /* 국내 0개(내 동네·전체·카테고리) — 빈 화면 대신 등록 유도 + 상대국 인기 줄. 가짜 매물 없음 (04T8) */
+          <div className="mt-4">
+            <Suspense fallback={null}>
+              <DomesticFallback viewer={viewer} message={tab === "local" ? t(lang, "home.localEmpty") : t(lang, "empty.none")} />
+            </Suspense>
+          </div>
         ) : (
           <div className="mt-12 flex flex-col items-center px-6 text-center">
             <TomoSymbol />
