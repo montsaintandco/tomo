@@ -71,6 +71,7 @@ function Bubble({ m, mine, viewerLanguage }: {
 export default function ChatRoom(props: {
   conversationId: string; viewerId: string; viewerLanguage: Lang;
   initialMessages: ChatMessage[];
+  blocked?: boolean; // 차단 관계(0033) — 입력창 대신 안내. 실제 차단은 DB 정책이 건다
 }) {
   const lang = props.viewerLanguage;
   const [messages, setMessages] = useState<ChatMessage[]>(props.initialMessages);
@@ -152,6 +153,9 @@ export default function ChatRoom(props: {
         <div ref={bottomRef} />
       </div>
       {error && <p role="alert" className="px-4 pb-1 text-xs text-tomo-rose">{error}</p>}
+      {props.blocked ? (
+        <p className="border-t border-tomo-navy/5 bg-white p-4 pb-20 text-center text-[13px] text-ink-soft md:pb-4">{t(lang, "trust.blocked.notice")}</p>
+      ) : (
       <form onSubmit={send} className="flex items-center gap-2 border-t border-tomo-navy/5 bg-white p-3 pb-20 md:pb-3">
         <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="sr-only" id="chat-image"
           onChange={(e) => { const f = e.target.files?.[0]; if (f) sendImage(f); }} />
@@ -175,6 +179,7 @@ export default function ChatRoom(props: {
           </svg>
         </button>
       </form>
+      )}
     </div>
   );
 }

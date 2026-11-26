@@ -6,6 +6,7 @@ import { daangnItem } from "@/lib/market/daangn";
 import { joongnaItem } from "@/lib/market/joongna";
 import { LIVE_SOURCES, SOURCE_CURRENCY, type MarketSource, type MarketItemDetail } from "@/lib/market/types";
 import { parseMarketUrl } from "@/lib/market/url";
+import { isMarketImageUrl } from "@/lib/url-guard";
 
 export async function loadItem(source: MarketSource, id: string): Promise<MarketItemDetail | null> {
   if (!/^[A-Za-z0-9_-]{1,64}$/.test(id)) return null; // 경로 세그먼트 삽입 방지 (../, %23 등)
@@ -53,7 +54,10 @@ export async function upsertExternalItem(
     // 스냅샷 URL은 반드시 그 마켓의 그 상품 URL — 우리 도메인 상세에 임의 피싱 링크·이미지가 실리는 것을 막는다
     const parsed = parseMarketUrl(url);
     if (!parsed || parsed.source !== source || parsed.id !== sourceId) return { error: "invalid url", status: 400 };
-    const safeImages = Array.isArray(images) ? images.filter((s): s is string => typeof s === "string" && /^https:\/\//.test(s)).slice(0, 8) : [];
+    // 이미지는 그 마켓 호스트만(lib/url-guard). 하나라도 다른 호스트면 거부 — 조용히 걸러내면 변조 시도를 못 알아챈다
+    const imgs = Array.isArray(images) ? images.filter((s): s is string => typeof s === "string" && s !== "").slice(0, 8) : [];
+    if (imgs.some((s) => !isMarketImageUrl(source, s))) return { error: "invalid image", status: 400 };
+    const safeImages = imgs;
     const p = Number((body as { price?: unknown }).price);
     if (!Number.isFinite(p) || p < 0) return { error: "invalid price", status: 400 };
     const { data, error } = await admin.from("external_items").upsert({
@@ -61,6 +65,7 @@ export async function upsertExternalItem(
       images: safeImages,
       seller_name: typeof sellerName === "string" ? sellerName.slice(0, 100) : "",
       // 클라이언트 스냅샷은 견적 전용 — fetched_at을 과거로 박아 RPC stale 가드가 카트 주문을 막게 함 (라이브 파싱 성공 시 덮어씀)
+      // epoch 는 DB 트리거(0034)가 origin='client' 로 바꾸는 표식이기도 하다 → 요청자·관리자만 보인다. 바꾸지 말 것
       status: "active", fetched_at: new Date(0).toISOString(),
     }, { onConflict: "source,source_id" }).select("id").single();
     if (error) return { error: error.message, status: 400 };

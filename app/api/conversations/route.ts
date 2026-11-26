@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { allow } from "@/lib/ratelimit";
+import { apiError, reqLang } from "@/lib/api-error";
 
 // API 라우트는 미들웨어 보호 밖 — 자체 인증 필수 (HANDOFF 주의사항)
 export async function POST(req: Request) {
@@ -31,6 +32,7 @@ export async function POST(req: Request) {
     const { data: retry } = await supabase.from("conversations")
       .select("id").eq("listing_id", listingId).eq("buyer_id", auth.user.id).maybeSingle();
     if (retry) return NextResponse.json({ id: retry.id });
+    if (error.code === "42501") return apiError(reqLang(req), "trust.err.blocked", 403); // 차단(0033)·정지(0016)
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
   return NextResponse.json({ id: created.id }, { status: 201 });

@@ -4,6 +4,7 @@ import { createServerSupabase } from "@/lib/supabase/server";
 import { createAdminSupabase } from "@/lib/supabase/admin";
 import { allow, clientIp } from "@/lib/ratelimit";
 import { tableMissing } from "@/lib/safe";
+import { checkAiBudget } from "@/lib/ai-budget";
 import { parseAiTurns } from "@/lib/support-ai";
 import { aiEnabled, supportAiModel, buildSystemPrompt, customerContext, streamAnswer, GatewayError } from "@/lib/support-ai.server";
 
@@ -32,6 +33,11 @@ export async function POST(req: Request) {
   const model = supportAiModel();
   const question = turns[turns.length - 1].content;
   const ipHash = createHash("sha256").update(ip).digest("hex").slice(0, 16);
+  // 하루 상한(전체·IP별). 넘으면 429 → 화면은 봇 트리로 폴백. 서비스 키가 없는 개발 환경은 건너뛴다
+  let admin: ReturnType<typeof createAdminSupabase> | null = null;
+  try { admin = createAdminSupabase(); } catch { /* SUPABASE_SERVICE_ROLE_KEY 없음 */ }
+  if (admin && (await checkAiBudget(admin, ipHash).catch(() => "cap" as const)) !== "ok")
+    return NextResponse.json({ error: "busy" }, { status: 429 });
   const log = (answer: string, ok: boolean) => void logUse({ user_id: userId, ip_hash: ipHash, lang, model, question, answer: answer.slice(0, 4000), ok });
 
   try {

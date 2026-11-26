@@ -4,6 +4,7 @@ import { translateMessage } from "@/lib/translate";
 import { pushToCounterpart } from "@/lib/push";
 import { t } from "@/lib/i18n";
 import { allow } from "@/lib/ratelimit";
+import { apiError, reqLang } from "@/lib/api-error";
 
 // API 라우트는 미들웨어 보호 밖 — 자체 인증 필수 (HANDOFF 주의사항)
 export async function POST(req: Request) {
@@ -40,6 +41,8 @@ export async function POST(req: Request) {
     source_language: from,
     ...(image ? { image_path: image } : {}),
   }).select("*").single();
+  // 42501 = RLS 거부: 차단(0033) 또는 정지(0016) — 원문 대신 사용자 언어 문구
+  if (error?.code === "42501") return apiError(reqLang(req), "trust.err.blocked", 403);
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
   // 보낸 사람은 자기 메시지를 읽은 상태 — 안읽음 집계에서 제외되도록 읽음 시각 갱신

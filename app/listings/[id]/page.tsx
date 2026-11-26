@@ -7,6 +7,7 @@ import OriginalToggle from "@/components/OriginalToggle";
 import ChatButton from "@/components/ChatButton";
 import CheckoutButton from "@/components/CheckoutButton";
 import ShareButton from "@/components/ShareButton";
+import ReportButton from "@/components/safety/ReportButton";
 import WishButton from "@/components/WishButton";
 import OfferButton, { type MyOffer } from "@/components/OfferButton";
 import SellerPanel, { type ReceivedOffer } from "@/components/SellerPanel";
@@ -243,6 +244,7 @@ export default async function ListingDetail(props: { params: Promise<{ id: strin
             <span className="flex flex-wrap items-center gap-2">
               <WishButton listingId={l.id} price={l.price} initialLiked={wished} initialCount={wishCount} guest={!!viewer.guest} lang={lang} />
               <ShareButton title={tr?.title ?? l.title} lang={lang} />
+              {!isMine && <ReportButton targetType="listing" targetId={l.id} lang={lang} guest={!!viewer.guest} next={`/listings/${l.id}`} />}
             </span>
             {travelDeal && (
               <span className="grad-bridge-soft inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold text-tomo-navy">

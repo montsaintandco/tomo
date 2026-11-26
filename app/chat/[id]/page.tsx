@@ -4,6 +4,9 @@ import { convertPrice, formatPrice, type Currency } from "@/lib/currency";
 import { t, type Lang } from "@/lib/i18n";
 import ChatRoom, { type ChatMessage } from "@/components/ChatRoom";
 import { TomoSymbol } from "@/components/Brand";
+import ReportButton from "@/components/safety/ReportButton";
+import BlockButton from "@/components/safety/BlockButton";
+import { rows } from "@/lib/safe";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
@@ -42,9 +45,15 @@ export default async function ChatDetailPage(props: { params: Promise<{ id: stri
     ? `${t(lang, "price.approx")} ${formatPrice(convertPrice(l.price, l.currency, viewer.rate), viewer.currency)}`
     : formatPrice(l.price, l.currency);
 
-  const { data: messages } = await supabase.from("messages")
-    .select("*").eq("conversation_id", convo.id)
-    .order("created_at", { ascending: true }).limit(100);
+  // 차단: iBlocked = 내가 건 차단(해제 버튼용), anyBlocked = 어느 쪽이든(입력창 잠금). 0033 미적용이면 둘 다 false
+  const [{ data: messages }, myBlocks, anyBlock] = await Promise.all([
+    supabase.from("messages").select("*").eq("conversation_id", convo.id)
+      .order("created_at", { ascending: true }).limit(100),
+    supabase.from("blocks").select("blocked_id").eq("blocker_id", viewer.id).eq("blocked_id", other.id),
+    supabase.rpc("blocked_with", { p_other: other.id }),
+  ]);
+  const iBlocked = rows(myBlocks).length > 0;
+  const anyBlocked = iBlocked || (!anyBlock.error && anyBlock.data === true);
 
   return (
     <main className="mx-auto flex h-dvh max-w-md flex-col md:h-[calc(100dvh-65px)] md:max-w-2xl">
@@ -57,7 +66,9 @@ export default async function ChatDetailPage(props: { params: Promise<{ id: stri
               <path d="M15 5l-7 7 7 7" />
             </svg>
           </Link>
-          <p className="text-[15px] font-bold text-ink">{other.nickname}</p>
+          <p className="min-w-0 flex-1 truncate text-[15px] font-bold text-ink">{other.nickname}</p>
+          <ReportButton targetType="conversation" targetId={convo.id} lang={lang} />
+          <BlockButton userId={other.id} initialBlocked={iBlocked} lang={lang} />
         </div>
         {/* 대화 맥락 — 상품 스트립 (구조 틴트 웰) */}
         <Link href={`/listings/${l.id}`} aria-label={t(lang, "chat.listing")}
@@ -88,7 +99,7 @@ export default async function ChatDetailPage(props: { params: Promise<{ id: stri
         </Link>
       </header>
       <ChatRoom conversationId={convo.id} viewerId={viewer.id}
-        viewerLanguage={lang} initialMessages={(messages ?? []) as ChatMessage[]} />
+        viewerLanguage={lang} initialMessages={(messages ?? []) as ChatMessage[]} blocked={anyBlocked} />
     </main>
   );
 }

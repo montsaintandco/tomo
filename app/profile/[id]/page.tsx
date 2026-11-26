@@ -7,6 +7,9 @@ import SellerStats, { type SellerStatsData } from "@/components/SellerStats";
 import SectionHeader from "@/components/SectionHeader";
 import { CountryChip, TomoSymbol } from "@/components/Brand";
 import AdminDeleteReview from "@/components/AdminDeleteReview";
+import ReportButton from "@/components/safety/ReportButton";
+import BlockButton from "@/components/safety/BlockButton";
+import { rows } from "@/lib/safe";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
@@ -44,6 +47,9 @@ export default async function ProfilePage(props: { params: Promise<{ id: string 
   const reviews = (reviewsRaw ?? []) as unknown as Review[];
   const { data: statsRaw } = await supabase.rpc("seller_stats", { uid: targetId });
   const stats = (statsRaw ?? null) as SellerStatsData | null;
+  const isSelf = !viewer.guest && viewer.id === targetId;
+  // 내가 이 사용자를 차단했는지(0033 미적용이면 빈 배열 → 미차단)
+  const blocked = !viewer.guest && !isSelf && rows(await supabase.from("blocks").select("blocked_id").eq("blocker_id", viewer.id!).eq("blocked_id", targetId)).length > 0;
 
   return (
     <main className="mx-auto max-w-md p-4 pb-8 standalone:pb-24 md:max-w-2xl md:px-6 md:pb-16 md:pt-8">
@@ -61,6 +67,12 @@ export default async function ProfilePage(props: { params: Promise<{ id: string 
         </div>
         <HeartGauge temp={Number(p.trust_temp)} lang={lang} />
         <SellerStats stats={stats} lang={lang} className="mt-3" />
+        {!isSelf && (
+          <div className="-mb-2 mt-2 flex justify-end">
+            <ReportButton targetType="user" targetId={targetId} lang={lang} guest={!!viewer.guest} next={`/profile/${targetId}`} />
+            {!viewer.guest && <BlockButton userId={targetId} initialBlocked={blocked} lang={lang} />}
+          </div>
+        )}
       </div>
 
       <section aria-label={t(lang, "profile.listings")}>

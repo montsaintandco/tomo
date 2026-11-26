@@ -39,8 +39,9 @@ export default function OfferButton({ listingId, price, currency, initial, guest
         .select("id, price, status").single();
       if (e) throw e;
       setOffer(data as MyOffer); setOpen(false);
-    } catch {
-      setError(t(lang, "offer.fail"));
+    } catch (e) {
+      // 42501 = RLS 거부(차단 0033·정지 0016)
+      setError(t(lang, (e as { code?: string })?.code === "42501" ? "trust.err.blocked" : "offer.fail"));
     } finally { setBusy(false); }
   }
 
