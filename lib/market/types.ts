@@ -7,6 +7,7 @@ export type SearchFilters = {
   sort?: "rec" | "new" | "price_asc" | "price_desc";
   cond?: "new" | "used";
   sold?: boolean; // true = 판매완료 포함
+  catIds?: number[]; // 메루카리 categoryId(OR). 다른 소스는 무시한다(lib/categories.ts)
 };
 
 export type MarketItem = {

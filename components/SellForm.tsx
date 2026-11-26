@@ -5,8 +5,8 @@ import { createBrowserSupabase } from "@/lib/supabase/client";
 import { t, type I18nKey, type Lang } from "@/lib/i18n";
 import PriceHint from "@/components/PriceHint";
 import { mergePhotos, resizeImage } from "@/lib/image-resize";
+import { LISTING_CATEGORIES, isListingCategory, listingCategoryName } from "@/lib/categories";
 
-const CATEGORIES = ["figure", "camera", "fashion", "kpop", "game", "vintage", "etc"] as const;
 const METHODS = ["direct", "shipping", "both"] as const;
 const CONDITIONS = ["new", "like_new", "good", "fair", "poor"] as const;
 const PAYERS = ["seller", "buyer"] as const;
@@ -40,7 +40,9 @@ export default function SellForm({ lang, hint, initial, prefill, importMsg, curr
   const [title, setTitle] = useState(initial?.title ?? prefill?.title ?? hint);
   const [description, setDescription] = useState(initial?.description ?? prefill?.description ?? "");
   const [price, setPrice] = useState(initial && initial.price > 0 ? String(initial.price) : prefill?.price ? String(prefill.price) : "");
-  const [category, setCategory] = useState<(typeof CATEGORIES)[number]>(pick(CATEGORIES, initial?.category, "etc"));
+  // 카테고리 = lib/categories.ts 대분류 + etc. 예전 값(fashion 등)으로 올린 상품을 고칠 때는 그 값을 목록에 남겨 바뀌지 않게 한다
+  const [category, setCategory] = useState<string>(isListingCategory(initial?.category) ? initial!.category! : "etc");
+  const categoryOptions = LISTING_CATEGORIES.includes(category) ? LISTING_CATEGORIES : [...LISTING_CATEGORIES, category];
   const [tradeMethod, setTradeMethod] = useState<(typeof METHODS)[number]>(pick(METHODS, initial?.trade_method, "both"));
   const [crossBorder, setCrossBorder] = useState(initial?.cross_border_enabled ?? true);
   const [condition, setCondition] = useState<(typeof CONDITIONS)[number]>(pick(CONDITIONS, initial?.condition, "good"));
@@ -196,8 +198,8 @@ export default function SellForm({ lang, hint, initial, prefill, importMsg, curr
             </select>
           </label>
           <label className={LABEL}>{t(lang, "sell.category")}
-            <select className={FIELD} value={category} onChange={(e) => setCategory(e.target.value as (typeof CATEGORIES)[number])}>
-              {CATEGORIES.map((c) => <option key={c} value={c}>{t(lang, `cat.${c}`)}</option>)}
+            <select className={FIELD} value={category} onChange={(e) => setCategory(e.target.value)}>
+              {categoryOptions.map((c) => <option key={c} value={c}>{listingCategoryName(lang, c)}</option>)}
             </select>
           </label>
           <fieldset>

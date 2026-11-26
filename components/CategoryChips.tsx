@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { t, type Lang } from "@/lib/i18n";
+import { LISTING_CATEGORIES, isListingCategory, listingCategoryName } from "@/lib/categories";
 
-export const CATEGORY_KEYS = ["figure", "camera", "fashion", "kpop", "game", "vintage", "etc"] as const;
-export type CategoryKey = (typeof CATEGORY_KEYS)[number];
-export const isCategory = (v: unknown): v is CategoryKey => CATEGORY_KEYS.includes(v as CategoryKey);
+// 토모 상품 카테고리 = lib/categories.ts 대분류 + etc. 예전 값(fashion)도 주소로는 받는다(칩에는 안 보인다)
+export const CATEGORY_KEYS = LISTING_CATEGORIES;
+export type CategoryKey = string;
+export const isCategory = isListingCategory;
 
 // 카테고리 칩 행 (당근·메루카리 홈의 카테고리 진입). active면 그 칩이 네이비 필
 export default function CategoryChips({ lang, active, q }: { lang: Lang; active?: CategoryKey; q?: string }) {
@@ -23,7 +25,7 @@ export default function CategoryChips({ lang, active, q }: { lang: Lang; active?
       {active && <Link href={href()} className={chip(false)}>{t(lang, "cat.all")}</Link>}
       {CATEGORY_KEYS.map((c) => (
         <Link key={c} href={href(c)} aria-current={active === c ? "page" : undefined} className={chip(active === c)}>
-          {t(lang, `cat.${c}`)}
+          {listingCategoryName(lang, c)}
         </Link>
       ))}
     </nav>

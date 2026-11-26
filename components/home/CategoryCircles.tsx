@@ -1,10 +1,11 @@
 // 원형 카테고리 한 줄 (키라팝 CharacterEntry 방식) — 홈의 카테고리 입구는 이것 하나다.
-// 누르면 상대국 마켓 검색으로 바로 간다(국내 상품은 비어 있는 때가 많아 기본 입구로 쓰지 않는다. 04T10).
-// 사진: public/hero/<key>.jpg 가 있으면 그것, 없으면 상대국 마켓 검색 앞쪽 상품(홈 카드와 겹치지 않게). 못 구하면 첫 글자 원형.
+// 누르면 그 대분류 화면(/categories/<slug>: 세부 분류·상대국 마켓 미리보기)으로 간다. 마지막 칸 「전체 카테고리」는 /categories.
+// 사진: public/hero/<hero>.jpg 가 있으면 그것, 없으면 상대국 마켓 그 카테고리 앞쪽 상품(홈 카드와 겹치지 않게). 못 구하면 첫 글자 원형.
 import Link from "next/link";
 import { t, otherCountry, type Lang } from "@/lib/i18n";
 import { heroImage } from "@/lib/hero-image";
 import { HOME_CATEGORIES, getCategoryCandidates } from "@/lib/home/data";
+import { name } from "@/lib/categories";
 import { pickPhotos, shownKeys } from "@/lib/home/assemble";
 import { getHomeRows } from "@/lib/home/rows";
 
@@ -18,11 +19,11 @@ export default async function CategoryCircles({ country, lang }: { country: "KR"
   return (
     <CirclesFrame lang={lang} other={otherCountry(country)}>
       {HOME_CATEGORIES.map((c, i) => {
-        const label = t(lang, `cat.${c.key}`);
-        const photo = heroImage(c.key) ?? live[i];
+        const label = name(lang, c);
+        const photo = heroImage(c.hero ?? c.slug) ?? live[i];
         return (
-          <li key={c.key}>
-            <Link href={`/global?q=${encodeURIComponent(label)}`} className={ITEM}>
+          <li key={c.slug}>
+            <Link href={`/categories/${c.slug}`} className={ITEM}>
               <span className={CIRCLE}>
                 {photo ? (
                   // eslint-disable-next-line @next/next/no-img-element -- 외부 마켓 썸네일·우리 정적 사진
@@ -62,7 +63,7 @@ function CirclesFrame({ lang, other, children }: { lang: Lang; other: "KR" | "JP
 export function CategoryCirclesSkeleton({ lang }: { lang: Lang }) {
   return (
     <div aria-hidden className="-mx-4 flex gap-1 overflow-hidden px-4 md:mx-0 md:grid md:grid-cols-7 md:gap-4 md:px-0">
-      {[...HOME_CATEGORIES.map((c) => t(lang, `cat.${c.key}`)), t(lang, "home.catAll")].map((label) => (
+      {[...HOME_CATEGORIES.map((c) => name(lang, c)), t(lang, "home.catAll")].map((label) => (
         <div key={label} className={ITEM}>
           <span className={`${CIRCLE} skeleton`} />
           <span className={LABEL}>{label}</span>

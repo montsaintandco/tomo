@@ -27,9 +27,9 @@ import { SITE_URL } from "@/lib/site";
 import { langAlternates, langFromSearch } from "@/lib/seo";
 import { directDetailTotal } from "@/components/detail/total";
 import { DirectTotalBox } from "@/components/detail/TotalBox";
+import { isListingCategory, listingCategoryName, findMajor } from "@/lib/categories";
 
 const HEART = "M12 21C7.2 17.2 2.5 13.6 2.5 8.9 2.5 5.6 5 3.5 7.8 3.5c1.7 0 3.3.9 4.2 2.3.9-1.4 2.5-2.3 4.2-2.3 2.8 0 5.3 2.1 5.3 5.4 0 4.7-4.7 8.3-9.5 12.1z";
-const CATEGORIES = ["figure", "camera", "fashion", "kpop", "game", "vintage", "etc"] as const;
 const METHODS = ["direct", "shipping", "both"] as const;
 
 // 메루카리식 상세: 이미지 → 제목 → 큰 가격+배송 주석 → 설명 → 상품 정보 표 → 판매자 → 안심 거래 → 하단 가격+구매 바
@@ -96,7 +96,9 @@ export default async function ListingDetail(props: { params: Promise<{ id: strin
   const travelDeal = foreign && (l.trade_method === "direct" || l.trade_method === "both");
   const center = l.country === "JP" ? "NARITA" : "SEOUL";
   const country = l.country as "KR" | "JP";
-  const category = (CATEGORIES as readonly string[]).includes(l.category) ? l.category as (typeof CATEGORIES)[number] : "etc";
+  const category = isListingCategory(l.category) ? l.category : "etc";
+  const categoryName = listingCategoryName(lang, category);
+  const categoryUrl = findMajor(category) ? `${SITE_URL}/categories/${category}` : `${SITE_URL}/?cat=${category}`;
   const method = (METHODS as readonly string[]).includes(l.trade_method) ? l.trade_method as (typeof METHODS)[number] : "both";
 
   const buyerPrice = free ? t(lang, "price.free") : foreign
@@ -118,7 +120,7 @@ export default async function ListingDetail(props: { params: Promise<{ id: strin
   const listedAt = new Date(l.created_at).toLocaleDateString(lang === "ja" ? "ja-JP" : "ko-KR", { year: "numeric", month: "long", day: "numeric" });
 
   const info: [string, React.ReactNode][] = [
-    [t(lang, "info.category"), t(lang, `cat.${category}`)],
+    [t(lang, "info.category"), categoryName],
     [t(lang, "info.condition"), t(lang, `cond.${condition}`)],
     [t(lang, "info.method"), methodLabel],
     ...(method !== "direct" ? [
@@ -159,7 +161,7 @@ export default async function ListingDetail(props: { params: Promise<{ id: strin
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd({
         "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [
           { "@type": "ListItem", position: 1, name: t(lang, "nav.home"), item: `${SITE_URL}/` },
-          { "@type": "ListItem", position: 2, name: t(lang, `cat.${category}`), item: `${SITE_URL}/?cat=${category}` },
+          { "@type": "ListItem", position: 2, name: categoryName, item: categoryUrl },
           { "@type": "ListItem", position: 3, name: tr?.title ?? l.title, item: `${SITE_URL}/listings/${l.id}` },
         ],
       }) }} />

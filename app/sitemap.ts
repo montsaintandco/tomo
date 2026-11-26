@@ -1,13 +1,14 @@
 import type { MetadataRoute } from "next";
 import { createClient } from "@supabase/supabase-js";
 import { SITE_URL } from "../lib/site";
+import { CATEGORIES } from "../lib/categories";
 
 // 정적 페이지 + 판매중 상품. 외부 마켓 상품(/global/…)은 제외 — 스크랩 콘텐츠·항상 동적
 export const revalidate = 3600;
 
 // lastmod 를 요청마다 지금 시각으로 주면 검색엔진이 lastmod 를 믿지 않는다(키라팝 2026-10-26 서치콘솔 '발견됨 - 색인 안 됨').
 // 정적 페이지는 내용을 실제로 고친 날을 준다 — 페이지를 손보면 이 날짜를 올린다. 상품은 끌올·등록 시각.
-const PAGES_UPDATED = new Date("2026-11-26T00:00:00+09:00"); // T9: 고객센터 FAQ 위치·안내 문구
+const PAGES_UPDATED = new Date("2026-11-26T00:00:00+09:00"); // T9: 고객센터 FAQ 위치·안내 문구 · CAT: 카테고리 21개 대분류 화면
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = PAGES_UPDATED;
@@ -19,6 +20,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/guide`, lastModified: now, changeFrequency: "monthly", priority: 0.8, ...withJa(`${SITE_URL}/guide`) },
     { url: `${SITE_URL}/travel`, lastModified: now, changeFrequency: "daily", priority: 0.6, ...withJa(`${SITE_URL}/travel`) },
     { url: `${SITE_URL}/categories`, lastModified: now, changeFrequency: "weekly", priority: 0.5, ...withJa(`${SITE_URL}/categories`) },
+    ...CATEGORIES.map((c) => ({ url: `${SITE_URL}/categories/${c.slug}`, lastModified: now, changeFrequency: "daily" as const, priority: 0.5, ...withJa(`${SITE_URL}/categories/${c.slug}`) })),
     { url: `${SITE_URL}/about`, lastModified: now, changeFrequency: "monthly", priority: 0.5, ...withJa(`${SITE_URL}/about`) },
     { url: `${SITE_URL}/help`, lastModified: now, changeFrequency: "monthly", priority: 0.4, ...withJa(`${SITE_URL}/help`) },
     { url: `${SITE_URL}/notice`, lastModified: now, changeFrequency: "weekly", priority: 0.3, ...withJa(`${SITE_URL}/notice`) },

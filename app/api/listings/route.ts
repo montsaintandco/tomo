@@ -3,8 +3,8 @@ import { pingIndexNow } from "@/lib/indexnow";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { translateListing } from "@/lib/translate";
 import { allow } from "@/lib/ratelimit";
+import { isListingCategory } from "@/lib/categories";
 
-const CATEGORIES = ["figure","camera","fashion","kpop","game","vintage","etc"];
 const METHODS = ["direct","shipping","both"];
 const CONDITIONS = ["new","like_new","good","fair","poor"];
 const PAYERS = ["seller","buyer"];
@@ -30,7 +30,7 @@ export async function POST(req: Request) {
       !description || typeof description !== "string" || description.length > 2000 ||
       !Number.isInteger(price) || price < 0 || price > 100000000)
     return NextResponse.json({ error: "invalid fields" }, { status: 400 });
-  if (!CATEGORIES.includes(category) || !METHODS.includes(tradeMethod))
+  if (!isListingCategory(category) || !METHODS.includes(tradeMethod))
     return NextResponse.json({ error: "invalid category or method" }, { status: 400 });
   if (!CONDITIONS.includes(condition) || !PAYERS.includes(shippingPayer) || !SHIP_DAYS.includes(shipDays))
     return NextResponse.json({ error: "invalid condition or shipping" }, { status: 400 });

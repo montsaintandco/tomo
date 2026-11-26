@@ -18,4 +18,6 @@ export const SEARCH_I18N = {
   "search.recent": ["최근 검색", "最近の検索"],
   "search.recentClear": ["모두 지우기", "すべて削除"],
   "search.recentRemove": ["{q} 지우기", "{q}を削除"],
+  "search.catByMercari": ["메루카리 카테고리로 거른 결과예요", "メルカリのカテゴリーで絞り込んだ結果です"],
+  "search.catByKeyword": ["이 마켓은 카테고리 번호가 없어 「{term}」(으)로 찾았어요", "このマーケットはカテゴリー番号がないため「{term}」で検索しました"],
 } as const satisfies Record<string, readonly [string, string]>;

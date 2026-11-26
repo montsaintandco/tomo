@@ -21,6 +21,7 @@ export default function MoreResults({ lang, rate, viewerCurrency, more, seen }: 
     if (more.f.max) p.set("max", String(more.f.max));
     if (more.f.cond) p.set("cond", more.f.cond);
     if (more.f.sold) p.set("sold", "1");
+    if (more.f.catIds?.length) p.set("cats", more.f.catIds.join(","));
     try {
       const res = await fetch(`/api/global/search?${p.toString()}`);
       if (!res.ok) throw new Error(String(res.status));

@@ -5,6 +5,7 @@ import { Wordmark, TomoSymbol } from "@/components/Brand";
 import HomeHub from "@/components/HomeHub";
 import LangToggle from "@/components/LangToggle";
 import CategoryChips, { isCategory } from "@/components/CategoryChips";
+import { listingCategoryName } from "@/lib/categories";
 import { t } from "@/lib/i18n";
 import { parseMarketUrl } from "@/lib/market/url";
 import { redirect } from "next/navigation";
@@ -166,7 +167,7 @@ export default async function Home(props: { searchParams: Promise<{ tab?: string
         {!feedError && !localNeedsLogin && (listings ?? []).length > 0 && (
           <div className="mb-5 hidden items-baseline justify-between md:flex">
             <h2 className="text-lg font-bold text-ink">
-              {q ? t(lang, "feed.results", { q }) : tab === "local" ? t(lang, "feed.localTitle") : tab === "travel" ? t(lang, "feed.travelTitle") : cat ? t(lang, `cat.${cat}`) : t(lang, "feed.latest")}
+              {q ? t(lang, "feed.results", { q }) : tab === "local" ? t(lang, "feed.localTitle") : tab === "travel" ? t(lang, "feed.travelTitle") : cat ? listingCategoryName(lang, cat) : t(lang, "feed.latest")}
             </h2>
             <p className="text-xs text-ink-soft">{t(lang, "feed.legend")}</p>
           </div>

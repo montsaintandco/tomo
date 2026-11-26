@@ -15,13 +15,16 @@ export async function GET(req: Request) {
   const mt = (p.get("mt") ?? "").slice(0, 200);
   if (mt) {
     const term = (p.get("term") ?? "").trim().slice(0, 80);
-    if (!term) return NextResponse.json({ items: [], excluded: [] });
+    // 카테고리로 찾은 첫 페이지는 검색어가 빈 말일 수 있다 — 그때는 메루카리 카테고리 번호(cats, 쉼표)로 이어 받는다. 형식만 보고 30개까지
+    const catIds = (p.get("cats") ?? "").split(",").filter((x) => /^\d{1,8}$/.test(x)).map(Number).filter((n) => n > 0).slice(0, 30);
+    if (!term && catIds.length === 0) return NextResponse.json({ items: [], excluded: [] });
     const num = (k: string) => { const n = Number(p.get(k)); return Number.isFinite(n) && n > 0 ? Math.round(n) : undefined; };
     const f: SearchFilters = {
       min: num("min"), max: num("max"),
       sort: (["rec", "new", "price_asc", "price_desc"] as const).find((x) => x === p.get("sort")) ?? "rec",
       cond: p.get("cond") === "new" || p.get("cond") === "used" ? (p.get("cond") as "new" | "used") : undefined,
       sold: p.get("sold") === "1",
+      ...(catIds.length ? { catIds } : {}),
     };
     const r = await searchMercariMore(term, f, mt);
     return NextResponse.json({ items: await withTranslatedTitles(r.items, lang), excluded: await withTranslatedTitles(r.excluded, lang), next: r.mercariMore?.token ?? null });

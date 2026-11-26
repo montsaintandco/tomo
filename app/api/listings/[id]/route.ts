@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { translateListing } from "@/lib/translate";
+import { isListingCategory } from "@/lib/categories";
 
-const CATEGORIES = ["figure","camera","fashion","kpop","game","vintage","etc"];
 const METHODS = ["direct","shipping","both"];
 const CONDITIONS = ["new","like_new","good","fair","poor"];
 const PAYERS = ["seller","buyer"];
@@ -24,7 +24,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
       !description || typeof description !== "string" || description.length > 2000 ||
       !Number.isInteger(price) || price < 0 || price > 100000000)
     return NextResponse.json({ error: "invalid fields" }, { status: 400 });
-  if (!CATEGORIES.includes(category) || !METHODS.includes(tradeMethod) ||
+  if (!isListingCategory(category) || !METHODS.includes(tradeMethod) ||
       !CONDITIONS.includes(condition) || !PAYERS.includes(shippingPayer) || !SHIP_DAYS.includes(shipDays))
     return NextResponse.json({ error: "invalid fields" }, { status: 400 });
 

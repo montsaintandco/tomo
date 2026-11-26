@@ -98,7 +98,7 @@ export async function mercariSearchPage(keyword: string, f: SearchFilters = {}, 
     searchCondition: {
       keyword, excludeKeyword: "", sort, order,
       status: f.sold ? ["STATUS_ON_SALE", "STATUS_TRADING", "STATUS_SOLD_OUT"] : ["STATUS_ON_SALE"],
-      categoryId: [], priceMin: f.min ?? 0, priceMax: f.max ?? 0,
+      categoryId: f.catIds ?? [], priceMin: f.min ?? 0, priceMax: f.max ?? 0,
       itemConditionId: f.cond === "new" ? [1] : f.cond === "used" ? [2, 3, 4, 5, 6] : [],
     },
     defaultDatasets: ["DATASET_TYPE_MERCARI"], serviceFrom: "suruga",

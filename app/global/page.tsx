@@ -18,6 +18,7 @@ import type { MercariMore } from "@/lib/market/search";
 import ResultBar from "@/components/search/ResultBar";
 import RecentSearches from "@/components/search/RecentSearches";
 import MoreResults from "@/components/search/MoreResults";
+import { parseCat, catScope, catCrumbs, catParam, name as catName } from "@/lib/categories";
 
 export const dynamic = "force-dynamic"; // 외부 검색은 요청 시점 조회
 
@@ -27,7 +28,7 @@ function sourcesFor(country: "KR" | "JP"): MarketSource[] {
 }
 
 export default async function GlobalPage(props: {
-  searchParams: Promise<{ q?: string; source?: string; min?: string; max?: string; sort?: string; cond?: string; sold?: string }>;
+  searchParams: Promise<{ q?: string; source?: string; min?: string; max?: string; sort?: string; cond?: string; sold?: string; cat?: string }>;
 }) {
   const searchParams = await props.searchParams;
   const supabase = await createServerSupabase();
@@ -57,25 +58,31 @@ export default async function GlobalPage(props: {
   if (filters.sort !== "rec") filterParams.set("sort", filters.sort!);
   if (filters.cond) filterParams.set("cond", filters.cond);
   if (filters.sold) filterParams.set("sold", "1");
+  // 카테고리(?cat=, lib/categories.ts) — 메루카리는 categoryId 로 거른다. 검색어 없이 카테고리만으로도 찾는다. 모든 링크·폼이 filterParams 로 이어 받는다
+  const catRef = parseCat(searchParams.cat);
+  const scope = catRef ? catScope(catRef) : undefined;
+  const catKey = catRef ? (catRef.kind === "mercari" ? `m${catRef.root.id}` : catParam(catRef.major, catRef.sub)) : "";
+  const catLabel = catRef ? catName(lang, catRef.kind === "mercari" ? catRef.root : catRef.sub ?? catRef.major) : "";
+  if (catKey) filterParams.set("cat", catKey);
 
   let items: ExternalCardItem[] = [];
   let excluded: ExternalCardItem[] = [];
   let usedQueries: string[] = [];
   let widenedFrom: string | undefined;
   let mercariMore: MercariMore | undefined;
-  const live = !!q && liveSource && !looksLikeUrl;
+  const live = (!!q || !!scope) && liveSource && !looksLikeUrl;
 
   if (live) {
     // 실시간 검색 — 소스별 언어로 번역해 조회. 살 수 없는 출품은 excluded 로 빠진다
-    const r = await searchMarkets(q, source === "all" ? mySources : source, filters, viewer.currency, viewer.rate);
+    const r = await searchMarkets(q, source === "all" ? mySources : source, filters, viewer.currency, viewer.rate, scope);
     // 상대국 소스 제목은 뷰어 언어로(한 요청). 검색 로그는 같은 시간에 적는다(최대 400ms, 실패해도 무시)
     const [translated] = await Promise.all([
       withTranslatedTitles([...r.items, ...r.excluded], lang),
-      logSearch(q, lang, source, r.items.length),
+      q ? logSearch(q, lang, source, r.items.length) : undefined, // 카테고리만 본 것은 인기 검색어에 넣지 않는다
     ]);
     items = translated.slice(0, r.items.length) as ExternalCardItem[];
     excluded = translated.slice(r.items.length) as ExternalCardItem[];
-    usedQueries = Array.from(new Set(Object.values(r.queries).filter((s): s is string => !!s && s !== q)));
+    usedQueries = q ? Array.from(new Set(Object.values(r.queries).filter((s): s is string => !!s && s !== q))) : [];
     widenedFrom = r.widenedFrom;
     mercariMore = r.mercariMore;
   } else if (!looksLikeUrl) {
@@ -103,13 +110,18 @@ export default async function GlobalPage(props: {
   if (q) searchParamsNow.set("q", q);
   if (source !== "all") searchParamsNow.set("source", source);
   const chips = [
+    catRef ? { key: ["cat"], label: catLabel } : null,
     filters.min ? { key: ["min"], label: t(lang, "search.chipPriceMin", { v: formatPrice(filters.min, viewer.currency, lang) }) } : null,
     filters.max ? { key: ["max"], label: t(lang, "search.chipPriceMax", { v: formatPrice(filters.max, viewer.currency, lang) }) } : null,
     filters.cond ? { key: ["cond"], label: t(lang, filters.cond === "new" ? "filter.condNew" : "filter.condUsed") } : null,
     filters.sold ? { key: ["sold"], label: t(lang, "filter.sold") } : null,
   ].filter((c): c is { key: string[]; label: string } => !!c);
 
-  const clearHref = source !== "all" ? `/global?source=${source}` : "/global";
+  // 검색어 지우기 — 소스·카테고리는 남긴다
+  const clearParams = new URLSearchParams();
+  if (source !== "all") clearParams.set("source", source);
+  if (catKey) clearParams.set("cat", catKey);
+  const clearHref = clearParams.toString() ? `/global?${clearParams.toString()}` : "/global";
 
   return (
     <main className="mx-auto max-w-md md:max-w-6xl md:px-6">
@@ -172,15 +184,16 @@ export default async function GlobalPage(props: {
         </nav>
 
         {/* 필터 — 메루카리 참조(가격·상태·정렬·판매완료)를 4마켓 공통으로. 네이티브 details+select, JS 없음 */}
-        {q && liveSource && (
+        {(q || scope) && liveSource && (
           <details className="group mt-2" open={activeFilters > 0}>
             <summary className="press inline-flex cursor-pointer list-none items-center gap-1.5 rounded-full border border-tomo-navy/15 bg-white px-3 py-1.5 text-[13px] font-bold text-ink [&::-webkit-details-marker]:hidden">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" className="h-4 w-4" aria-hidden><path d="M4 6h16M7 12h10M10 18h4" /></svg>
               {t(lang, "filter.title")}{activeFilters > 0 && <span className="rounded-full bg-tomo-coral-deep px-1.5 text-[11px] text-white">{activeFilters}</span>}
             </summary>
             <form className="reveal mt-2 flex flex-wrap items-end gap-x-3 gap-y-2 rounded-card border border-tomo-navy/10 bg-white p-3 text-[13px]">
-              <input type="hidden" name="q" value={q} />
+              {q && <input type="hidden" name="q" value={q} />}
               {source !== "all" && <input type="hidden" name="source" value={source} />}
+              {catKey && <input type="hidden" name="cat" value={catKey} />}
               <label className="flex flex-col gap-1 text-[11px] font-bold text-ink-soft">{t(lang, "filter.price")} ({viewer.currency === "KRW" ? "원" : "¥"})
                 <span className="flex items-center gap-1">
                   <input name="min" type="number" inputMode="numeric" min={0} defaultValue={filters.min ?? ""} placeholder={t(lang, "filter.min")} className="w-24 rounded-[6px] border border-tomo-navy/15 px-2 py-1.5 text-base font-normal text-ink md:text-[13px]" />
@@ -200,7 +213,7 @@ export default async function GlobalPage(props: {
               </label>
               <label className="flex items-center gap-1.5 py-1.5 text-[13px] text-ink"><input type="checkbox" name="sold" value="1" defaultChecked={filters.sold} className="h-4 w-4 accent-[#1d4ed8]" />{t(lang, "filter.sold")}</label>
               <button type="submit" className="btn bg-tomo-navy px-4 py-2 text-[13px] text-white">{t(lang, "filter.apply")}</button>
-              {activeFilters > 0 && <Link href={`/global?q=${encodeURIComponent(q)}${source !== "all" ? `&source=${source}` : ""}`} className="press py-2 text-[13px] text-ink-soft underline underline-offset-2">{t(lang, "filter.reset")}</Link>}
+              {activeFilters > 0 && <Link href={`/global?q=${encodeURIComponent(q)}${source !== "all" ? `&source=${source}` : ""}${catKey ? `&cat=${catKey}` : ""}`} className="press py-2 text-[13px] text-ink-soft underline underline-offset-2">{t(lang, "filter.reset")}</Link>}
               <p className="basis-full text-[11px] text-ink-faint">{t(lang, "filter.note")}</p>
             </form>
           </details>
@@ -209,6 +222,23 @@ export default async function GlobalPage(props: {
 
       <div className="min-h-[70dvh] px-4 pb-6 pt-2 md:px-0 md:pb-16">
         <RecentSearches lang={lang} q={live ? q : ""} source={source !== "all" ? source : undefined} />
+        {live && catRef && (
+          <div className="mb-2">
+            <nav aria-label={t(lang, "cats.where")} className="flex flex-wrap items-center gap-x-1.5 text-[12px] text-ink-soft md:text-[13px]">
+              {catCrumbs(lang, catRef, t(lang, "cats.all")).map((c, i) => (
+                <span key={i} className="inline-flex items-center gap-1.5">
+                  {i > 0 && <span aria-hidden>›</span>}
+                  {c.href ? <Link href={c.href} className="press py-1 underline-offset-2 hover:underline">{c.label}</Link> : <span className="font-bold text-ink" aria-current="page">{c.label}</span>}
+                </span>
+              ))}
+            </nav>
+            <p className="mt-0.5 text-[11px] text-ink-faint">
+              {mySources.includes("mercari") && (source === "all" || source === "mercari")
+                ? t(lang, "search.catByMercari")
+                : t(lang, "search.catByKeyword", { term: q || (mySources.includes("mercari") ? scope!.ja : scope!.ko) })}
+            </p>
+          </div>
+        )}
         {live && (
           <ResultBar lang={lang} params={searchParamsNow} count={items.length} more={!!mercariMore}
             sort={filters.sort ?? "rec"} chips={chips} translated={usedQueries} widenedFrom={widenedFrom} />
@@ -225,10 +255,10 @@ export default async function GlobalPage(props: {
           <div className="mt-12 flex flex-col items-center px-6 text-center">
             <TomoSymbol />
             <p className="mt-3 text-sm text-ink-soft">
-              {looksLikeUrl ? t(lang, "global.urlFail") : q ? t(lang, "empty.search", { q }) : t(lang, "global.emptyIdle")}
+              {looksLikeUrl ? t(lang, "global.urlFail") : q || catLabel ? t(lang, "empty.search", { q: q || catLabel }) : t(lang, "global.emptyIdle")}
             </p>
             <p className="mt-1 text-xs text-ink-soft">
-              {looksLikeUrl ? t(lang, "global.urlHint") : q ? t(lang, "global.emptySearchSub") : t(lang, "global.emptyIdleSub")}
+              {looksLikeUrl ? t(lang, "global.urlHint") : q || catLabel ? t(lang, "global.emptySearchSub") : t(lang, "global.emptyIdleSub")}
             </p>
           </div>
         )}

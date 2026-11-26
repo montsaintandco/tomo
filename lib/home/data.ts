@@ -6,7 +6,7 @@ import { tableMissing } from "@/lib/safe";
 import { mercariSearch } from "@/lib/market/mercari";
 import { joongnaSearch } from "@/lib/market/joongna";
 import type { MarketItem } from "@/lib/market/types";
-import type { CategoryKey } from "@/components/CategoryChips";
+import { FEATURED, findMajor, krTerm, type MajorCategory } from "@/lib/categories";
 import { cleanPopular, countQueries } from "./popular";
 
 const DAY = 86_400_000;
@@ -26,32 +26,22 @@ async function loadPopular(lang: "ko" | "ja"): Promise<string[]> {
 export const getPopularTerms = (lang: "ko" | "ja") =>
   unstable_cache(() => loadPopular(lang), ["home-popular", "v1", lang], { revalidate: 600 })().catch(() => [] as string[]);
 
-/**
- * 홈 원형 카테고리 — 「기타」는 해외 검색어로 뜻이 없어(한국어 「기타」= 악기) 뺀다.
- * term: 원형 사진을 고를 상대국 마켓 검색어. KR 보는 사람 → 일본 마켓(ja), JP 보는 사람 → 한국 마켓(ko)
- */
-export const HOME_CATEGORIES: readonly { key: CategoryKey; term: { KR: string; JP: string } }[] = [
-  { key: "figure", term: { KR: "フィギュア", JP: "피규어" } },
-  { key: "camera", term: { KR: "カメラ", JP: "카메라" } },
-  { key: "fashion", term: { KR: "古着", JP: "의류" } },
-  { key: "kpop", term: { KR: "K-POP グッズ", JP: "앨범" } },
-  { key: "game", term: { KR: "ゲームソフト", JP: "게임" } },
-  { key: "vintage", term: { KR: "ヴィンテージ", JP: "빈티지" } },
-];
+/** 홈 원형 카테고리 — lib/categories.ts FEATURED 6칸. 누르면 /categories/<slug> */
+export const HOME_CATEGORIES: readonly MajorCategory[] = FEATURED.map((s) => findMajor(s)!);
 
 const PHOTO_TIMEOUT_MS = 3500;
 
-async function searchFor(country: "KR" | "JP", term: string): Promise<MarketItem[]> {
-  const items = await (country === "KR" ? mercariSearch(term) : joongnaSearch(term));
-  if (items.length === 0) throw new Error(`home-cat:${term}: empty`); // 빈 결과는 캐시하지 않는다
+// 사진 후보 — KR 보는 사람은 메루카리 그 카테고리(번호), JP 보는 사람은 중고나라 한국어 키워드(번호 없음, lib/categories.ts)
+async function searchFor(country: "KR" | "JP", c: MajorCategory): Promise<MarketItem[]> {
+  const items = await (country === "KR" ? mercariSearch("", { catIds: c.mercari }) : joongnaSearch(krTerm(c)));
+  if (items.length === 0) throw new Error(`home-cat:${c.slug}: empty`); // 빈 결과는 캐시하지 않는다
   return items.slice(0, 12);
 }
 
-/** 카테고리마다 사진 후보(상대국 마켓 검색 앞쪽 12개). 6시간 캐시, 하나가 느리면 그 칸만 빈 후보 */
-export function getCategoryCandidates(country: "KR" | "JP"): Promise<MarketItem[][]> {
-  return Promise.all(HOME_CATEGORIES.map((c) => {
-    const term = c.term[country];
-    const cached = unstable_cache(() => searchFor(country, term), ["home-cat", "v1", country, term], { revalidate: 21_600 })()
+/** 카테고리마다 사진 후보(상대국 마켓 앞쪽 12개). 6시간 캐시, 하나가 느리면 그 칸만 빈 후보 */
+export function getCategoryCandidates(country: "KR" | "JP", cats: readonly MajorCategory[] = HOME_CATEGORIES): Promise<MarketItem[][]> {
+  return Promise.all(cats.map((c) => {
+    const cached = unstable_cache(() => searchFor(country, c), ["home-cat", "v2", country, c.slug], { revalidate: 21_600 })()
       .catch(() => [] as MarketItem[]);
     return Promise.race([cached, new Promise<MarketItem[]>((r) => setTimeout(() => r([]), PHOTO_TIMEOUT_MS))]);
   }));
