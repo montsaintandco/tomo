@@ -4,11 +4,19 @@ import { useEffect, useRef, useState } from "react";
 // 메루카리식 갤러리: 데스크톱은 좌측 세로 썸네일 + 큰 이미지, 모바일은 큰 이미지 + 아래 가로 썸네일.
 // 메인 이미지는 네이티브 스크롤 스냅 — JS가 붙기 전에도 스와이프가 되고, 화살표·썸네일은 scrollTo로 같은 스트립을 움직인다.
 // 현재 인덱스는 스크롤 위치에서 읽는다 (상태 하나, 상품이 바뀌면 부모가 key로 새로 만든다)
-export default function Gallery({ images, alt, lang, counter, prevLabel, nextLabel }: {
-  images: string[]; alt: string; lang?: string; counter: string; prevLabel: string; nextLabel: string;
+// 확대: 큰 이미지를 누르면 <dialog> 전체 화면(가로 스와이프). zoomLabel 이 없으면 확대를 끈다
+export default function Gallery({ images, alt, lang, counter, prevLabel, nextLabel, zoomLabel, closeLabel }: {
+  images: string[]; alt: string; lang?: string; counter: string; prevLabel: string; nextLabel: string; zoomLabel?: string; closeLabel?: string;
 }) {
   const [i, setI] = useState(0);
   const strip = useRef<HTMLDivElement>(null);
+  const zoom = useRef<HTMLDialogElement>(null);
+  const zoomStrip = useRef<HTMLDivElement>(null);
+  const openZoom = () => {
+    zoom.current?.showModal();
+    const el = zoomStrip.current;
+    if (el) el.scrollLeft = i * el.clientWidth;
+  };
   const n = images.length;
 
   useEffect(() => {
@@ -52,9 +60,16 @@ export default function Gallery({ images, alt, lang, counter, prevLabel, nextLab
           {images.map((src, k) => (
             // eslint-disable-next-line @next/next/no-img-element
             <img key={k} src={src} alt={k === 0 ? alt : ""} lang={k === 0 ? lang : undefined}
-              className="aspect-square w-full shrink-0 snap-center object-contain" loading={k === 0 ? "eager" : "lazy"} />
+              onClick={zoomLabel ? openZoom : undefined}
+              className={`aspect-square w-full shrink-0 snap-center object-contain ${zoomLabel ? "cursor-zoom-in" : ""}`} loading={k === 0 ? "eager" : "lazy"} />
           ))}
         </div>
+        {zoomLabel && (
+          <button type="button" onClick={openZoom} aria-label={zoomLabel}
+            className="press absolute right-3 top-3 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/85 text-tomo-navy shadow-soft">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden><circle cx="11" cy="11" r="6.5" /><path d="m20 20-4.2-4.2M11 8.5v5M8.5 11h5" /></svg>
+          </button>
+        )}
         {n > 1 && (
           <>
             <button type="button" onClick={() => to(i - 1)} aria-label={prevLabel} className={`${arrow} left-3`}>
@@ -69,6 +84,19 @@ export default function Gallery({ images, alt, lang, counter, prevLabel, nextLab
           </>
         )}
       </div>
+      {zoomLabel && (
+        <dialog ref={zoom} aria-label={zoomLabel} onClick={(e) => { if (e.target === e.currentTarget) zoom.current?.close(); }}
+          className="m-0 h-full max-h-none w-full max-w-none bg-black/95 p-0 backdrop:bg-black/80">
+          <div ref={zoomStrip} className="flex h-full snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {images.map((src, k) => (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img key={k} src={src} alt="" className="h-full w-full shrink-0 snap-center object-contain" loading="lazy" />
+            ))}
+          </div>
+          <button type="button" onClick={() => zoom.current?.close()} aria-label={closeLabel ?? "×"}
+            className="press absolute right-3 top-3 flex h-11 w-11 items-center justify-center rounded-full bg-white/90 text-lg font-bold text-tomo-navy">✕</button>
+        </dialog>
+      )}
     </div>
   );
 }

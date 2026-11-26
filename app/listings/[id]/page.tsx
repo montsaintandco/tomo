@@ -23,6 +23,9 @@ import { notFound } from "next/navigation";
 import PolicyNote from "@/components/PolicyNote";
 import { headers } from "next/headers";
 import { SITE_URL } from "@/lib/site";
+import { langAlternates, langFromSearch } from "@/lib/seo";
+import { directDetailTotal } from "@/components/detail/total";
+import { DirectTotalBox } from "@/components/detail/TotalBox";
 
 const HEART = "M12 21C7.2 17.2 2.5 13.6 2.5 8.9 2.5 5.6 5 3.5 7.8 3.5c1.7 0 3.3.9 4.2 2.3.9-1.4 2.5-2.3 4.2-2.3 2.8 0 5.3 2.1 5.3 5.4 0 4.7-4.7 8.3-9.5 12.1z";
 const CATEGORIES = ["figure", "camera", "fashion", "kpop", "game", "vintage", "etc"] as const;
@@ -108,6 +111,9 @@ export default async function ListingDetail(props: { params: Promise<{ id: strin
   const shipAvailable = method !== "direct" && (!foreign || !!l.cross_border_enabled);
   const secondaryCheckout = meetupPrimary ? shipAvailable : method === "both";
   const shipNote = foreign && method !== "direct" ? t(lang, "ship.intl") : methodLabel;
+  // 국경 간 택배 결제 합계 — 결제(app/api/checkout)·DB(0035)와 같은 directShippingFee. 첫 화면에서 국제 배송비를 보인다
+  const directTotals = foreign && shipAvailable && !free && canAct && !isMine
+    ? directDetailTotal(l.price, l.currency === "JPY" ? "JPY" : "KRW", true) : null;
   const listedAt = new Date(l.created_at).toLocaleDateString(lang === "ja" ? "ja-JP" : "ko-KR", { year: "numeric", month: "long", day: "numeric" });
 
   const info: [string, React.ReactNode][] = [
@@ -146,6 +152,14 @@ export default async function ListingDetail(props: { params: Promise<{ id: strin
         itemCondition: `https://schema.org/${l.condition === "new" ? "NewCondition" : "UsedCondition"}`,
         offers: { "@type": "Offer", price: l.price, priceCurrency: l.currency, url: `${SITE_URL}/listings/${l.id}`,
           availability: `https://schema.org/${l.status === "active" ? "InStock" : "SoldOut"}`, seller: { "@type": "Person", name: seller.nickname } },
+      }) }} />
+      {/* 이동 경로 구조화 데이터(01#13) — 홈 › 카테고리 › 상품 */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd({
+        "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [
+          { "@type": "ListItem", position: 1, name: t(lang, "nav.home"), item: `${SITE_URL}/` },
+          { "@type": "ListItem", position: 2, name: t(lang, `cat.${category}`), item: `${SITE_URL}/?cat=${category}` },
+          { "@type": "ListItem", position: 3, name: tr?.title ?? l.title, item: `${SITE_URL}/listings/${l.id}` },
+        ],
       }) }} />
       {/* 이미지 위 뒤로가기 — 상세는 이미지가 헤더다. 데스크톱은 좌측 고정 컬럼 */}
       <div className="relative md:sticky md:top-24 md:overflow-hidden md:rounded-card md:shadow-soft">
@@ -253,6 +267,8 @@ export default async function ListingDetail(props: { params: Promise<{ id: strin
             )}
           </div>
         </div>
+
+        {directTotals && <DirectTotalBox lang={lang} totals={directTotals} viewerCurrency={viewer.currency} rate={viewer.rate} />}
 
         {/* 가격제안 — 판매자가 허용한 판매중 상품, 구매자만 */}
         {canAct && !isMine && !free && l.allow_offers && (
@@ -381,8 +397,8 @@ export default async function ListingDetail(props: { params: Promise<{ id: strin
 }
 
 // 웹 문법: 상품명이 탭 제목·공유 카드 제목이다
-export async function generateMetadata(props: { params: Promise<{ id: string }> }): Promise<import("next").Metadata> {
-  const { id } = await props.params;
+export async function generateMetadata(props: { params: Promise<{ id: string }>; searchParams: Promise<{ lang?: string }> }): Promise<import("next").Metadata> {
+  const [{ id }, sp] = await Promise.all([props.params, props.searchParams]);
   const supabase = await createServerSupabase();
   const { data } = await supabase.from("listings").select("title, description, price, currency, status, images").eq("id", id).maybeSingle();
   if (!data) return { title: "TOMO" };
@@ -391,7 +407,7 @@ export async function generateMetadata(props: { params: Promise<{ id: string }> 
   const description = `${price} · ${String(data.description ?? "").replace(/\s+/g, " ").slice(0, 120)}`;
   return {
     title: data.title, description,
-    alternates: { canonical: `/listings/${id}` },
+    alternates: langAlternates(`/listings/${id}`, langFromSearch(sp)),
     openGraph: { type: "website", title: data.title, description, ...(img ? { images: [img] } : {}) },
     twitter: { card: img ? "summary_large_image" : "summary" },
     ...(data.status !== "active" ? { robots: { index: false, follow: true } } : {}),

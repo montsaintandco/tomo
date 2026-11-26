@@ -15,7 +15,7 @@ export default function OriginalToggle(props: {
   const shownLang = showOriginal ? props.originalLang : props.lang;
   return (
     <div>
-      <h1 lang={shownLang} className="text-[17px] font-bold leading-snug text-ink">{title}</h1>
+      <h1 lang={shownLang} className="whitespace-pre-wrap break-words text-[17px] font-bold leading-snug text-ink">{title}</h1>
       {props.between}
       <p lang={shownLang} className="mt-4 whitespace-pre-wrap text-sm leading-relaxed text-ink">{desc}</p>
       {props.needsTranslation && props.hasTranslation && (

@@ -8,11 +8,16 @@ export default function PreorderCheck({ lang }: { lang: Lang }) {
   const items = [["ext.check1", "ext.check1Body"], ["ext.check2", "ext.check2Body"], ["ext.check3", "ext.check3Body"]] as const;
   return (
     <>
-      <button type="button" onClick={() => ref.current?.showModal()}
-        className="press flex w-full items-center justify-between gap-3 rounded-card bg-tomo-ivory px-3.5 py-3 text-left text-[13px] font-bold text-ink">
-        <span>{t(lang, "ext.checkTitle")}</span>
-        <span className="shrink-0 text-[12px] text-tomo-navy underline">{t(lang, "ext.checkMore")}</span>
-      </button>
+      {/* 04상세: 접힌 한 줄이면 놓친다 — 3가지 제목은 늘 펼쳐 두고 본문만 「자세히」 */}
+      <div className="rounded-card bg-tomo-ivory px-3.5 py-3 text-[13px] text-ink">
+        <div className="flex items-center justify-between gap-3">
+          <p className="font-bold">{t(lang, "ext.checkTitle")}</p>
+          <button type="button" onClick={() => ref.current?.showModal()} className="press shrink-0 text-[12px] font-bold text-tomo-navy underline">{t(lang, "ext.checkMore")}</button>
+        </div>
+        <ol className="mt-1.5 list-decimal space-y-0.5 pl-5 text-[12px] leading-snug">
+          {items.map(([h]) => <li key={h}>{t(lang, h)}</li>)}
+        </ol>
+      </div>
       <dialog ref={ref} aria-labelledby="check-title"
         className="sheet m-0 mt-auto w-full max-w-md rounded-t-card bg-white p-0 shadow-lift backdrop:bg-tomo-navy/40 md:m-auto md:rounded-card">
         <div className="flex flex-col gap-4 p-5">
