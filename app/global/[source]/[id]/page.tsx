@@ -35,6 +35,8 @@ import { proxyDetailTotal } from "@/components/detail/total";
 import { ProxyTotalBox } from "@/components/detail/TotalBox";
 import ItemInsight from "@/components/detail/ItemInsight";
 import EndedRescue from "@/components/detail/EndedRescue";
+import ExternalWishButton from "@/components/search/ExternalWishButton";
+import { wishedKeys } from "@/components/search/wish-server";
 
 // 파서가 원문 키로 주는 부가정보 라벨 → 화면 언어 키. 모르는 키는 원문 그대로 보인다
 const EXTRA_LABEL: Record<string, I18nKey> = {
@@ -146,11 +148,12 @@ export default async function ExternalItemPage(props: {
   const needsTranslation = !!live && sourceLang !== lang; // 캐시 폴백은 title_translated를 이미 쓴다
   const seen = new Set<string>([params.id, `${item.title}|${item.price}`]); // 당근은 URL id와 내부 id가 달라 제목·가격으로도 거른다
   const sellerRaw = (item.sellerItems ?? []).filter((it) => { const k = it.sourceId; if (seen.has(k) || seen.has(`${it.title}|${it.price}`)) return false; seen.add(k); seen.add(`${it.title}|${it.price}`); return true; }); // 현재 상품·중복 제거
-  // 본문 번역·판매자 상품 제목 번역·판매자 취소 이력은 서로 독립 — 동시에
-  const [tr, sellerItems, cancels] = await Promise.all([
+  // 본문 번역·판매자 상품 제목 번역·판매자 취소 이력·찜 여부(비로그인은 조회 안 함)는 서로 독립 — 동시에
+  const [tr, sellerItems, cancels, wishedSet] = await Promise.all([
     needsTranslation ? translateExternal(source, params.id, lang, [item.title, item.description, item.condition, item.category ?? "", ...(item.tradeTags ?? []), ...Object.values(item.extra)]) : Promise.resolve(null),
     sellerRaw.length ? withTranslatedTitles(sellerRaw, lang) : Promise.resolve([] as typeof sellerRaw),
     foreign && !item.soldOut ? sellerCancels(source, item.sellerName) : Promise.resolve(0),
+    wishedKeys(supabase, viewer.id, [{ source, sourceId: params.id }]),
   ]);
   const category = tr?.[3] || item.category;
   const tradeTags = item.tradeTags?.map((tag, i) => tr?.[4 + i] || tag);
@@ -225,6 +228,9 @@ export default async function ExternalItemPage(props: {
           {item.soldOut && (
             <span className="rounded-full bg-tomo-navy/70 px-2.5 py-1 text-[11px] font-bold text-white">{t(lang, "badge.soldOut")}</span>
           )}
+          {/* 해외 상품 찜(0038) — 찜할 때 화면 제목·가격·첫 사진을 스냅샷으로 남긴다 */}
+          <ExternalWishButton className="ml-auto" lang={lang} guest={!!viewer.guest} initialWished={wishedSet.size > 0}
+            item={{ source, sourceId: params.id, title: shownTitle, price: item.price, currency: item.currency, thumb: images[0] ?? "" }} />
         </div>
 
         {/* 품절 구제(02#14) — 비활성 버튼만 두지 않고 다음 행동(다시 찾기·비슷한 상품)을 맨 위에 */}

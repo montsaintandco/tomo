@@ -1,6 +1,10 @@
 import { createServerSupabase } from "@/lib/supabase/server";
 import { pageMeta, langFromSearch } from "@/lib/seo";
-import { getViewerOrGuest } from "@/lib/listings";
+import { getViewerOrGuest, type ViewerOrGuest } from "@/lib/listings";
+import { Suspense } from "react";
+import ResultsSkeleton from "@/components/search/ResultsSkeleton";
+import { wishedKeys } from "@/components/search/wish-server";
+import { wishKey } from "@/components/search/wish";
 import ExternalItemCard, { type ExternalCardItem } from "@/components/ExternalItemCard";
 import { TomoSymbol } from "@/components/Brand";
 import { searchMarkets } from "@/lib/market/search";
@@ -65,45 +69,7 @@ export default async function GlobalPage(props: {
   const catLabel = catRef ? catName(lang, catRef.kind === "mercari" ? catRef.root : catRef.sub ?? catRef.major) : "";
   if (catKey) filterParams.set("cat", catKey);
 
-  let items: ExternalCardItem[] = [];
-  let excluded: ExternalCardItem[] = [];
-  let usedQueries: string[] = [];
-  let widenedFrom: string | undefined;
-  let mercariMore: MercariMore | undefined;
   const live = (!!q || !!scope) && liveSource && !looksLikeUrl;
-
-  if (live) {
-    // 실시간 검색 — 소스별 언어로 번역해 조회. 살 수 없는 출품은 excluded 로 빠진다
-    const r = await searchMarkets(q, source === "all" ? mySources : source, filters, viewer.currency, viewer.rate, scope);
-    // 상대국 소스 제목은 뷰어 언어로(한 요청). 검색 로그는 같은 시간에 적는다(최대 400ms, 실패해도 무시)
-    const [translated] = await Promise.all([
-      withTranslatedTitles([...r.items, ...r.excluded], lang),
-      q ? logSearch(q, lang, source, r.items.length) : undefined, // 카테고리만 본 것은 인기 검색어에 넣지 않는다
-    ]);
-    items = translated.slice(0, r.items.length) as ExternalCardItem[];
-    excluded = translated.slice(r.items.length) as ExternalCardItem[];
-    usedQueries = q ? Array.from(new Set(Object.values(r.queries).filter((s): s is string => !!s && s !== q))) : [];
-    widenedFrom = r.widenedFrom;
-    mercariMore = r.mercariMore;
-  } else if (!looksLikeUrl) {
-    // 검색어 없거나 한국 소스: 캐시된 상품 (어드민 수동 등록 포함). 미지원 URL은 빈 상태로 안내
-    // 번역 제목은 화면 언어와 같을 때만(lib/market/title). title_translated_lang 열(0036)이 아직 없으면 그 열 없이 다시 읽는다
-    type Row = { source: string; source_id: string; title: string; title_translated: string | null; title_translated_lang?: string | null; price: number; currency: string; images: string[] };
-    const read = (cols: string) => {
-      const c = supabase.from("external_items").select(cols)
-        .eq("status", "active").not("images", "eq", "{}").order("fetched_at", { ascending: false }).limit(60); // 이미지 없는 행(테스트·파싱 실패)은 첫 화면에서 제외
-      return source !== "all" ? c.eq("source", source) : c.in("source", mySources);
-    };
-    const base = "source, source_id, title, title_translated, price, currency, images";
-    let res = await read(`${base}, title_translated_lang`);
-    if (res.error) res = await read(base);
-    const cached = ((res.data ?? []) as unknown as Row[]).map((r) => ({
-      source: r.source as MarketSource, sourceId: r.source_id, url: "", soldOut: false,
-      ...titleForLang(r.title, r.title_translated, r.title_translated_lang, lang), price: r.price,
-      currency: r.currency as "KRW" | "JPY", thumb: r.images[0] ?? "",
-    }));
-    items = (await withTranslatedTitles(cached, lang)) as ExternalCardItem[]; // 화면 언어 번역이 없는 상대국 제목은 지금 번역
-  }
 
   // 결과 줄(건수·정렬·필터 칩)에 쓸 지금 검색의 쿼리와 걸린 조건
   const searchParamsNow = new URLSearchParams(filterParams);
@@ -239,15 +205,81 @@ export default async function GlobalPage(props: {
             </p>
           </div>
         )}
+        <Suspense key={`${searchParamsNow.toString()}|${looksLikeUrl}`} fallback={<ResultsSkeleton />}>
+          <Results q={q} source={source} mySources={mySources} filters={filters} scope={scope} live={live} looksLikeUrl={looksLikeUrl}
+            catLabel={catLabel} viewer={viewer} params={searchParamsNow} chips={chips} />
+        </Suspense>
+      </div>
+    </main>
+  );
+}
+
+// 검색 결과(느린 부분: 외부 마켓 라이브 조회·번역·찜 여부). 페이지가 Suspense key=지금 쿼리로 감싸
+// 검색어·탭·필터·칩을 바꿀 때마다 스켈레톤이 보인다(같은 경로의 쿼리만 바뀌면 loading.tsx 는 다시 안 뜬다)
+async function Results({ q, source, mySources, filters, scope, live, looksLikeUrl, catLabel, viewer, params, chips }: {
+  q: string; source: MarketSource | "all"; mySources: MarketSource[]; filters: SearchFilters;
+  scope: Parameters<typeof searchMarkets>[5]; live: boolean; looksLikeUrl: boolean; catLabel: string;
+  viewer: ViewerOrGuest; params: URLSearchParams; chips: { key: string[]; label: string }[];
+}) {
+  const supabase = await createServerSupabase();
+  const lang: Lang = viewer.language;
+  let items: ExternalCardItem[] = [];
+  let excluded: ExternalCardItem[] = [];
+  let usedQueries: string[] = [];
+  let widenedFrom: string | undefined;
+  let mercariMore: MercariMore | undefined;
+  let wished = new Set<string>();
+
+  if (live) {
+    // 실시간 검색 — 소스별 언어로 번역해 조회. 살 수 없는 출품은 excluded 로 빠진다
+    const r = await searchMarkets(q, source === "all" ? mySources : source, filters, viewer.currency, viewer.rate, scope);
+    // 상대국 소스 제목은 뷰어 언어로(한 요청). 검색 로그는 같은 시간에 적는다(최대 400ms, 실패해도 무시)
+    // 찜 여부는 카드 전체를 한 번에(비로그인은 조회 안 함)
+    const [translated, , w] = await Promise.all([
+      withTranslatedTitles([...r.items, ...r.excluded], lang),
+      q ? logSearch(q, lang, source, r.items.length) : undefined, // 카테고리만 본 것은 인기 검색어에 넣지 않는다
+      wishedKeys(supabase, viewer.id, [...r.items, ...r.excluded]),
+    ]);
+    wished = w;
+    items = translated.slice(0, r.items.length) as ExternalCardItem[];
+    excluded = translated.slice(r.items.length) as ExternalCardItem[];
+    usedQueries = q ? Array.from(new Set(Object.values(r.queries).filter((s): s is string => !!s && s !== q))) : [];
+    widenedFrom = r.widenedFrom;
+    mercariMore = r.mercariMore;
+  } else if (!looksLikeUrl) {
+    // 검색어 없거나 한국 소스: 캐시된 상품 (어드민 수동 등록 포함). 미지원 URL은 빈 상태로 안내
+    // 번역 제목은 화면 언어와 같을 때만(lib/market/title). title_translated_lang 열(0036)이 아직 없으면 그 열 없이 다시 읽는다
+    type Row = { source: string; source_id: string; title: string; title_translated: string | null; title_translated_lang?: string | null; price: number; currency: string; images: string[] };
+    const read = (cols: string) => {
+      const c = supabase.from("external_items").select(cols)
+        .eq("status", "active").not("images", "eq", "{}").order("fetched_at", { ascending: false }).limit(60); // 이미지 없는 행(테스트·파싱 실패)은 첫 화면에서 제외
+      return source !== "all" ? c.eq("source", source) : c.in("source", mySources);
+    };
+    const base = "source, source_id, title, title_translated, price, currency, images";
+    let res = await read(`${base}, title_translated_lang`);
+    if (res.error) res = await read(base);
+    const cached = ((res.data ?? []) as unknown as Row[]).map((r) => ({
+      source: r.source as MarketSource, sourceId: r.source_id, url: "", soldOut: false,
+      ...titleForLang(r.title, r.title_translated, r.title_translated_lang, lang), price: r.price,
+      currency: r.currency as "KRW" | "JPY", thumb: r.images[0] ?? "",
+    }));
+    const [tr, w] = await Promise.all([withTranslatedTitles(cached, lang), wishedKeys(supabase, viewer.id, cached)]);
+    items = tr as ExternalCardItem[]; // 화면 언어 번역이 없는 상대국 제목은 지금 번역
+    wished = w;
+  }
+  const wish = (it: ExternalCardItem) => ({ wished: wished.has(wishKey(it.source, it.sourceId)), guest: !!viewer.guest });
+
+  return (
+    <>
         {live && (
-          <ResultBar lang={lang} params={searchParamsNow} count={items.length} more={!!mercariMore}
+          <ResultBar lang={lang} currency={viewer.currency} params={params} count={items.length} more={!!mercariMore}
             sort={filters.sort ?? "rec"} chips={chips} translated={usedQueries} widenedFrom={widenedFrom} />
         )}
 
         {items.length > 0 ? (
           <div className="grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3 md:grid-cols-4 md:gap-x-5 md:gap-y-7 lg:grid-cols-5">
             {items.map((it) => (
-              <ExternalItemCard key={`${it.source}-${it.sourceId}`} item={it}
+              <ExternalItemCard key={`${it.source}-${it.sourceId}`} item={it} wish={wish(it)}
                 rate={viewer.rate} viewerCurrency={viewer.currency} lang={lang} />
             ))}
           </div>
@@ -264,7 +296,7 @@ export default async function GlobalPage(props: {
         )}
 
         {live && mercariMore && (
-          <MoreResults lang={lang} rate={viewer.rate} viewerCurrency={viewer.currency} more={mercariMore}
+          <MoreResults lang={lang} guest={!!viewer.guest} rate={viewer.rate} viewerCurrency={viewer.currency} more={mercariMore}
             seen={[...items, ...excluded].filter((i) => i.source === "mercari").map((i) => i.sourceId)} />
         )}
 
@@ -279,13 +311,12 @@ export default async function GlobalPage(props: {
             <h2 className="sr-only">{t(lang, "search.excludedTitle")}</h2>
             <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-5 opacity-70 sm:grid-cols-3 md:grid-cols-4 md:gap-x-5 md:gap-y-7 lg:grid-cols-5">
               {excluded.map((it) => (
-                <ExternalItemCard key={`${it.source}-${it.sourceId}`} item={it} rate={viewer.rate} viewerCurrency={viewer.currency} lang={lang} />
+                <ExternalItemCard key={`${it.source}-${it.sourceId}`} item={it} wish={wish(it)} rate={viewer.rate} viewerCurrency={viewer.currency} lang={lang} />
               ))}
             </div>
           </details>
         )}
-      </div>
-    </main>
+    </>
   );
 }
 

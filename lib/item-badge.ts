@@ -9,3 +9,8 @@ export function itemBadge(i: { soldOut?: boolean; auction?: boolean; rank?: numb
   if (i.isNew) return { key: "badge.new" };
   return null;
 }
+
+// 사진 위 덮개 — 품절은 배지 대신 사진 전체를 덮는다(검색 카드·캐러셀 공통). 덮개가 있으면 itemBadge 는 null
+export function itemOverlay(i: { soldOut?: boolean }): "badge.soldOut" | null {
+  return i.soldOut ? "badge.soldOut" : null;
+}
