@@ -18,6 +18,14 @@ export function pageMeta(
   };
 }
 
+// 상세·동적 페이지용 hreflang 묶음(05-roadmap 2차 준비). generateMetadata 에서 alternates 로 그대로 쓴다.
+// ko = 기본 URL, ja = ?lang=ja, x-default = ko. canonical 은 화면 언어 쪽.
+export function langAlternates(path: string, lang: Lang = "ko"): NonNullable<Metadata["alternates"]> {
+  const ko = path;
+  const ja = `${path}${path.includes("?") ? "&" : "?"}lang=ja`;
+  return { canonical: lang === "ja" ? ja : ko, languages: { ko, ja, "x-default": ko } };
+}
+
 // 정적 페이지용 — searchParams의 lang만 본다 (쿠키는 크롤러가 갖지 않으므로 메타에는 쓰지 않는다)
 export function langFromSearch(sp: { lang?: string } | undefined): Lang {
   return sp?.lang === "ja" ? "ja" : "ko";
