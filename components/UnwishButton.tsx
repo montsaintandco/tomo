@@ -20,7 +20,7 @@ export default function UnwishButton({ listingId, lang }: { listingId: string; l
 
   return (
     <button type="button" onClick={remove} disabled={busy || isPending} aria-label={t(lang, "wish.remove")} title={t(lang, "wish.remove")}
-      className="press flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-ink-faint hover:text-tomo-rose disabled:opacity-45">
+      className="press flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink-faint hover:text-tomo-rose disabled:opacity-45">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" className="h-4 w-4" aria-hidden>
         <path d="m7 7 10 10M17 7 7 17" />
       </svg>

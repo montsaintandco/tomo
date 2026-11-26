@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { convertPrice, formatPrice, type Currency } from "@/lib/currency";
+import type { Currency } from "@/lib/currency";
+import Price from "@/components/ui/Price";
 import { displayTitle, type Viewer } from "@/lib/listings";
 import { CountryChip, TomoSymbol } from "@/components/Brand";
 import { t, type Lang } from "@/lib/i18n";
@@ -30,6 +31,7 @@ export default function ListingRow({ listing, viewer }: {
 }) {
   const lang: Lang = viewer.language;
   const foreign = listing.country !== viewer.country;
+  const title = displayTitle(listing, viewer.language);
   const sold = listing.status === "sold";
   const reserved = listing.status === "reserved";
   // 상대국 상품이면서 직접 만나 거래 가능 → 여행 갔을 때 직거래할 수 있음
@@ -38,7 +40,7 @@ export default function ListingRow({ listing, viewer }: {
   return (
     <li className="border-b border-tomo-navy/5 last:border-0 md:border-0">
       {/* 모바일=당근식 가로 행, 데스크톱=이미지 우선 세로 카드 (같은 마크업, 반응형 전환) */}
-      <Link href={`/listings/${listing.id}`}
+      <Link href={`/listings/${listing.id}`} title={title !== listing.title ? listing.title : undefined}
         className="press group flex gap-3 py-3.5 md:flex-col md:gap-2.5 md:py-0">
         <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-thumb bg-tomo-navy/5 md:aspect-square md:h-auto md:w-full">
           {listing.images[0] ? (
@@ -58,22 +60,16 @@ export default function ListingRow({ listing, viewer }: {
         </div>
 
         <div className="flex min-w-0 flex-1 flex-col justify-center gap-1 md:justify-start">
-          <p className={`line-clamp-2 text-[15px] leading-snug ${sold ? "text-ink-faint" : "text-ink"}`}>
-            {displayTitle(listing, viewer.language)}
+          <p className={`line-clamp-2 text-[15px] leading-snug ${sold ? "text-ink-soft" : "text-ink"}`}>
+            {title}
           </p>
           <p className="flex items-center gap-1.5 text-xs text-ink-soft">
             <CountryChip country={listing.country} />
             <span className="truncate">{listing.region} · {ago(listing.created_at, lang)}</span>
           </p>
           {/* 구매자 결정 숫자(내 통화)가 가장 크게, 판매자 원가는 작게 — Price-Loudest는 구매자의 숫자다 */}
-          <p className={`tnum text-base font-extrabold ${sold ? "text-ink-faint" : "text-ink"}`}>
-            {listing.price === 0 ? t(lang, "price.free") : foreign ? (
-              <>
-                {t(lang, "price.approx")} {formatPrice(convertPrice(listing.price, listing.currency, viewer.rate), viewer.currency)}
-                <span className="ml-1.5 text-xs font-bold text-ink-soft">{formatPrice(listing.price, listing.currency)}</span>
-              </>
-            ) : formatPrice(listing.price, listing.currency)}
-          </p>
+          <Price amount={listing.price} currency={listing.currency} viewerCurrency={viewer.currency} rate={viewer.rate}
+            lang={lang} fallback={t(lang, "price.free")} size="md" inline dim={sold} />
           {!sold && (
             <span className="mt-0.5 flex flex-wrap items-center gap-1">
               {travelDeal && (
@@ -83,7 +79,7 @@ export default function ListingRow({ listing, viewer }: {
               )}
               {/* 모든 판매중 상품이 에스크로 대상 — 원칙 1: 안전장치를 숨기지 말 것 (외국 행에만 두면 국내는 미보호로 읽힌다) */}
               <span className="inline-flex w-fit items-center gap-1 rounded-full bg-tomo-navy/5 px-2 py-0.5 text-[11px] font-bold text-tomo-navy">
-                <svg viewBox="0 0 24 24" fill="none" stroke="#111827" strokeWidth={2.2}
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2}
                   strokeLinecap="round" strokeLinejoin="round" className="h-2.5 w-2.5" aria-hidden>
                   <path d="M12 3.5l6.5 2.7v4.6c0 4.3-2.8 7.6-6.5 9.7-3.7-2.1-6.5-5.4-6.5-9.7V6.2z" />
                   <path d="m9.3 11.6 1.9 1.9 3.5-3.5" />

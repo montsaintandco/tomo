@@ -7,8 +7,10 @@ import { t, type Lang } from "@/lib/i18n";
 const HEART = "M12 21C7.2 17.2 2.5 13.6 2.5 8.9 2.5 5.6 5 3.5 7.8 3.5c1.7 0 3.3.9 4.2 2.3.9-1.4 2.5-2.3 4.2-2.3 2.8 0 5.3 2.1 5.3 5.4 0 4.7-4.7 8.3-9.5 12.1z";
 
 // 찜 토글 — RLS가 본인 행만 허용하므로 API 라우트 없이 브라우저 클라이언트로 직접 쓴다
-export default function WishButton({ listingId, price, initialLiked, initialCount, guest, lang }: {
+// compact: 카드 사진 위 하트 — 보이는 원 32px, 누르는 자리는 가상 요소로 44px(모바일 터치 최소), 숫자 없음
+export default function WishButton({ listingId, price, initialLiked, initialCount, guest, lang, compact = false, className = "" }: {
   listingId: string; price: number; initialLiked: boolean; initialCount: number; guest: boolean; lang: Lang;
+  compact?: boolean; className?: string;
 }) {
   const [liked, setLiked] = useState(initialLiked);
   const [count, setCount] = useState(initialCount);
@@ -36,13 +38,24 @@ export default function WishButton({ listingId, price, initialLiked, initialCoun
     }
   }
 
+  if (compact) return (
+    <button type="button" onClick={toggle} aria-pressed={liked}
+      aria-label={liked ? t(lang, "detail.unwishAria") : t(lang, "detail.wishAria")}
+      className={`press flex h-8 w-8 items-center justify-center rounded-full bg-white/95 shadow-soft before:absolute before:-inset-1.5 before:content-[''] ${liked ? "text-accent" : "text-ink"} ${className || "relative"}`}>
+      <svg key={String(liked)} viewBox="0 0 24 24" className={`h-[18px] w-[18px] ${liked ? "pop" : ""}`} aria-hidden
+        fill={liked ? "currentColor" : "none"} stroke="currentColor" strokeWidth={1.9} strokeLinejoin="round">
+        <path d={HEART} />
+      </svg>
+    </button>
+  );
+
   return (
     <button type="button" onClick={toggle} aria-pressed={liked}
       aria-label={liked ? t(lang, "detail.unwishAria") : t(lang, "detail.wishAria")}
       className={`press inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-bold ${
         liked ? "bg-tomo-coral-deep/10 text-tomo-coral-deep" : "bg-tomo-navy/5 text-tomo-navy"}`}>
       <svg key={String(liked)} viewBox="0 0 24 24" className={`h-4 w-4 ${liked ? "pop" : ""}`} aria-hidden
-        fill={liked ? "#1D4ED8" : "none"} stroke="currentColor" strokeWidth={1.9} strokeLinejoin="round">
+        fill={liked ? "currentColor" : "none"} stroke="currentColor" strokeWidth={1.9} strokeLinejoin="round">
         <path d={HEART} />
       </svg>
       <span className="tnum">{count > 0 ? count : t(lang, "detail.wish")}</span>

@@ -22,6 +22,10 @@ const config: Config = {
         "tomo-ivory": "#F5F5F7",      // 틴트 필드 (검색·신뢰 스트립·푸터)
         "tomo-navy": "#111827",       // 구조·잉크·활성 탭 (near-black)
         "tomo-rose": "#DC2626",       // 오류·파괴적
+        // 새 이름 (05-roadmap T1, DESIGN.md 역할명) — 옛 이름은 그대로 두고 같은 값을 새 이름으로도 부른다
+        accent: "var(--accent)",          // #1D4ED8 단일 액센트
+        "accent-ink": "var(--accent-ink)", // 액센트 틴트 위 작은 글자·링크 (#EEF2FF 위 8:1)
+        "accent-tint": "#EEF2FF",
         ink: "#111827",
         "ink-soft": "#6B7280",
         "ink-faint": "#9CA3AF",

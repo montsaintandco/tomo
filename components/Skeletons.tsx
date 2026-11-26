@@ -1,5 +1,17 @@
 // 라우트 loading.tsx용 스켈레톤 — 클릭 즉시 페이지가 바뀌고, 데이터는 그 자리에서 스트리밍된다 (이동 후 로딩)
 
+// 카드 한 장 자리 — ListingCard·ExternalItemCard와 같은 높이(사진 → 제목 1줄 → 가격 큰 줄 → 작은 줄)
+export function CardSkeleton() {
+  return (
+    <div aria-hidden>
+      <div className="skeleton aspect-square rounded-thumb" />
+      <div className="skeleton mt-2 h-4 w-5/6 rounded" />
+      <div className="skeleton mt-1.5 h-5 w-1/2 rounded" />
+      <div className="skeleton mt-1 h-3.5 w-1/3 rounded" />
+    </div>
+  );
+}
+
 export function FeedSkeleton() {
   return (
     <main className="mx-auto max-w-md px-4 pt-4 md:max-w-6xl md:px-6 md:pt-8" aria-busy aria-label="loading">
@@ -7,11 +19,7 @@ export function FeedSkeleton() {
       <div className="skeleton mt-3 h-4 w-64 rounded" />
       <ul className="mt-6 grid grid-cols-2 gap-x-3 gap-y-5 md:grid-cols-4 md:gap-x-5 md:gap-y-7">
         {Array.from({ length: 8 }, (_, i) => (
-          <li key={i}>
-            <div className="skeleton aspect-square rounded-thumb" />
-            <div className="skeleton mt-2 h-4 w-5/6 rounded" />
-            <div className="skeleton mt-1.5 h-4 w-1/3 rounded" />
-          </li>
+          <li key={i}><CardSkeleton /></li>
         ))}
       </ul>
     </main>

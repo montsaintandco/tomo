@@ -39,7 +39,7 @@ export default function PriceHint({ title, currency, lang, onApply }: {
               </span>
               {stats.sources.length > 0 && <span> · {t(lang, "sell.priceSrc", { sources: stats.sources.map((s) => t(lang, `source.${s}`)).join("·") })}</span>}
               <button type="button" onClick={() => onApply(stats.median!)}
-                className="press ml-2 font-bold text-tomo-coral-deep underline underline-offset-2">
+                className="press ml-2 font-bold text-accent underline underline-offset-2">
                 {t(lang, "sell.priceApply")}
               </button>
             </>
