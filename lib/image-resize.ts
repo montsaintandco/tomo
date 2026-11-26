@@ -16,3 +16,14 @@ export async function resizeImage(file: File, maxSide = 1600, quality = 0.85): P
     return file;
   }
 }
+
+type PhotoLike = { name: string; size: number; type: string; lastModified?: number };
+
+/** 판매 폼 사진 합치기 — 이미지만, 같은 파일 중복 제거, 최대 max장. dropped = 넘쳐서 버린 수 */
+export function mergePhotos<T extends PhotoLike>(prev: T[], incoming: T[], max = 5): { files: T[]; dropped: number } {
+  const key = (f: T) => `${f.name}|${f.size}|${f.lastModified ?? 0}`;
+  const seen = new Set(prev.map(key));
+  const fresh = incoming.filter((f) => f.type.startsWith("image/") && !seen.has(key(f)) && !!seen.add(key(f)));
+  const all = [...prev, ...fresh];
+  return { files: all.slice(0, max), dropped: Math.max(0, all.length - max) };
+}

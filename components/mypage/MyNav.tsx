@@ -5,30 +5,37 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { t, type I18nKey, type Lang } from "@/lib/i18n";
 import { TomoSymbol } from "@/components/Brand";
+import type { BadgeKey, MyBadges } from "@/components/mypage/counts";
 
-const ITEMS: { href: string; key: I18nKey; unread?: boolean }[] = [
-  { href: "/mypage", key: "my.nav.home" },
-  { href: "/mypage/orders", key: "my.nav.orders" },
-  { href: "/mypage/sales", key: "my.nav.sales" },
-  { href: "/mypage/offers", key: "my.nav.offers" },
-  { href: "/mypage/payouts", key: "my.nav.payouts" },
-  { href: "/mypage/wishlist", key: "my.nav.wishlist" },
-  { href: "/mypage/notifications", key: "my.nav.notifications", unread: true },
-  { href: "/mypage/support", key: "my.nav.support" },
-  { href: "/mypage/addresses", key: "my.nav.addresses" },
-  { href: "/mypage/settings", key: "my.nav.settings" },
+// 아이콘은 24px 선 아이콘 path(새 의존성 없이 직접 그린다). badge = 미확인 숫자 키(counts.ts myBadges)
+const ITEMS: { href: string; key: I18nKey; icon: string; badge?: BadgeKey }[] = [
+  { href: "/mypage", key: "my.nav.home", icon: "M3 10.5 12 3l9 7.5V21h-6v-6H9v6H3z" },
+  { href: "/mypage/orders", key: "my.nav.orders", icon: "M5 8h14l-1 13H6zM9 8V6a3 3 0 0 1 6 0v2", badge: "orders" },
+  { href: "/mypage/sales", key: "my.nav.sales", icon: "M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8zM7.5 7.5h.01", badge: "sales" },
+  { href: "/mypage/offers", key: "my.nav.offers", icon: "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2zM8 10h8", badge: "offers" },
+  { href: "/mypage/payouts", key: "my.nav.payouts", icon: "M3 7h18v13H3zM3 7l3-4h12l3 4M16 14h.01" },
+  { href: "/mypage/wishlist", key: "my.nav.wishlist", icon: "M12 20s-8-4.9-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 9c0 6.1-8 11-8 11z" },
+  { href: "/mypage/notifications", key: "my.nav.notifications", icon: "M6 9a6 6 0 0 1 12 0c0 6 3 8 3 8H3s3-2 3-8M10.3 21a1.9 1.9 0 0 0 3.4 0", badge: "notifications" },
+  { href: "/mypage/support", key: "my.nav.support", icon: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM9.2 9a3 3 0 0 1 5.6 1c0 2-2.8 2.5-2.8 4M12 17.5h.01" },
+  { href: "/mypage/addresses", key: "my.nav.addresses", icon: "M19 10c0 6-7 11-7 11s-7-5-7-11a7 7 0 0 1 14 0zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z" },
+  { href: "/mypage/settings", key: "my.nav.settings", icon: "M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6" },
 ];
+const ADMIN_ICON = "M12 21s7-3.5 7-9V5l-7-2.5L5 5v7c0 5.5 7 9 7 9z";
 
+const Icon = ({ d }: { d: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 shrink-0" aria-hidden><path d={d} /></svg>
+);
 const Chevron = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-ink-faint" aria-hidden><path d="m9 5 7 7-7 7" /></svg>
 );
-const Badge = ({ n }: { n: number }) => (
-  <span className="tnum ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-tomo-coral-deep px-1.5 text-[11px] font-bold text-white">{n > 99 ? "99+" : n}</span>
+const Badge = ({ n, lang }: { n: number; lang: Lang }) => (
+  <span aria-label={t(lang, "my.badgeAria", { n })} className="tnum ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-tomo-coral-deep px-1.5 text-[11px] font-bold text-white">{n > 99 ? "99+" : n}</span>
 );
 
-export default function MyNav({ lang, unread = 0, isAdmin = false, variant = "side" }: {
-  lang: Lang; unread?: number; isAdmin?: boolean; variant?: "side" | "list";
+export default function MyNav({ lang, badges = {}, isAdmin = false, variant = "side" }: {
+  lang: Lang; badges?: Partial<MyBadges>; isAdmin?: boolean; variant?: "side" | "list";
 }) {
+  const count = (k?: BadgeKey) => (k ? badges[k] ?? 0 : 0);
   const path = usePathname();
   const active = (href: string) => (href === "/mypage" ? path === "/mypage" : path === href || path.startsWith(href + "/"));
 
@@ -39,15 +46,16 @@ export default function MyNav({ lang, unread = 0, isAdmin = false, variant = "si
         <ul className="card divide-y divide-tomo-navy/5">
           {ITEMS.slice(1).map((it) => (
             <li key={it.href}>
-              <Link href={it.href} className="press flex min-h-12 items-center gap-2 px-4 text-[14px] text-ink">
+              <Link href={it.href} className="press flex min-h-12 items-center gap-3 px-4 text-[14px] text-ink">
+                <span className="text-ink-soft"><Icon d={it.icon} /></span>
                 {t(lang, it.key)}
-                {it.unread && unread > 0 ? <Badge n={unread} /> : <span className="ml-auto" />}
+                {count(it.badge) > 0 ? <Badge n={count(it.badge)} lang={lang} /> : <span className="ml-auto" />}
                 <Chevron />
               </Link>
             </li>
           ))}
           {isAdmin && (
-            <li><Link href="/admin" className="press flex min-h-12 items-center px-4 text-[14px] font-bold text-tomo-navy">{t(lang, "my.admin")}<span className="ml-auto" /><Chevron /></Link></li>
+            <li><Link href="/admin" className="press flex min-h-12 items-center gap-3 px-4 text-[14px] font-bold text-tomo-navy"><Icon d={ADMIN_ICON} />{t(lang, "my.admin")}<span className="ml-auto" /><Chevron /></Link></li>
           )}
         </ul>
       </nav>
@@ -67,16 +75,17 @@ export default function MyNav({ lang, unread = 0, isAdmin = false, variant = "si
           {ITEMS.map((it) => (
             <li key={it.href}>
               <Link href={it.href} aria-current={active(it.href) ? "page" : undefined}
-                className={`press flex min-h-10 items-center gap-2 rounded-card px-3 text-[14px] ${
+                className={`press flex min-h-10 items-center gap-2.5 rounded-card px-3 text-[14px] ${
                   active(it.href) ? "bg-tomo-navy/5 font-bold text-ink" : "text-ink-soft hover:text-ink"}`}>
+                <Icon d={it.icon} />
                 {t(lang, it.key)}
-                {it.unread && unread > 0 && <Badge n={unread} />}
+                {count(it.badge) > 0 && <Badge n={count(it.badge)} lang={lang} />}
               </Link>
             </li>
           ))}
           {isAdmin && (
             <li className="mt-2 border-t border-tomo-navy/5 pt-2">
-              <Link href="/admin" className="press flex min-h-10 items-center rounded-card px-3 text-[14px] font-bold text-tomo-navy">{t(lang, "my.admin")}</Link>
+              <Link href="/admin" className="press flex min-h-10 items-center gap-2.5 rounded-card px-3 text-[14px] font-bold text-tomo-navy"><Icon d={ADMIN_ICON} />{t(lang, "my.admin")}</Link>
             </li>
           )}
         </ul>
@@ -104,7 +113,7 @@ export function Tabs({ tabs }: { tabs: { href: string; label: string; active: bo
 }
 
 export function Row({ href, image, title, sub, right, extra, bare }: {
-  href: string; image?: string; title: string; sub: string; right: string; extra?: React.ReactNode; bare?: boolean;
+  href: string; image?: string; title: string; sub: string; right: React.ReactNode; extra?: React.ReactNode; bare?: boolean;
 }) {
   return (
     <div className={`flex items-center gap-3 ${bare ? "" : "card p-3"}`}>

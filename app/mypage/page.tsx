@@ -1,7 +1,9 @@
 import { createServerSupabase } from "@/lib/supabase/server";
 import { getViewer } from "@/lib/listings";
 import { t, type Lang } from "@/lib/i18n";
-import HeartGauge from "@/components/HeartGauge";
+import TrustGauge from "@/components/TrustGauge";
+import ProgressBoard from "@/components/mypage/ProgressBoard";
+import { myBadges, progressCounts, TX_PROGRESS, PROXY_PROGRESS } from "@/components/mypage/counts";
 import SectionHeader from "@/components/SectionHeader";
 import { CountryChip } from "@/components/Brand";
 import MyNav, { Empty } from "@/components/mypage/MyNav";
@@ -20,27 +22,26 @@ export default async function MyPage() {
   const lang: Lang = viewer.language;
   const me = viewer.id;
 
-  const [{ data: profile }, offersInRes, offersOutRes, wishRes, shipRes, receiveRes, travelersRes, notifRes, unreadRes] = await Promise.all([
+  const [{ data: profile }, badges, offersOutRes, wishRes, travelersRes, notifRes, txProgRes, proxyProgRes] = await Promise.all([
     supabase.from("profiles").select("nickname, country, region, trust_temp").eq("id", me).single(),
-    supabase.from("offers").select("id, listings!inner(seller_id)", { count: "exact", head: true }).eq("listings.seller_id", me).eq("status", "pending"),
+    myBadges(supabase, me),
     supabase.from("offers").select("id, listings!inner(status)", { count: "exact", head: true }).eq("buyer_id", me).eq("status", "accepted").eq("listings.status", "active"),
     supabase.from("wishlists").select("price_at_wish, listings(price)").eq("user_id", me).not("price_at_wish", "is", null).limit(200),
-    supabase.from("transactions").select("id", { count: "exact", head: true }).eq("seller_id", me).eq("status", "paid"),
-    supabase.from("transactions").select("id", { count: "exact", head: true }).eq("buyer_id", me).in("status", ["shipped", "shipped_international", "delivered"]),
     supabase.rpc("travelers_to", { p_country: viewer.country, p_region: viewer.region }),
     supabase.from("notifications").select("id, kind, ref_type, ref_id, data, read_at, created_at").order("created_at", { ascending: false }).limit(3),
-    supabase.rpc("unread_notifications"),
+    supabase.from("transactions").select("status").eq("buyer_id", me).in("status", TX_PROGRESS).limit(500),
+    supabase.from("proxy_requests").select("status, order_id").eq("user_id", me).in("status", PROXY_PROGRESS).limit(500),
   ]);
 
-  // 할 일 — 지금 내가 움직여야 하는 것만. 링크는 하위 화면으로
-  const pendingIn = offersInRes.count ?? 0;
+  // 할 일 — 지금 내가 움직여야 하는 것만. 링크는 하위 화면으로. 숫자는 메뉴 배지와 같다(myBadges)
+  const pendingIn = badges.offers;
   const acceptedOut = offersOutRes.count ?? 0;
   const drops = (wishRes.data ?? []).filter((w) => {
     const l = w.listings as unknown as { price: number } | null;
     return l && w.price_at_wish && l.price < w.price_at_wish;
   }).length;
-  const toShip = shipRes.count ?? 0;
-  const toReceive = receiveRes.count ?? 0;
+  const toShip = badges.sales;
+  const toReceive = badges.orders;
   const travelers = typeof travelersRes.data === "number" ? travelersRes.data : 0;
   const todos: { text: string; href: string }[] = [
     ...(toShip ? [{ text: t(lang, "my.todoShip", { n: toShip }), href: "/mypage/sales?tab=tx" }] : []),
@@ -51,7 +52,8 @@ export default async function MyPage() {
     ...(travelers ? [{ text: t(lang, "trip.travelers", { n: travelers }), href: "/sell" }] : []),
   ];
   const notifs = rows(notifRes as { data: Notif[] | null; error: { code?: string } | null });
-  const unread = typeof unreadRes.data === "number" ? unreadRes.data : 0;
+  const unread = badges.notifications;
+  const progress = progressCounts(txProgRes.data ?? [], proxyProgRes.data ?? []);
 
   return (
     <main className="mx-auto max-w-md p-4 pb-8 standalone:pb-24 md:max-w-none md:p-0 md:pb-16">
@@ -73,9 +75,11 @@ export default async function MyPage() {
             <Link href="/mypage/edit" className="btn border-[1.5px] border-tomo-navy bg-white px-3 py-2 text-xs text-tomo-navy">{t(lang, "my.editProfile")}</Link>
           </div>
         </div>
-        <HeartGauge temp={Number(profile?.trust_temp ?? 36.5)} lang={lang} />
+        <TrustGauge temp={Number(profile?.trust_temp ?? 36.5)} lang={lang} />
         <Link href={`/profile/${me}`} className="press mt-3 block text-center text-[13px] font-bold text-tomo-navy">{t(lang, "my.profileLink")} →</Link>
       </div>
+
+      <ProgressBoard counts={progress} lang={lang} />
 
       <section aria-label={t(lang, "my.todo")} className="mb-8">
         <SectionHeader lang={lang} title={t(lang, "my.todo")} />
@@ -106,7 +110,7 @@ export default async function MyPage() {
         </section>
       )}
 
-      <MyNav lang={lang} unread={unread} isAdmin={viewer.isAdmin} variant="list" />
+      <MyNav lang={lang} badges={badges} isAdmin={viewer.isAdmin} variant="list" />
     </main>
   );
 }

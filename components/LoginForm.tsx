@@ -9,13 +9,16 @@ import Link from "next/link";
 type Mode = "signin" | "signup";
 
 export default function LoginForm({ lang }: { lang: Lang }) {
-  const [mode, setMode] = useState<Mode>("signin");
+  const sp = useSearchParams();
+  // ?mode=signup 이면 가입 탭으로 연다. ?error=oauth 는 콜백 실패(app/auth/callback)
+  const [mode, setMode] = useState<Mode>(sp.get("mode") === "signup" ? "signup" : "signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [showPw, setShowPw] = useState(false);
+  const [error, setError] = useState(sp.get("error") === "oauth" ? t(lang, "auth.errOauth") : "");
   const [busy, setBusy] = useState(false);
   const router = useRouter();
-  const next = useSearchParams().get("next");
+  const next = sp.get("next");
   // 온보딩이 미완이면 보호 경로 진입 시 미들웨어가 다시 온보딩으로 보냄
   const dest = next && /^\/(?![\/\\])/.test(next) ? next : "/onboarding";
 
@@ -31,7 +34,7 @@ export default function LoginForm({ lang }: { lang: Lang }) {
       },
     });
     if (error || !data?.url) {
-      setError(error?.message ?? t(lang, "auth.googleFail"));
+      setError(t(lang, "auth.googleFail"));
       setBusy(false);
       return;
     }
@@ -55,7 +58,9 @@ export default function LoginForm({ lang }: { lang: Lang }) {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (!error) return router.push(dest);
         if (/invalid login credentials/i.test(error.message)) return setError(t(lang, "auth.errInvalid"));
-        setError(error.message);
+        if (/not confirmed/i.test(error.message)) return setError(t(lang, "auth.errConfirm"));
+        if (/rate limit|too many/i.test(error.message)) return setError(t(lang, "auth.errRate"));
+        setError(t(lang, "auth.errGeneric"));
       } else {
         const { data, error } = await supabase.auth.signUp({ email, password });
         if (!error) {
@@ -65,23 +70,28 @@ export default function LoginForm({ lang }: { lang: Lang }) {
         }
         if (/already registered|already exists|user already/i.test(error.message)) return setError(t(lang, "auth.errExists"));
         if (/rate limit/i.test(error.message)) return setError(t(lang, "auth.errRate"));
-        setError(error.message);
+        setError(t(lang, "auth.errGeneric"));
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t(lang, "auth.errGeneric"));
+    } catch {
+      setError(t(lang, "auth.errGeneric"));
     } finally {
       setBusy(false);
     }
   }
 
   const modes: [Mode, string][] = [["signin", t(lang, "auth.signin")], ["signup", t(lang, "auth.signup")]];
+  // 보호 경로에서 튕겨 온 경우 왜 여기 왔는지 알려 준다 (/sell 은 판매 전용 문구)
+  const notice = next && dest !== "/onboarding" ? t(lang, dest.startsWith("/sell") ? "auth.needLoginSell" : "auth.needLogin") : "";
+  const pwInput = "w-full rounded-full bg-white py-3 pl-4 pr-16 text-base shadow-soft placeholder:text-ink-soft";
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-4 p-6">
+    <main className="mx-auto flex min-h-[100dvh] max-w-sm flex-col justify-center gap-4 p-6">
       <div className="mb-1 flex flex-col items-center gap-1">
         <Link href="/" aria-label="TOMO"><Wordmark className="text-3xl" /></Link>
         <p className="text-xs text-ink-soft">{t(lang, "footer.tagline")}</p>
+        <h1 className="mt-3 text-[17px] font-extrabold text-ink">{t(lang, mode === "signin" ? "auth.titleSignin" : "auth.titleSignup")}</h1>
       </div>
+      {notice && <p role="status" className="rounded-card bg-accent-tint px-4 py-3 text-center text-[13px] font-bold leading-relaxed text-accent-ink">{notice}</p>}
       <button type="button" onClick={googleLogin} disabled={busy}
         className="btn flex items-center justify-center gap-2.5 bg-white py-3 text-sm text-ink shadow-soft">
         {/* 구글 공식 4색 G 로고 */}
@@ -105,13 +115,19 @@ export default function LoginForm({ lang }: { lang: Lang }) {
         ))}
       </div>
       <form onSubmit={submit} className="flex flex-col gap-3">
-        <label htmlFor="auth-email" className="sr-only">{t(lang, "auth.email")}</label>
+        <label htmlFor="auth-email" className="-mb-1.5 px-1 text-[13px] font-bold text-ink">{t(lang, "auth.email")}</label>
         <input id="auth-email" className="rounded-full bg-white px-4 py-3 text-base shadow-soft placeholder:text-ink-soft" type="email" autoComplete="email"
           placeholder="name@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
-        <label htmlFor="auth-password" className="sr-only">{t(lang, "auth.password")}</label>
-        <input id="auth-password" className="rounded-full bg-white px-4 py-3 text-base shadow-soft placeholder:text-ink-soft" type="password"
-          autoComplete={mode === "signin" ? "current-password" : "new-password"}
-          placeholder={t(lang, "auth.passwordHint")} value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} />
+        <label htmlFor="auth-password" className="-mb-1.5 px-1 text-[13px] font-bold text-ink">{t(lang, mode === "signup" ? "auth.passwordHint" : "auth.password")}</label>
+        <div className="relative">
+          <input id="auth-password" className={pwInput} type={showPw ? "text" : "password"}
+            autoComplete={mode === "signin" ? "current-password" : "new-password"}
+            value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} />
+          <button type="button" aria-label={t(lang, "auth.showAria")} aria-pressed={showPw} onClick={() => setShowPw(!showPw)}
+            className="press absolute inset-y-0 right-1 my-auto h-10 rounded-full px-3 text-[12px] font-bold text-ink-soft">
+            {t(lang, showPw ? "auth.hide" : "auth.show")}
+          </button>
+        </div>
         <button disabled={busy} className="btn bg-tomo-coral-deep py-3 text-sm text-white">
           {busy ? t(lang, "auth.wait") : mode === "signin" ? t(lang, "auth.signin") : t(lang, "auth.signupCta")}
         </button>

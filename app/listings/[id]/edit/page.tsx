@@ -11,7 +11,7 @@ export default async function EditListingPage(props: { params: Promise<{ id: str
   const viewer = await getViewer(supabase);
   if (!viewer) redirect(`/login?next=/listings/${id}/edit`);
   const { data: l } = await supabase.from("listings")
-    .select("id, seller_id, title, description, price, category, trade_method, cross_border_enabled, condition, shipping_payer, ship_days, allow_offers")
+    .select("id, seller_id, title, description, price, category, trade_method, cross_border_enabled, condition, shipping_payer, ship_days, allow_offers, images")
     .eq("id", id).maybeSingle();
   if (!l || l.seller_id !== viewer.id) notFound();
   return <SellForm lang={viewer.language} hint="" initial={l as SellInitial} currency={viewer.currency} />;

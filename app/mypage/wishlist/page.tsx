@@ -1,6 +1,8 @@
 import { createServerSupabase } from "@/lib/supabase/server";
 import { getViewer, displayTitle } from "@/lib/listings";
-import { formatPrice, type Currency } from "@/lib/currency";
+import type { Currency } from "@/lib/currency";
+import { formatMoney } from "@/lib/price-display";
+import Price from "@/components/ui/Price";
 import { t } from "@/lib/i18n";
 import UnwishButton from "@/components/UnwishButton";
 import { PageTitle, Row, Empty, More } from "@/components/mypage/MyNav";
@@ -27,7 +29,6 @@ export default async function MyWishlist(props: { searchParams: Promise<{ page?:
     .eq("user_id", viewer.id).order("created_at", { ascending: false }).limit(limit + 1);
   const all = (data ?? []) as unknown as { listing_id: string; price_at_wish: number | null; listings: MiniListing | null }[];
   const list = all.slice(0, limit).filter((w) => w.listings);
-  const priceOf = (l: { price: number; currency: string }) => l.price === 0 ? t(lang, "price.free") : formatPrice(l.price, l.currency as Currency);
   const statusOf = (s: string) => t(lang, s === "active" ? "status.selling" : s === "reserved" ? "badge.reserved" : "status.soldDone");
 
   return (
@@ -37,10 +38,11 @@ export default async function MyWishlist(props: { searchParams: Promise<{ page?:
         {list.map((w) => {
           const l = w.listings!;
           const drop = w.price_at_wish && l.price < w.price_at_wish
-            ? `${t(lang, "my.priceDrop", { diff: formatPrice(w.price_at_wish - l.price, l.currency as Currency) })} · ` : "";
+            ? `${t(lang, "my.priceDrop", { diff: formatMoney(w.price_at_wish - l.price, l.currency as Currency, lang) })} · ` : "";
           return (
             <Row key={l.id} href={`/listings/${l.id}`} image={l.images?.[0]} title={displayTitle(l, lang)}
-              sub={drop + statusOf(l.status)} right={priceOf(l)} extra={<UnwishButton listingId={l.id} lang={lang} />} />
+              sub={drop + statusOf(l.status)} right={<Price className="items-end text-right" amount={l.price} currency={l.currency as Currency} viewerCurrency={viewer.currency}
+                rate={viewer.rate} lang={lang} fallback={t(lang, "price.free")} dim={l.status !== "active" && l.status !== "reserved"} />} extra={<UnwishButton listingId={l.id} lang={lang} />} />
           );
         })}
         {list.length === 0 && <Empty text={t(lang, "my.noWishlist")} />}

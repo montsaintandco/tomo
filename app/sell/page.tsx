@@ -27,9 +27,8 @@ export default async function SellPage(props: { searchParams: Promise<{ hint?: s
         title: item.title.slice(0, 80),
         description: (item.description || item.title).slice(0, 2000),
         price: sameCurrency && item.price > 0 ? Math.round(item.price) : undefined,
-        images: (item.images.length ? item.images : [item.thumb]).filter(Boolean).slice(0, 5),
       };
-      importMsg = sameCurrency ? t(lang, "sell.imported") : `${t(lang, "sell.imported")} · ${t(lang, "sell.importCurrency")}`;
+      importMsg = sameCurrency ? t(lang, "sell.importedNoPhoto") : `${t(lang, "sell.importedNoPhoto")} · ${t(lang, "sell.importCurrency")}`;
     } else {
       importMsg = t(lang, "sell.importFail");
     }
