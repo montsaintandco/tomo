@@ -97,9 +97,13 @@ export function parseDaangnContext(html: string): Partial<MarketItemDetail> & { 
   }
 }
 
-export async function daangnSearch(keyword: string): Promise<MarketItem[]> {
-  const html = await fetchHtml(
-    `https://www.daangn.com/kr/buy-sell/?search=${encodeURIComponent(keyword)}`);
+// category = 당근 category_id(1단계 20개, lib/categories.ts KR_MARKET_CAT). 2026-11-26 실측: 검색어와 함께일 때만 걸러진 목록이 온다
+// (검색어 없이 category_id 만 주면 JSON-LD 목록이 비어 있다)
+export const daangnSearchUrl = (keyword: string, category?: number) =>
+  `https://www.daangn.com/kr/buy-sell/?${category && Number.isInteger(category) && category > 0 ? `category_id=${category}&` : ""}search=${encodeURIComponent(keyword)}`;
+
+export async function daangnSearch(keyword: string, category?: number): Promise<MarketItem[]> {
+  const html = await fetchHtml(daangnSearchUrl(keyword, category));
   const list = jsonLdBlocks(html).find((b) => b?.["@type"] === "ItemList");
   const elements: any[] = list?.itemListElement ?? [];
 

@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { translateListing } from "@/lib/translate";
 import { isListingCategory } from "@/lib/categories";
+import { apiError, reqLang } from "@/lib/api-error";
+import { loadPriceLock, PRICE_LOCK_ERR } from "../price-lock";
 
 const METHODS = ["direct","shipping","both"];
 const CONDITIONS = ["new","like_new","good","fair","poor"];
@@ -28,8 +30,12 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
       !CONDITIONS.includes(condition) || !PAYERS.includes(shippingPayer) || !SHIP_DAYS.includes(shipDays))
     return NextResponse.json({ error: "invalid fields" }, { status: 400 });
 
-  const { data: current } = await supabase.from("listings").select("seller_id, source_language").eq("id", id).maybeSingle();
+  const { data: current } = await supabase.from("listings").select("seller_id, source_language, price, status").eq("id", id).maybeSingle();
   if (!current || current.seller_id !== auth.user.id) return NextResponse.json({ error: "not found" }, { status: 404 });
+  if (price !== current.price) {
+    const lock = await loadPriceLock(supabase, id, current.status);
+    if (lock) return apiError(reqLang(req), PRICE_LOCK_ERR[lock], 409);
+  }
 
   const patch: Record<string, unknown> = {
     title, description, price, category, trade_method: tradeMethod, cross_border_enabled: !!crossBorder,
@@ -38,7 +44,10 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   if (Array.isArray(images) && images.length > 0) patch.images = images.filter(imageOk).slice(0, 5);
 
   const { error } = await supabase.from("listings").update(patch).eq("id", id);
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  if (error) {
+    if (/price locked/.test(error.message)) return apiError(reqLang(req), PRICE_LOCK_ERR.activeTx, 409); // 0039 트리거(경합)
+    return NextResponse.json({ error: error.message }, { status: 400 });
+  }
 
   // 제목·설명이 바뀌었으니 상대 언어 번역도 갱신 (실패해도 수정은 유지)
   const from = current.source_language as "ko" | "ja";

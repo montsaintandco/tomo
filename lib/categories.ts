@@ -5,8 +5,10 @@
 // - 한국 사용자 → 일본 마켓. 메루카리는 categoryId 필터로 찾는다(키워드 대체 아님). 번호는 api.mercari.jp/master/v2/datasets/item_categories
 //   2026-11-26 실측(tests/unit/fixtures/mercari-categories.json, 0~3단계). mq 가 있으면 그 카테고리 안에서 그 말로 좁힌다(캐릭터 이름처럼 메루카리에 카테고리가 없는 것).
 //   야후 플리마는 카테고리 번호를 쓰지 않는다(체계가 다르다). 탭을 직접 골랐을 때만 일본어 이름(mq ?? ja)으로 찾는다.
-// - 일본 사용자 → 한국 마켓(당근·중고나라). 두 곳 다 검색 API 에 카테고리 번호가 없다. 그래서 한국어 키워드(kr, 없으면 ko 첫 토막)로 대신 찾는다.
-//   ponytail: 두 사이트 카테고리 API 가 확인되면 번호로 승격.
+// - 일본 사용자 → 한국 마켓(당근·중고나라). 한국어 키워드(kr, 없으면 ko 첫 토막)에 더해 마켓 카테고리 번호로 좁힌다(KR_MARKET_CAT).
+//   2026-11-26 실측: 중고나라 web.joongna.com/search/<말>?category=<categorySeq> (1~3단계 모두 받음),
+//   당근 www.daangn.com/kr/buy-sell/?category_id=<id>&search=<말> (1단계 20개뿐. 검색어 없이는 JSON-LD 목록이 비어 검색어가 꼭 필요).
+//   번호 0 = 그 마켓은 키워드만(분류가 여러 곳에 흩어져 번호로 좁히면 빠지는 매물이 더 많은 경우).
 //
 // slug 는 URL 과 판매 매물 listings.category 값이다. 예전 값(figure·camera·kpop·game·vintage)은 같은 slug 의 대분류로 이어진다.
 // fashion 은 여성·남성으로 나뉘어 대분류가 아니지만, 예전 매물이 있을 수 있어 판매 값으로는 계속 받는다(LEGACY_LISTING).
@@ -379,14 +381,69 @@ export function parseCat(raw: unknown): CatRef | null {
 export const catParam = (major: MajorCategory, sub?: SubCategory) => (sub ? `${major.slug}.${sub.slug}` : major.slug);
 export const catSearchHref = (major: MajorCategory, sub?: SubCategory) => `/global?cat=${catParam(major, sub)}`;
 
-/** 검색에 넘길 범위 — 메루카리는 번호(+mq), 번호가 없는 마켓은 ja(일본 마켓)·ko(한국 마켓) 검색어 */
-export type CatScope = { mercari: number[]; mq?: string; ja: string; ko: string };
+/** 검색에 넘길 범위 — 메루카리는 번호(+mq), 번호가 없는 마켓은 ja(일본 마켓)·ko(한국 마켓) 검색어.
+ *  jn·dg = 중고나라·당근 카테고리 번호(krCatIds 가 채운다). ko 검색어와 함께 joongnaSearch·daangnSearch 에 넘긴다 */
+export type CatScope = { mercari: number[]; mq?: string; ja: string; ko: string; jn?: number; dg?: number };
 
 export function catScope(ref: CatRef): CatScope {
   if (ref.kind === "mercari") return { mercari: [ref.root.id], ja: ref.root.ja.split("・")[0], ko: ref.root.ko.split("·")[0] };
   const c = ref.sub ?? ref.major;
   return { mercari: c.mercari, ...(c.mq ? { mq: c.mq } : {}), ja: c.mq ?? c.ja.split("・")[0], ko: krTerm(c) };
 }
+
+/** 한국 마켓 카테고리 번호 — 쓸 때 `{ ...catScope(ref), ...krCatIds(ref) }`. 0 인 마켓은 빠진다 */
+export function krCatIds(ref: CatRef): Pick<CatScope, "jn" | "dg"> {
+  if (ref.kind !== "tomo") return {};
+  const [jn, dg] = KR_MARKET_CAT[catParam(ref.major, ref.sub)] ?? [0, 0];
+  return { ...(jn ? { jn } : {}), ...(dg ? { dg } : {}) };
+}
+
+// ── 한국 마켓 카테고리 번호 [중고나라 categorySeq, 당근 category_id] (2026-11-26 실측, 위 머리말 참고) ──
+// 키 = catParam(대분류·세부). 0 = 그 마켓은 번호 없이 키워드만. 표에 없는 키도 키워드만.
+// 당근 1단계: 1 디지털기기 172 생활가전 8 가구/인테리어 7 생활/주방 4 유아동 173 유아도서 5 여성의류 31 여성잡화 14 남성패션/잡화
+//   6 뷰티/미용 3 스포츠/레저 2 취미/게임/음반 9 도서 305 가공식품 483 건강기능식품 16 반려동물용품 139 식물 13 기타
+// 캐릭터 굿즈는 두 마켓 모두 전용 분류가 없고 여러 곳에 흩어져 있어 키워드만 쓴다.
+export const KR_MARKET_CAT: Record<string, readonly [number, number]> = {
+  figure: [209, 2], "figure.figure": [1217, 2], "figure.plamo": [1218, 2], "figure.trading-card": [1388, 2], "figure.toy": [209, 2],
+  "figure.gacha": [209, 2], "figure.kuji": [209, 2], "figure.doll": [209, 2], "figure.boardgame": [13, 2], "figure.rc": [1220, 2],
+  kpop: [1253, 2], "kpop.idol": [1253, 2], "kpop.photocard": [1253, 2], "kpop.album": [1250, 2], "kpop.musician": [1253, 2], "kpop.talent": [1253, 2],
+  game: [12, 2], "game.switch2": [203, 2], "game.switch": [203, 2], "game.ps5": [201, 2], "game.ps4": [201, 2], "game.ds": [203, 2],
+  "game.xbox": [205, 2], "game.retro": [12, 2],
+  camera: [9, 1], "camera.digital": [9, 1], "camera.film": [174, 1], "camera.lens": [177, 1], "camera.video": [175, 1],
+  "camera.instant": [174, 1], "camera.accessory": [9, 1], "camera.film-roll": [9, 1],
+  digital: [0, 1], "digital.phone": [139, 1], "digital.tablet": [140, 1], "digital.pc": [8, 1], "digital.pc-parts": [8, 1],
+  "digital.earphone": [1171, 1], "digital.audio": [153, 1], "digital.smartwatch": [141, 1], "digital.appliance": [7, 172],
+  women: [111, 5], "women.outer": [111, 5], "women.top": [111, 5], "women.pants": [1055, 5], "women.skirt": [1056, 5],
+  "women.dress": [1052, 5], "women.setup": [1052, 5], "women.inner": [1060, 5], "women.kimono": [111, 5],
+  men: [112, 14], "men.outer": [112, 14], "men.top": [112, 14], "men.pants": [1067, 14], "men.suit": [1064, 14],
+  "men.inner": [1071, 14], "men.kimono": [112, 14],
+  // 신발·가방: 당근은 여성잡화(31)·남성(14)로 나뉘어 성별이 정해진 세부만 번호를 쓴다
+  shoes: [3, 0], "shoes.sneakers": [114, 0], "shoes.boots": [3, 0], "shoes.sandals": [3, 0], "shoes.pumps": [1077, 31],
+  "shoes.women": [115, 31], "shoes.men": [116, 14], "shoes.kids": [135, 4],
+  bag: [3, 0], "bag.shoulder": [1088, 0], "bag.tote": [1090, 0], "bag.hand": [117, 0], "bag.backpack": [1091, 0],
+  "bag.pouch": [1093, 0], "bag.travel": [1095, 0], "bag.wallet": [118, 0], "bag.card-case": [118, 0],
+  // 시계·주얼리: 중고나라 수입명품(1>108)은 빠진다(명품은 별도 분류). 벽시계·생활잡화가 섞이는 문제가 더 커서 번호를 쓴다
+  watch: [120, 0], "watch.women": [120, 31], "watch.men": [120, 14], "watch.smartwatch": [141, 1], "watch.vintage": [120, 0],
+  jewelry: [119, 0], "jewelry.necklace": [1102, 0], "jewelry.ring": [1101, 0], "jewelry.earring": [1101, 0],
+  "jewelry.bracelet": [1103, 0], "jewelry.brooch": [119, 0],
+  accessory: [3, 0], "accessory.hat": [122, 0], "accessory.eyewear": [121, 0], "accessory.scarf": [123, 0], "accessory.belt": [118, 0],
+  "accessory.hair": [123, 0], "accessory.keyring": [123, 0], "accessory.umbrella": [123, 0],
+  beauty: [4, 6], "beauty.skincare": [124, 6], "beauty.makeup": [125, 6], "beauty.hair": [127, 6], "beauty.body": [127, 6],
+  "beauty.nail": [129, 6], "beauty.fragrance": [128, 6], "beauty.device": [156, 6],
+  sports: [0, 3], "sports.golf": [228, 3], "sports.outdoor": [241, 3], "sports.fishing": [242, 3], "sports.bike": [229, 3],
+  "sports.fitness": [235, 3], "sports.baseball": [232, 3], "sports.soccer": [231, 3], "sports.racket": [234, 3], "sports.winter": [237, 3],
+  kids: [5, 4], "kids.baby-wear": [134, 4], "kids.kids-wear": [134, 4], "kids.toy": [137, 4], "kids.stroller": [132, 4],
+  "kids.feeding": [132, 4], "kids.maternity": [5, 4], "kids.school": [135, 4],
+  book: [14, 9], "book.manga": [1244, 9], "book.manga-set": [1244, 9], "book.book": [14, 9], "book.magazine": [220, 9],
+  "book.photobook": [14, 9], "book.artbook": [219, 9], "book.picture-book": [214, 173],
+  music: [0, 2], "music.cd": [1250, 2], "music.vinyl": [1252, 2], "music.dvd": [1251, 2], "music.cassette": [1252, 2],
+  "music.guitar": [1226, 2], "music.keyboard": [1225, 2], "music.instrument": [211, 2], "music.dj": [0, 2],
+  food: [195, 305], "food.snack": [195, 305], "food.tea": [195, 305], "food.seasoning": [195, 305], "food.supplement": [195, 483],
+  living: [0, 0], "living.interior": [189, 8], "living.light": [188, 8], "living.kitchen": [194, 7], "living.bedding": [186, 8],
+  "living.stationery": [223, 0], "living.pet": [208, 16], "living.garden": [193, 139], "living.diy": [20, 0],
+  vintage: [212, 0], "vintage.antique": [212, 0], "vintage.craft": [212, 0], "vintage.painting": [212, 0], "vintage.collection": [212, 0],
+  "vintage.handmade": [210, 0],
+};
 
 /** 위치 줄 — [전체 카테고리, 대분류, 세부 분류]. href 가 없는 칸은 지금 위치 */
 export function catCrumbs(lang: Lang, ref: CatRef, allLabel: string): { label: string; href?: string }[] {

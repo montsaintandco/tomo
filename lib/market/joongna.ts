@@ -34,8 +34,12 @@ function textOf(html: string): string {
     .trim();
 }
 
-export async function joongnaSearch(keyword: string): Promise<MarketItem[]> {
-  const html = await fetchHtml(`https://web.joongna.com/search/${encodeURIComponent(keyword)}`);
+// category = 중고나라 categorySeq(lib/categories.ts KR_MARKET_CAT). 2026-11-26 실측: 1~3단계 번호 모두 검색어와 함께 걸러진다
+export const joongnaSearchUrl = (keyword: string, category?: number) =>
+  `https://web.joongna.com/search/${encodeURIComponent(keyword)}${category && Number.isInteger(category) && category > 0 ? `?category=${category}` : ""}`;
+
+export async function joongnaSearch(keyword: string, category?: number): Promise<MarketItem[]> {
+  const html = await fetchHtml(joongnaSearchUrl(keyword, category));
   const blocks = html.split(/<a[^>]*href="\/product\//).slice(1);
 
   const items: MarketItem[] = [];
