@@ -65,7 +65,8 @@ describe("escrow RLS + state machine", () => {
     expect(tx.is_cross_border).toBe(true);
     expect(tx.center).toBe("NARITA");           // bob = JP 판매자
     expect(tx.platform_fee).toBe(Math.floor(tx.item_price * 0.1));
-    expect(tx.intl_shipping_fee).toBe(3000);
+    // 0035: 화면이 보낸 3000 은 무시하고 DB가 대행과 같은 표(거래 통화 KRW 8000 / JPY 900)로 정한다
+    expect(tx.intl_shipping_fee).toBe(tx.currency === "KRW" ? 8000 : 900);
     expect(tx.status).toBe("pending_payment");
 
     // 예약됨

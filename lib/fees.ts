@@ -32,6 +32,13 @@ export const CUSTOMS_RATE_ABOVE = 0.05;  // 과세 구간: 세금 + 소계의 5%
 export const DUTY_RATE = { KRW: 0.08, JPY: 0 } as const;
 export const VAT_RATE = 0.1;
 
+// 국경 간 직거래 국제배송비 — 대행과 같은 표(주문당 1회 추정치)를 거래 통화(판매자 상품 통화)로 받는다.
+// 화면이 보낸 값은 쓰지 않는다(01#15). DB start_transaction(0035)이 같은 값을 스스로 정한다 — 바꾸면 두 곳 다.
+export function directShippingFee(currency: "KRW" | "JPY", crossBorder = true): number {
+  if (!crossBorder) return 0;
+  return currency === "JPY" ? PROXY_SHIPPING_ESTIMATE_JPY : PROXY_SHIPPING_ESTIMATE_KRW;
+}
+
 export function customsCharge(subtotal: number, intlShipping: number, currency: "KRW" | "JPY"): number {
   if (subtotal <= 0) return 0;
   if (subtotal <= CUSTOMS_FREE_LIMIT[currency]) return Math.floor(subtotal * CUSTOMS_RATE_BELOW);

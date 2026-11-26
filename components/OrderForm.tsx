@@ -1,7 +1,9 @@
 "use client";
 import { useState } from "react";
 import { t, type Lang } from "@/lib/i18n";
-import type { ProxyOrderTotal } from "@/lib/fees";
+import { proxyOrderTotal, type ProxyOrderTotal } from "@/lib/fees";
+import type { RecheckChange } from "@/lib/price-check";
+import PriceChangedDialog from "@/components/pay/PriceChangedDialog";
 import OrderSummary from "@/components/OrderSummary";
 import type { CartRow } from "@/components/CartList";
 import { formatPrice, convertPrice } from "@/lib/currency";
@@ -26,9 +28,18 @@ function Field({ k, label, value, onChange, type = "text", required = true }: {
 }
 
 // addresses: null = 주소록(0028) 없음 → 기존 프로필 프리필만. needPccc: 주소록이 있고 한국 수취 주문일 때만 통관부호 필수
-export default function OrderForm({ lang, rows, totals, rate, initialShip, addresses = null, needPccc = false }: {
+// 결제 직전 재확인: 화면 가격(seen)을 같이 보낸다. 서버가 409(pay.err.changed)면 확인 창을 띄우고,
+// 동의하면 바뀜 가격을 화면에 반영해 다시 보낸다(합계는 서버와 같은 proxyOrderTotal).
+export default function OrderForm({ lang, rows: initialRows, totals: initialTotals, rate, initialShip, addresses = null, needPccc = false }: {
   lang: Lang; rows: CartRow[]; totals: ProxyOrderTotal; rate: number; initialShip: Ship; addresses?: Addr[] | null; needPccc?: boolean;
 }) {
+  const [rows, setRows] = useState<CartRow[]>(initialRows);
+  const [changes, setChanges] = useState<RecheckChange[] | null>(null);
+  const totals = proxyOrderTotal(rows, initialTotals.currency, rate);
+  const applied = (list: CartRow[], cs: RecheckChange[]) => list.map((r) => {
+    const c = cs.find((x) => x.id === r.id && (x.kind === "up" || x.kind === "down"));
+    return c ? { ...r, price: c.to } : r;
+  });
   const first = addresses?.find((a) => a.is_default) ?? addresses?.[0];
   const [ship, setShip] = useState<Ship>(initialShip);
   const [addressId, setAddressId] = useState<string | null>(first?.id ?? null);
@@ -49,14 +60,20 @@ export default function OrderForm({ lang, rows, totals, rate, initialShip, addre
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    await send(rows);
+  }
+
+  async function send(list: CartRow[]) {
     if (!consent) { setError(t(lang, "order.consentNeeded")); return; }
     const code = pccc.trim().toUpperCase();
     if (needPccc && !/^P[0-9]{12}$/.test(code)) { setError(t(lang, code ? "addr.pcccInvalid" : "addr.pcccRequired")); return; }
     setBusy(true); setMsg(""); setError("");
+    const seen = Object.fromEntries(list.map((r) => [r.id, r.price]));
     const res = await fetch("/api/order", { method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ itemIds: rows.map((r) => r.id), method, ship: needPccc ? { ...ship, pccc: code } : ship, addressId }) });
+      body: JSON.stringify({ itemIds: list.map((r) => r.id), seen, method, ship: needPccc ? { ...ship, pccc: code } : ship, addressId }) });
     const json = await res.json().catch(() => ({}));
-    if (res.status === 503) { setMsg(t(lang, "order.pending")); setBusy(false); return; }
+    if (res.status === 409 && json.code === "pay.err.changed" && Array.isArray(json.changes)) { setChanges(json.changes); setBusy(false); return; }
+    if (res.status === 503) { setMsg(json.error || t(lang, "order.pending")); setBusy(false); return; }
     if (res.status === 401) { setError(t(lang, "order.fail")); setBusy(false); return; }
     if (!res.ok) { setError(json.error || t(lang, "order.fail")); setBusy(false); return; }
     // 주문은 이미 생성됨 — 결제창을 닫으면 주문 페이지에서 다시 결제할 수 있다
@@ -152,6 +169,11 @@ export default function OrderForm({ lang, rows, totals, rate, initialShip, addre
       <div className="fixed inset-x-0 bottom-0 z-20 border-t border-tomo-navy/5 bg-white p-3 standalone:bottom-16 md:static md:border-0 md:bg-transparent md:p-0 md:sticky md:top-24">
         <OrderSummary lang={lang} totals={totals} cta={{ label: busy ? t(lang, "order.paying") : t(lang, "order.checkout"), busy, onClick: () => (document.getElementById("order-form") as HTMLFormElement)?.requestSubmit() }} />
       </div>
+      {changes && (
+        <PriceChangedDialog lang={lang} changes={changes} newTotal={proxyOrderTotal(applied(rows, changes), initialTotals.currency, rate)}
+          onClose={() => setChanges(null)}
+          onAgree={() => { const next = applied(rows, changes); setRows(next); setChanges(null); void send(next); }} />
+      )}
     </form>
   );
 }

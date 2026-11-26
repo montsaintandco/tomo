@@ -4,6 +4,7 @@ import { createAdminSupabase } from "@/lib/supabase/admin";
 import { upsertExternalItem } from "@/lib/market/item";
 import { SOURCE_LABEL, type MarketSource } from "@/lib/market/types";
 import { allow } from "@/lib/ratelimit";
+import { apiError, reqLang } from "@/lib/api-error";
 
 export const runtime = "nodejs";
 
@@ -11,26 +12,31 @@ export const runtime = "nodejs";
 export async function POST(req: Request) {
   const supabase = await createServerSupabase();
   const { data: auth } = await supabase.auth.getUser();
-  if (!auth.user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  if (!allow(`cart:${auth.user.id}`, 40)) return NextResponse.json({ error: "too many requests" }, { status: 429 });
+  const lang = reqLang(req);
+  if (!auth.user) return apiError(lang, "pay.err.unauthorized", 401);
+  if (!allow(`cart:${auth.user.id}`, 40)) return apiError(lang, "pay.err.busy", 429);
 
   const body = await req.json().catch(() => ({}));
   const { source, sourceId } = body;
   if (!SOURCE_LABEL[source as MarketSource] || typeof sourceId !== "string" || !sourceId)
-    return NextResponse.json({ error: "invalid source" }, { status: 400 });
+    return apiError(lang, "pay.err.invalidSource");
 
   let itemId: string;
   try {
     const admin = createAdminSupabase();
     const result = await upsertExternalItem(admin, source, sourceId, body, { allowClientSnapshot: false });
-    if ("error" in result) return NextResponse.json({ error: result.error }, { status: result.status });
+    // upsertExternalItem 문구는 한국어 고정 — 상태로 언어별 키를 고른다(409 품절 / 409 확인 불가 / 그 밖)
+    if ("error" in result) {
+      if (result.status === 409) return apiError(lang, result.error.includes("품절") ? "pay.err.soldOut" : "pay.err.cannotVerify", 409);
+      return apiError(lang, "pay.err.cart", result.status);
+    }
     itemId = result.id;
   } catch {
-    return NextResponse.json({ error: "장바구니 준비 중이에요 (서버 설정 필요)" }, { status: 503 });
+    return apiError(lang, "pay.err.cartNotReady", 503);
   }
 
   const { error } = await supabase.from("cart_items").upsert({ user_id: auth.user.id, external_item_id: itemId }, { onConflict: "user_id,external_item_id", ignoreDuplicates: true });
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  if (error) return apiError(lang, "pay.err.cart");
   const { count } = await supabase.from("cart_items").select("*", { count: "exact", head: true }).eq("user_id", auth.user.id);
   return NextResponse.json({ itemId, count: count ?? 0 }, { status: 201 });
 }
