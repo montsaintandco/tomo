@@ -1,16 +1,17 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { SITE_URL } from "@/lib/site";
 
 // OAuth 콜백: 코드 → 세션 교환 후 목적지로. 신규 유저는 온보딩(프로필 있으면 스스로 홈으로 보냄)
 export async function GET(req: NextRequest) {
-  const url = new URL(req.url);
+  const url = new URL(req.url); // 서버(standalone) 안에서 origin 은 0.0.0.0:3000 → 리다이렉트는 SITE_URL 기준
   const code = url.searchParams.get("code");
   const next = url.searchParams.get("next");
   const dest = next && /^\/(?![\/\\])/.test(next) ? next : "/onboarding"; // "//evil.com"은 절대 URL로 해석되므로 두 번째 문자까지 검사
 
-  if (!code) return NextResponse.redirect(new URL("/login?error=oauth", url.origin));
+  if (!code) return NextResponse.redirect(new URL("/login?error=oauth", SITE_URL));
 
-  const res = NextResponse.redirect(new URL(dest, url.origin));
+  const res = NextResponse.redirect(new URL(dest, SITE_URL));
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -22,6 +23,6 @@ export async function GET(req: NextRequest) {
     }
   );
   const { error } = await supabase.auth.exchangeCodeForSession(code);
-  if (error) return NextResponse.redirect(new URL("/login?error=oauth", url.origin));
+  if (error) return NextResponse.redirect(new URL("/login?error=oauth", SITE_URL));
   return res;
 }

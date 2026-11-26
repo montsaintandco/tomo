@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getStripe, type PayKind } from "@/lib/stripe";
 import { settleSession, backPath } from "@/lib/stripe-settle";
 import { createAdminSupabase } from "@/lib/supabase/admin";
+import { SITE_URL } from "@/lib/site";
 
 export const runtime = "nodejs";
 
@@ -9,7 +10,8 @@ export const runtime = "nodejs";
 // 세션 id만으로는 아무것도 못 한다: 상태·금액은 Stripe 서버 응답과 DB로 다시 확인한다. 확정 오류는 웹훅이 다시 시도한다.
 export async function GET(req: Request) {
   const url = new URL(req.url);
-  const go = (path: string) => NextResponse.redirect(new URL(path, url.origin));
+  // 서버(standalone) 안에서 req.url 은 http://0.0.0.0:3000 이라 사이트 주소로 돌려보낸다
+  const go = (path: string) => NextResponse.redirect(new URL(path, SITE_URL));
   const sid = url.searchParams.get("session_id") ?? "";
   const stripe = getStripe();
   if (!stripe || !/^cs_[A-Za-z0-9_]+$/.test(sid)) return go("/?pay=fail");
