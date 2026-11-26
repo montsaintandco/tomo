@@ -1,5 +1,5 @@
 # CI 임시 Supabase(로컬 스택) 설정 — T11 DB 테스트 전용. 운영 프로젝트 설정이 아니다.
-# 마이그레이션·시드는 supabase start 가 아니라 server-image.yml 의 db-tests 작업이 psql 로 직접 넣는다
+# 마이그레이션·시드는 supabase start 가 아니라 .github/workflows/db-tests.yml이 psql 로 직접 넣는다
 # (0013 번호가 두 파일이라 CLI 의 마이그레이션 기록 표에서 버전이 겹친다 → docs/aaa/06-db-replay.md).
 project_id = "tomo"
 
@@ -15,9 +15,6 @@ major_version = 17
 enabled = false
 
 [studio]
-enabled = false
-
-[inbucket]
 enabled = false
 
 [realtime]
