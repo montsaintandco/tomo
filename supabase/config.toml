@@ -17,9 +17,6 @@ enabled = false
 [studio]
 enabled = false
 
-[inbucket]
-enabled = false
-
 [realtime]
 enabled = false
 

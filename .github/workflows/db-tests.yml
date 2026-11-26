@@ -1,0 +1,48 @@
+# T11 DB 테스트 — 이 작업 안에서만 사는 임시 Supabase(로컬 스택)에 0001~ 마이그레이션을 처음부터 재생하고 supabase/seed.sql 을 넣은 뒤 전체 테스트를 돈다.
+# 배포(server-image)와 분리된 워크플로다. 실패해도 이미지·배포·smoke 에 영향이 없다(T11b 에서 server-image.yml 밖으로 옮김).
+# 운영 DB 에는 접속하지 않는다(tests/setup/db-guard.ts 가 CI 에서 127.0.0.1 외 주소를 막는다).
+# 배포 게이트로 올릴 때: 이 작업을 server-image.yml 로 되옮기고 build 의 needs 를 [gate, db-tests] 로 바꾼다.
+# 마이그레이션은 supabase start 가 아니라 psql 로 넣는다(0013 번호 중복 — docs/aaa/06-db-replay.md).
+name: db-tests
+on:
+  push:
+    branches: [master, "aaa/**"]
+    paths-ignore: ["docs/**", "plans/**", ".agents/**", "**/*.md"]
+  workflow_dispatch:
+concurrency: { group: "db-tests-${{ github.ref }}", cancel-in-progress: true }
+permissions: { contents: read }
+jobs:
+  db-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - uses: supabase/setup-cli@v1
+        with: { version: latest }
+      - name: 임시 Supabase 띄우기
+        run: |
+          supabase --version
+          mkdir -p "$RUNNER_TEMP/sb"
+          mv supabase/migrations supabase/seed.sql "$RUNNER_TEMP/sb/"
+          supabase start
+      - name: 마이그레이션 0001~ 재생 + 시드
+        run: |
+          set -euo pipefail
+          eval "$(supabase status -o env)"
+          for f in $(LC_ALL=C ls "$RUNNER_TEMP"/sb/migrations/*.sql); do
+            echo "== $(basename "$f")"
+            psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f "$f"
+          done
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f "$RUNNER_TEMP/sb/seed.sql"
+          psql "$DB_URL" -q -c "notify pgrst, 'reload schema'"
+          sleep 3
+      - run: npm install --no-audit --no-fund
+      - name: DB 테스트
+        run: |
+          eval "$(supabase status -o env)"
+          export NEXT_PUBLIC_SUPABASE_URL="$API_URL"
+          export NEXT_PUBLIC_SUPABASE_ANON_KEY="${ANON_KEY:-$PUBLISHABLE_KEY}"
+          export SUPABASE_SERVICE_ROLE_KEY="${SERVICE_ROLE_KEY:-$SECRET_KEY}"
+          npm test
