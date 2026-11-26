@@ -60,7 +60,7 @@ export default function TxActions({
   const canAdminCancel = role === "admin" && ADMIN_CANCELABLE.includes(status);
   const canForceComplete = role === "admin" && status === "delivered";
 
-  // 운영자 처리(환불이 걸린 일)는 서버 라우트로 — DB 상태 변경 후 토스 취소, 실패하면 환불 대기열
+  // 운영자 처리(환불이 걸린 일)는 서버 라우트로 — DB 상태 변경 후 Stripe 환불, 실패하면 환불 대기열
   async function adminCall(body: Record<string, unknown>) {
     if (!confirm(t(lang, "refund.confirm"))) return false;
     setBusy(true); setError(""); setNotice("");

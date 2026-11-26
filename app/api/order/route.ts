@@ -1,30 +1,30 @@
 import { NextResponse } from "next/server";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { createAdminSupabase } from "@/lib/supabase/admin";
-import { tossKeys, krwAmount, tossOrderId, type TossParams } from "@/lib/toss";
+import { getStripe, krwAmount, createSession, type PayMethod } from "@/lib/stripe";
 import { t } from "@/lib/i18n";
 
 export const runtime = "nodejs";
 
-type Method = "card" | "kakao_pay" | "naver_pay";
+type Method = PayMethod;
 const METHODS: Method[] = ["card", "kakao_pay", "naver_pay"];
 
-// 주문 생성 → 토스 결제창 파라미터. 키 없으면 주문 만들기 전에 503 (스펙 §3). 미들웨어 밖 — 자체 인증
+// 주문 생성 → Stripe 결제창 URL. 키 없으면 주문 만들기 전에 503 (스펙 §3). 미들웨어 밖 — 자체 인증
 export async function POST(req: Request) {
   const supabase = await createServerSupabase();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  const keys = tossKeys();
-  if (!keys) return NextResponse.json({ error: "결제 준비 중" }, { status: 503 });
+  const stripe = getStripe();
+  if (!stripe) return NextResponse.json({ error: "결제 준비 중" }, { status: 503 });
 
   const body = await req.json().catch(() => ({}));
   const method: Method = METHODS.includes(body.method) ? body.method : "card";
   const { data: profile } = await supabase.from("profiles").select("language, country").eq("id", auth.user.id).single();
   const lang = profile?.language === "ja" ? "ja" : "ko";
 
-  let order: { id: string; total: number; currency: string; payment_method: string; status: string };
+  let order: { id: string; total: number; currency: string; payment_method: string; status: string; stripe_session_id?: string | null };
   if (typeof body.orderId === "string") {
-    const { data } = await supabase.from("proxy_orders").select("id, total, currency, payment_method, status").eq("id", body.orderId).maybeSingle();
+    const { data } = await supabase.from("proxy_orders").select("id, total, currency, payment_method, status, stripe_session_id").eq("id", body.orderId).maybeSingle();
     if (!data || data.status !== "pending_payment") return NextResponse.json({ error: "order not payable" }, { status: 400 });
     order = data;
   } else {
@@ -52,24 +52,37 @@ export async function POST(req: Request) {
   const amount = await krwAmount(supabase, order.total, order.currency);
   if (amount == null) return NextResponse.json({ error: "결제 준비 중" }, { status: 503 });
 
-  // 승인 라우트가 orderId로 주문을 찾는다(mark_proxy_order_paid는 stripe_session_id 컬럼 재사용). service_role로 기록, 0건이면 열지 않는다
-  const orderId = tossOrderId.po(order.id);
-  const { data: updated, error: upErr } = await createAdminSupabase().from("proxy_orders")
-    .update({ stripe_session_id: orderId }).eq("id", order.id).eq("status", "pending_payment").select("id");
-  if (upErr || !updated || updated.length === 0) return NextResponse.json({ error: "결제 준비 중" }, { status: 503 });
-
   const { count } = await supabase.from("proxy_requests").select("*", { count: "exact", head: true }).eq("order_id", order.id);
   const origin = process.env.NEXT_PUBLIC_SITE_URL ?? req.headers.get("origin") ?? new URL(req.url).origin;
-  const toss: TossParams = {
-    clientKey: keys.clientKey, orderId, amount, customerKey: auth.user.id,
-    method: METHODS.includes(order.payment_method as Method) ? (order.payment_method as Method) : "card",
-    orderName: t(lang, "order.stripeName", { n: count ?? 1 }),
-    successUrl: `${origin}/api/toss/confirm`,
-    failUrl: `${origin}/order/${order.id}?pay=fail`,
-  };
-  return NextResponse.json({ toss, orderId: order.id });
-}
+  const prevSession = order.stripe_session_id?.startsWith("cs_") ? order.stripe_session_id : null;
+  // 옛 창이 열려 있으면 그대로, 이미 결제됐으면 확정 경로로 보낸다(새 창으로 덮어쓰면 그 결제가 옛 창 취급돼 환불된다)
+  if (prevSession) {
+    const prev = await stripe.checkout.sessions.retrieve(prevSession).catch(() => null);
+    if (prev?.status === "open" && prev.url) return NextResponse.json({ url: prev.url, orderId: order.id });
+    if (prev?.status === "complete") return NextResponse.json({ url: `/api/stripe/return?session_id=${prev.id}`, orderId: order.id });
+  }
+  let session;
+  try {
+    session = await createSession(stripe, {
+      kind: "po", id: order.id, amount, base: order.total, cur: order.currency, lang, email: auth.user.email,
+      method: METHODS.includes(order.payment_method as Method) ? (order.payment_method as Method) : "card",
+      name: t(lang, "order.stripeName", { n: count ?? 1 }), origin, back: `/order/${order.id}`,
+    });
+  } catch {
+    return NextResponse.json({ error: "결제 세션 생성 실패", orderId: order.id }, { status: 400 });
+  }
 
+  // 확정은 stripe_session_id로 주문을 찾는다(mark_proxy_order_paid). service_role로 기록, 0건이면 세션을 만료하고 열지 않는다
+  const { data: updated, error: upErr } = await createAdminSupabase().from("proxy_orders")
+    .update({ stripe_session_id: session.id }).eq("id", order.id).eq("status", "pending_payment").select("id");
+  if (upErr || !updated || updated.length === 0) {
+    await stripe.checkout.sessions.expire(session.id).catch(() => {});
+    return NextResponse.json({ error: "결제 준비 중" }, { status: 503 });
+  }
+  // 재결제: 이전 세션은 더 이상 확정되지 않으니 만료시켜 고객이 끝내지 못하게 한다(끝내도 확정 단계가 자동 환불)
+  if (prevSession) await stripe.checkout.sessions.expire(prevSession).catch(() => {});
+  return NextResponse.json({ url: session.url, orderId: order.id });
+}
 type Ship = { name?: unknown; phone?: unknown; postal?: unknown; address?: unknown; note?: unknown; pccc?: unknown };
 
 // 주소록(0028) 준비. 테이블이 없거나 읽지 못하면 아무것도 안 한다(기존 profiles.ship_* 흐름 그대로).
@@ -105,7 +118,7 @@ async function prepareAddress(
   return { addressId: data.id };
 }
 
-// 주문 취소: RPC로 결제 전 주문만 취소. 취소된 주문은 승인 라우트가 pending이 아니라서 확정하지 않는다
+// 주문 취소: RPC로 결제 전 주문만 취소 → 열린 Stripe 세션 만료(그래도 결제되면 확정 단계가 자동 환불)
 export async function DELETE(req: Request) {
   const supabase = await createServerSupabase();
   const { data: auth } = await supabase.auth.getUser();
@@ -115,7 +128,10 @@ export async function DELETE(req: Request) {
   const { orderId } = body;
   if (typeof orderId !== "string" || !orderId) return NextResponse.json({ error: "invalid order" }, { status: 400 });
 
+  const { data: order } = await supabase.from("proxy_orders").select("stripe_session_id").eq("id", orderId).maybeSingle();
   const { error } = await supabase.rpc("cancel_proxy_order", { p_id: orderId });
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  const stripe = getStripe();
+  if (stripe && order?.stripe_session_id?.startsWith("cs_")) await stripe.checkout.sessions.expire(order.stripe_session_id).catch(() => {});
   return NextResponse.json({ ok: true });
 }

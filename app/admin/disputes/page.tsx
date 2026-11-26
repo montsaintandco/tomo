@@ -8,7 +8,7 @@ const REFUND: Record<string, { label: string; tone: "amber" | "red" | "green" }>
   pending: { label: "환불 대기", tone: "amber" }, failed: { label: "환불 실패", tone: "red" }, done: { label: "환불 완료", tone: "green" },
 };
 
-// 분쟁 큐 — 사유 확인 → 정산(완료) / 환불(취소). 행을 펼치면 처리 폼. 환불 취소는 /api/admin/cancel → refunds → 토스 취소(실패하면 /admin/refunds)
+// 분쟁 큐 — 사유 확인 → 정산(완료) / 환불(취소). 행을 펼치면 처리 폼. 환불 취소는 /api/admin/cancel → refunds → Stripe 환불(실패하면 /admin/refunds)
 export default async function AdminDisputesPage() {
   const supabase = await createServerSupabase();
   const { data } = await supabase.from("transactions")

@@ -50,7 +50,7 @@ export default async function AdminOrdersPage(props: { searchParams: Promise<{ s
               <td className="tnum whitespace-nowrap">
                 {money(r.total, r.currency)}
                 <span className="a-faint block text-[11px]">상품 {money(r.subtotal, r.currency)} · 배송 {money(r.intl_shipping, r.currency)} · 수수료 {money(r.service_fee, r.currency)}</span>
-                {paidKrw[r.id] != null && <span className="a-faint block text-[11px]">토스 청구 {money(paidKrw[r.id]!, "KRW")}</span>}
+                {paidKrw[r.id] != null && <span className="a-faint block text-[11px]">청구 {money(paidKrw[r.id]!, "KRW")}</span>}
               </td>
               <td className="tnum whitespace-nowrap">
                 {refunded[r.id] ? <>

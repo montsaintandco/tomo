@@ -8,7 +8,7 @@ describe("refundKrw (부분 환불 원화)", () => {
     expect(refundKrw(10000, 1, 3, 10000)).toBe(3333);   // 3333.33 → 3333
     expect(refundKrw(10000, 2, 3, 10000)).toBe(6667);   // 6666.67 → 6667
   });
-  it("never exceeds the remaining Toss balance", () => {
+  it("never exceeds the remaining refundable balance", () => {
     expect(refundKrw(10000, 2, 3, 5000)).toBe(5000);
     expect(refundKrw(10000, 3, 3, 0)).toBe(0);
   });

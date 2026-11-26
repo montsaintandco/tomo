@@ -16,7 +16,7 @@ type Refund = {
 
 const SELECT = "id, kind, transaction_id, proxy_order_id, proxy_request_id, amount, currency, amount_krw, is_full, reason, status, attempts, last_error, created_at, done_at, profiles!refunds_user_id_fkey(nickname)";
 
-// 환불 원장 — DB 취소는 끝났는데 토스 취소가 안 된 건(대기·실패)을 다시 보낸다. 완료는 최근 100건
+// 환불 원장 — DB 취소는 끝났는데 Stripe 환불이 안 된 건(대기·실패)을 다시 보낸다. 완료는 최근 100건
 export default async function AdminRefundsPage() {
   const supabase = await createServerSupabase();
   const [openRes, doneRes] = await Promise.all([
@@ -38,7 +38,7 @@ export default async function AdminRefundsPage() {
       <td className="whitespace-nowrap">{r.profiles?.nickname ?? "—"}</td>
       <td className="tnum whitespace-nowrap">
         {money(r.amount, r.currency)}{r.is_full && <span className="a-faint ml-1 text-[11px]">잔액 전부</span>}
-        {r.amount_krw != null && <span className="a-faint block text-[11px]">토스 {money(r.amount_krw, "KRW")}</span>}
+        {r.amount_krw != null && <span className="a-faint block text-[11px]">Stripe {money(r.amount_krw, "KRW")}</span>}
       </td>
       <td className="max-w-[260px]"><span className="block whitespace-pre-wrap text-[12px]">{r.reason}</span></td>
       <td>
@@ -53,7 +53,7 @@ export default async function AdminRefundsPage() {
 
   return (
     <>
-      <PageHeader title="환불" sub="취소 처리 후 토스 환불이 안 끝난 건을 다시 보내요. 같은 환불은 두 번 나가지 않습니다(Idempotency-Key)" />
+      <PageHeader title="환불" sub="취소 처리 후 Stripe 환불이 안 끝난 건을 다시 보내요. 같은 환불은 두 번 나가지 않습니다(Idempotency-Key)" />
       {missing && <Panel className="mb-4"><p className="a-muted p-4 text-[13px]">환불 원장(0025 마이그레이션)이 아직 적용되지 않았어요.</p></Panel>}
       <Panel title="처리 필요" count={open.length} className="mb-4">
         <Table head={["대상", "받는 사람", "금액", "사유", "상태", "생성", ""]} empty="대기 중인 환불이 없어요">

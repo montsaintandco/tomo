@@ -65,7 +65,7 @@ export default function ProxyActions({ id, status, isOwner, isAdmin, lang = "ko"
     startTransition(() => router.refresh());
   }
 
-  // 운영자 취소 — 서버 라우트가 DB 취소(환불 행) 후 토스 취소, 실패하면 /admin/refunds 대기열
+  // 운영자 취소 — 서버 라우트가 DB 취소(환불 행) 후 Stripe 환불, 실패하면 /admin/refunds 대기열
   async function adminCancel() {
     if (!confirm(t(lang, "refund.confirm"))) return;
     setBusy(true); setError(""); setNotice("");

@@ -1,7 +1,6 @@
 "use client";
 import { useState } from "react";
 import { t, type Lang } from "@/lib/i18n";
-import { payWithToss } from "@/lib/toss-client";
 
 // meetup=true: 만남 거래(여행 직거래) — 선결제 에스크로, 센터·국제배송 없음. variant link는 보조 경로용
 export default function CheckoutButton({ listingId, lang = "ko", meetup = false, variant = "primary" }: {
@@ -22,7 +21,7 @@ export default function CheckoutButton({ listingId, lang = "ko", meetup = false,
       // 503 = 결제 키 미투입 — 오류가 아니라 대기 상태
       if (res.status === 503) { setMsg(t(lang, "detail.checkoutPending")); setBusy(false); return; }
       if (!res.ok) throw new Error(json.error || t(lang, "detail.checkoutFail"));
-      if (json.toss) { await payWithToss(json.toss); return; }               // 토스 결제창 → 성공/실패 리다이렉트
+      if (json.url) { window.location.href = json.url; return; }            // Stripe 결제창 → 성공 리다이렉트
       if (json.transactionId) { window.location.href = `/transactions/${json.transactionId}`; return; }
       setMsg(t(lang, "detail.checkoutPending")); setBusy(false);
     } catch (e) {

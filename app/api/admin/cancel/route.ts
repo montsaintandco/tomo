@@ -7,8 +7,8 @@ export const runtime = "nodejs";
 
 const UUID = /^[0-9a-f-]{36}$/;
 
-// 운영자 취소·분쟁 처리·강제 구매확정. DB 상태 변경(운영자 세션, is_admin_user 검사) → 환불 행이 생기면 바로 토스 취소 시도.
-// 토스 실패·키 없음이면 상태 변경은 유지되고 환불은 /admin/refunds 대기열에 남는다.
+// 운영자 취소·분쟁 처리·강제 구매확정. DB 상태 변경(운영자 세션, is_admin_user 검사) → 환불 행이 생기면 바로 Stripe 환불 시도.
+// Stripe 실패·키 없음이면 상태 변경은 유지되고 환불은 /admin/refunds 대기열에 남는다.
 export async function POST(req: Request) {
   const supabase = await createServerSupabase();
   const viewer = await getViewer(supabase);

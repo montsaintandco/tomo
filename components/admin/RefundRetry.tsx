@@ -2,7 +2,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
-// 환불 대기열 「다시 시도」 — 같은 환불 id가 토스 Idempotency-Key라 여러 번 눌러도 이중 환불 없음 (한국어 고정)
+// 환불 대기열 「다시 시도」 — 같은 환불 id가 Stripe Idempotency-Key라 여러 번 눌러도 이중 환불 없음 (한국어 고정)
 export default function RefundRetry({ id }: { id: string }) {
   const [busy, setBusy] = useState(false);
   const [isPending, startTransition] = useTransition();

@@ -1,15 +1,15 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { customsCharge } from "./fees";
-import { tossKeys, tossPayment, tossCancel } from "./toss";
+import { getStripe } from "./stripe";
 import { createAdminSupabase } from "./supabase/admin";
 import { rows } from "./safe";
 
-// 환불 실행 (0025). 순서: DB 상태 변경 + refunds(pending) → 토스 취소(Idempotency-Key = 환불 id) → refund_mark.
-// 토스 실패·키 없음이면 refunds 행이 failed로 남고 /admin/refunds에서 「다시 시도」.
+// 환불 실행 (0025). 순서: DB 상태 변경 + refunds(pending) → Stripe 환불(Idempotency-Key = 환불 id) → refund_mark.
+// Stripe 실패·키 없음이면 refunds 행이 failed로 남고 /admin/refunds에서 「다시 시도」.
 
 type Cur = "KRW" | "JPY";
 
-/** 부분 환불 원화 = round(실제 청구 원화 × 환불액 ÷ 주문 총액). 토스 잔액을 넘지 않는다. */
+/** 부분 환불 원화 = round(실제 청구 원화 × 환불액 ÷ 주문 총액). 결제의 남은 환불 가능액을 넘지 않는다. */
 export function refundKrw(paidKrw: number, amount: number, total: number, balanceKrw: number): number {
   if (!(paidKrw > 0) || !(amount > 0) || !(total > 0)) return 0;
   const v = Math.round((paidKrw * Math.min(amount, total)) / total);
@@ -68,7 +68,7 @@ export async function loadCancelPreviews(supabase: SupabaseClient, orderIds: str
 
 export type RefundResult = { status: "done" | "failed" | "pending"; error?: string };
 
-/** 환불 1건을 토스에 보낸다 (service_role 클라이언트). 이미 done이면 그대로. */
+/** 환불 1건을 Stripe에 보낸다 (service_role 클라이언트). 이미 done이면 그대로. */
 export async function processRefund(admin: SupabaseClient, id: string): Promise<RefundResult> {
   const { data: f, error } = await admin.from("refunds")
     .select("id, kind, transaction_id, proxy_order_id, payment_key, amount, is_full, reason, status").eq("id", id).maybeSingle();
@@ -79,8 +79,10 @@ export async function processRefund(admin: SupabaseClient, id: string): Promise<
     await admin.rpc("refund_mark", { p_id: id, p_ok: false, p_error: msg, p_amount_krw: null });
     return { status: "failed", error: msg };
   };
-  const keys = tossKeys();
-  if (!keys) return fail("TOSS_KEYS_MISSING: 토스 키 없음");
+  // Stripe 전환(2026-11-23) 전 토스 결제는 Stripe로 환불할 수 없다 → 토스 상점관리자에서 직접 처리
+  if (!String(f.payment_key).startsWith("pi_")) return fail("LEGACY_TOSS: 토스 결제 건 — 토스 상점관리자에서 직접 환불");
+  const stripe = getStripe();
+  if (!stripe) return fail("STRIPE_KEYS_MISSING: Stripe 키 없음");
 
   // 환불 비율의 분모(주문/거래 통화 총액)와 실제 청구 원화
   let total = 0; let paidKrw: number | null = null;
@@ -93,24 +95,35 @@ export async function processRefund(admin: SupabaseClient, id: string): Promise<
   }
   if (!(total > 0)) return fail("TOTAL_UNKNOWN: 원 거래 금액을 못 읽음");
 
-  const p = await tossPayment(keys.secretKey, f.payment_key);
-  if (!p.ok) return fail(`${p.error.code}: ${p.error.message}`);
-  const paid = paidKrw ?? p.payment.totalAmount;   // 0025 전 결제는 paid_krw가 비어 토스 총액으로 대신
+  let paid: number; let balance: number;
+  try {
+    const pi = await stripe.paymentIntents.retrieve(f.payment_key, { expand: ["latest_charge"] });
+    const ch = pi.latest_charge && typeof pi.latest_charge === "object" ? pi.latest_charge : null;
+    paid = paidKrw ?? pi.amount_received;
+    balance = Math.max(0, (ch?.amount_captured ?? pi.amount_received) - (ch?.amount_refunded ?? 0));
+  } catch (e) { return fail(`PI_LOOKUP: ${e instanceof Error ? e.message : "조회 실패"}`); }
 
-  let cancelAmount: number | undefined;
-  if (!f.is_full) {
-    cancelAmount = refundKrw(paid, f.amount, total, p.payment.balanceAmount);
-    if (cancelAmount <= 0) return fail(`ZERO_AMOUNT: 환불 원화 0 (토스 잔액 ${p.payment.balanceAmount})`);
+  // 전액: 남은 잔액 전부(이미 0이면 끝난 것으로 본다). 부분: 청구 원화 비율, 잔액 상한
+  const amount = f.is_full ? balance : refundKrw(paid, f.amount, total, balance);
+  if (amount <= 0) {
+    if (f.is_full) { const { error: me } = await admin.rpc("refund_mark", { p_id: id, p_ok: true, p_error: null, p_amount_krw: null }); return me ? { status: "pending", error: me.message } : { status: "done" }; }
+    return fail(`ZERO_AMOUNT: 환불 원화 0 (남은 금액 ${balance})`);
   }
-  const r = await tossCancel(keys.secretKey, f.payment_key, f.reason, { cancelAmount, idempotencyKey: f.id });
-  if (!r.ok && !(f.is_full && r.error.code === "ALREADY_CANCELED_PAYMENT")) return fail(`${r.error.code}: ${r.error.message}`);
+  try {
+    // 기록 실패 뒤 재시도로 같은 환불이 두 번 나가지 않게 먼저 찾는다. 키에 금액을 넣어 잔액이 바뀐 재시도도 키 충돌이 없다
+    const prev = await stripe.refunds.list({ payment_intent: f.payment_key, limit: 100 });
+    const hit = prev.data.find((x) => x.metadata?.refund_id === f.id && x.status !== "failed" && x.status !== "canceled");
+    if (hit) {
+      const { error: me } = await admin.rpc("refund_mark", { p_id: id, p_ok: true, p_error: null, p_amount_krw: hit.amount });
+      return me ? { status: "pending", error: `Stripe 환불은 됐지만 기록 실패: ${me.message}` } : { status: "done" };
+    }
+    await stripe.refunds.create({ payment_intent: f.payment_key, amount, reason: "requested_by_customer", metadata: { refund_id: f.id } }, { idempotencyKey: `${f.id}:${amount}` });
+  } catch (e) { return fail(`STRIPE_REFUND: ${e instanceof Error ? e.message : "환불 실패"}`); }
 
-  const krw = r.ok ? (r.canceledKrw ?? cancelAmount ?? p.payment.balanceAmount) : null;
-  const { error: me } = await admin.rpc("refund_mark", { p_id: id, p_ok: true, p_error: null, p_amount_krw: krw });
-  if (me) return { status: "pending", error: `토스 취소는 됐지만 기록 실패: ${me.message}` };
+  const { error: me } = await admin.rpc("refund_mark", { p_id: id, p_ok: true, p_error: null, p_amount_krw: amount });
+  if (me) return { status: "pending", error: `Stripe 환불은 됐지만 기록 실패: ${me.message}` };
   return { status: "done" };
 }
-
 /** 라우트용: service_role 없으면 대기열에 남긴다. */
 export async function runRefund(id: string): Promise<RefundResult> {
   let admin: SupabaseClient;
