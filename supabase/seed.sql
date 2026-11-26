@@ -1,5 +1,5 @@
 -- CI 임시 Supabase 전용 시드 (T11). 운영 DB에는 절대 돌리지 않는다.
--- .github/workflows/server-image.yml 의 db-tests 작업이 마이그레이션 0001~ 재생 뒤 psql 로 넣는다.
+-- .github/workflows/db-tests.yml이 마이그레이션 0001~ 재생 뒤 psql 로 넣는다.
 -- 비밀번호는 로컬 스택 전용이며 tests/*.test.ts 의 TEST_PASSWORD 기본값과 같다.
 -- 시험 계정: alice(한국 판매자) · bob(일본 구매자, 국경 간 상품 1개) · center(관리자)
 -- 테스트가 기대하는 데이터: bob 의 국경 간 active 상품, 최근 external_items 1개, trending_themes(0017 시드)

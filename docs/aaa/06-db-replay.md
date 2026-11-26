@@ -36,3 +36,14 @@ PGlite는 함수 본문(plpgsql)을 부를 때만 검사한다. 부르지 않은
 ## 다시 막히면
 
 막힌 파일·줄·오류를 이 문서 아래에 적는다. 적용된 마이그레이션 파일은 고치지 않는다(운영과 어긋난다).
+
+## Actions 첫 실행 (T11b, 2026-11-26)
+
+| 실행 | 결과 | 원인·처리 |
+|---|---|---|
+| server-image 45758960572(4760dbe) | db-tests 실패(배포는 진행) | 최신 CLI(3.4.0)가 config.toml `[inbucket]` 을 거부(`local_smtp` 로 바뀜). 그 절을 지웠다 |
+| db-tests 45759478133 | 재생 37/37·시드 성공, 테스트 2파일 실패 | `notifications.test.ts`·`unit/pay-recheck.test.ts` 가 `supabase/migrations` 파일을 읽는데 치워 둔 상태였다. `supabase start` 직후 되돌린다 |
+| db-tests 45759666726 | 성공. 테스트 파일 40/40 | CLI 를 3.4.0 으로 고정 |
+
+DB 테스트는 배포 게이트와 분리된 `.github/workflows/db-tests.yml` 로 옮겼다(master·`aaa/**` 푸시, 수동 실행). 실패해도 이미지·배포·smoke 에 영향이 없다.
+적용된 마이그레이션 파일 때문에 막힌 곳은 없었다.
