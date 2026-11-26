@@ -32,8 +32,17 @@ export const HOME_CATEGORIES: readonly MajorCategory[] = FEATURED.map((s) => fin
 const PHOTO_TIMEOUT_MS = 3500;
 
 // 사진 후보 — KR 보는 사람은 메루카리 그 카테고리(번호), JP 보는 사람은 중고나라 한국어 키워드(번호 없음, lib/categories.ts)
+// 마켓에 동시에 나가는 사진 검색을 3개로 제한한다(카테고리 21칸을 한 번에 부르면 메루카리가 짧은 간격 요청을 403 으로 막는다 — 에어쉽 11/22 실측).
+// 늦은 칸은 화면에서 먼저 첨 글자로 나오고, 검색이 끝나면 6시간 캐시에 남아 다음 요청부터 사진이 나온다.
+let active = 0; const waiters: (() => void)[] = [];
+async function limited<T>(fn: () => Promise<T>): Promise<T> {
+  if (active >= 3) await new Promise<void>((r) => waiters.push(r));
+  active++;
+  try { return await fn(); } finally { active--; waiters.shift()?.(); }
+}
+
 async function searchFor(country: "KR" | "JP", c: MajorCategory): Promise<MarketItem[]> {
-  const items = await (country === "KR" ? mercariSearch("", { catIds: c.mercari }) : joongnaSearch(krTerm(c)));
+  const items = await limited(() => (country === "KR" ? mercariSearch("", { catIds: c.mercari }) : joongnaSearch(krTerm(c))));
   if (items.length === 0) throw new Error(`home-cat:${c.slug}: empty`); // 빈 결과는 캐시하지 않는다
   return items.slice(0, 12);
 }
