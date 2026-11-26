@@ -232,3 +232,9 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=<Supabase 대시보드 → Project Settings → AP
 - env(선택): OPS_TELEGRAM_BOT_TOKEN·OPS_TELEGRAM_CHAT_ID(Coolify + GitHub Secrets) 넣으면 서버 오류·스모크 실패가 텔레그램으로 온다. SUPPORT_AI_DAILY_CAP·SUPPORT_AI_DAILY_PER_IP(기본 300·30).
 - worktree 주의: worktree 안 `next build` 가 `.next/standalone/node_modules` junction 을 만든다. 지울 때는 모든 ReparsePoint 를 먼저 끊는다(2026-11-26 메인 node_modules 2회 삭제 사고, docs/aaa/index.md).
 - 남은 것: 운영 실결제 1회(Ren 확인 필요), 외부 상품 찜(DB 필요), 브랜드 색 통일(04#11), 서치콘솔·네이버 새 도메인 등록, db-tests 게이트 승격, 판매자 본인 가격 수정 API 의 거래 중 가격 변경 차단(T8 지적).
+### 2026-11-26 후속(카테고리·나머지 적용)
+- 카테고리 21개 대분류·151개 세부(8323c36), 메루카리 categoryId, 한국 마켓 카테고리 번호(중고나라 categorySeq·당근 category_id 실측, 8d16c0b).
+- tomo 시험 매물 6개와 딸린 시험 거래 30·대화 4·환불 기록 2 삭제(되돌림 시험 후). 판매 중 0개.
+- 해외 상품 찜(0038 external_wishlists), 판매자 가격 잠금(0039 트리거), 브랜드 색 통일(DESIGN.md 색 규칙, ink-soft 7.6:1·ink-faint 4.8:1), 빠른 필터 칩·결과 스켈레톤.
+- 구글 서치콘솔 tomo.airship.click 확인·사이트맵 제출, 네이버 서치어드바이저 소유확인·사이트맵·robots 수집요청 완료.
+- 남은 것: 운영 실결제 1회(Ren 확인), 텔레그램 운영 알림 봇 토큰, 홈 캐러셀·카테고리 미리보기 카드 찜 하트(찜 여부 조회 연결 필요), 검색엔진 수집 결과 며칠 뒤 확인.
