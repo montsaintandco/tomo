@@ -206,3 +206,13 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=<Supabase 대시보드 → Project Settings → AP
 - **DB 재개·적용(2026-11-23 11시)**: Supabase tomo(seoulbuy 무료 조직)를 재개했다. 0025~0029를 한 트랜잭션으로 시험 실행(표 9개·버킷·공지 1·주소 5 백필 확인 후 되돌림, 되돌림 확인)한 뒤 하나씩 적용했다. 0030(AI 로그)도 같은 방식. anon의 `profiles.ship_name` select 권한이 false인 것 확인. 전체 vitest 100개 중 98 통과·1 건너뜀, 실패 1건(rls 프로필 수정 차단 테스트의 `select()` 전체 열)은 `select("id")`로 고쳐 통과.
 - **토스 키 주의**: `.env.local`의 공개 테스트 시크릿 키로 결제 조회 API를 부르면 `UNAUTHORIZED_KEY`가 난다. 지금 키로는 환불이 전부 `/admin/refunds` 대기열(failed)로 간다. 본인 토스 테스트/라이브 키로 바꿔야 실환불이 된다.
 - **AI 상담 키**: Coolify `tomo-image`에 `AI_GATEWAY_API_KEY`(에어쉽과 같은 키)를 넣었다.
+
+## 2026-11-23 결제 토스 → Stripe 전환 (Ren 「결제 스트라이프로 전환」)
+
+- Stripe Checkout(호스팅 결제창) 리다이렉트. 청구는 KRW(약관 그대로, JPY 상품은 JPY_KRW 환산). 카드·국내카드(kr_card)·카카오페이·네이버페이는 `allowed_payment_method_types` 필터라 계정에서 켜진 것만 보인다.
+- 확정: `/api/stripe/return?session_id=`(성공 리다이렉트)와 `/api/stripe/webhook`(checkout.session.completed·async_payment_succeeded) 둘 다 `lib/stripe-settle.ts settleSession`(멱등). DB·Stripe 오류는 던짐 → 웹훅 500 재시도.
+- 자동 환불: DB가 확실히 「확정 불가」라고 답한 결제(이미 다른 결제로 확정·취소·금액 바뀜·옛 창)만 전액 환불(키 `auto_<pi>`). 이미 환불이 나간 PI는 확정하지 않는다. 세션 metadata `app=tomo:<SITE_URL>`이 다르면 무시.
+- 0031(적용 완료 2026-11-23): `mark_tx_paid(tx_id, pi)` 한 문장 확정, 미결제 예약 10분 → 45분(결제창 30분), `transactions.stripe_session_id`. 재결제는 열린 창 재사용, 새 창은 거래 생성 10분 안에만.
+- 환불(`lib/refunds.ts`): Stripe refunds, 같은 refund_id 환불이 이미 있으면 다시 안 보냄, 키 `<refund_id>:<amount>`. 토스 결제(pi_ 아님)는 `LEGACY_TOSS`로 실패 → 토스 상점관리자에서 직접.
+- 필요한 서버 env(Coolify `tomo-image`): `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`(엔드포인트 https://tomo.airship.click/api/stripe/webhook). 없으면 결제 버튼이 「결제 준비 중」(503).
+- 리뷰: deep 서브에이전트 지적(높음 3·중간 6) 반영. 실제 결제·웹훅은 키가 없어 아직 미시험.
