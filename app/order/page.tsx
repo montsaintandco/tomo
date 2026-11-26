@@ -10,7 +10,7 @@ import type { MarketSource } from "@/lib/market/types";
 import type { Currency } from "@/lib/currency";
 import type { Addr } from "@/components/AddressBook";
 
-export const metadata: Metadata = { title: "주문하기 · TOMO", robots: { index: false } };
+export const metadata: Metadata = { title: "주문하기", robots: { index: false } };
 
 // react-hooks/purity: Date.now()는 렌더 바디가 아닌 모듈 스코프 헬퍼로 (app/cart/page.tsx의 isStale과 동일 패턴)
 function isFresh(status: string, fetchedAt: string): boolean {

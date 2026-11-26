@@ -12,7 +12,7 @@ import { rows, tableMissing } from "@/lib/safe";
 import type { MarketSource } from "@/lib/market/types";
 import ExternalUnwish from "./ExternalUnwish";
 
-export const metadata = { title: "찜 · いいね | TOMO", robots: { index: false } };
+export const metadata = { title: "찜 · いいね", robots: { index: false } };
 
 type MiniListing = {
   id: string; title: string; price: number; currency: string; status: string; images: string[];

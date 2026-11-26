@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { pageMeta, langFromSearch } from "@/lib/seo";
+import { pageMeta, langUrl } from "@/lib/seo";
+import { jsonLd } from "@/lib/json-ld";
 import { getRequestLang } from "@/lib/locale";
 import { t, otherCountry } from "@/lib/i18n";
 import { getThemes } from "@/lib/market/themes";
@@ -9,8 +10,8 @@ import { getCategoryCandidates } from "@/lib/home/data";
 import { pickPhotos } from "@/lib/home/assemble";
 import { CATEGORIES, name, catSearchHref } from "@/lib/categories";
 
-export async function generateMetadata(props: { searchParams: Promise<{ lang?: string }> }) {
-  return pageMeta("/categories", { title: "카테고리 · カテゴリー", description: "피규어·캐릭터 굿즈·K-POP·게임·카메라·패션·뷰티·생활까지 대분류 21개, 세부 분류로 한국·일본 중고 상품을 찾아보세요." }, langFromSearch(await props.searchParams));
+export async function generateMetadata() {
+  return pageMeta("/categories", "categories", await getRequestLang(), { n: CATEGORIES.length });
 }
 
 // 전체 카테고리 — lib/categories.ts 대분류 전부 + 각 세부 분류 링크.
@@ -36,9 +37,15 @@ export default async function CategoriesPage() {
   const photos = pickPhotos(candidates, new Set());
   const subTotal = CATEGORIES.reduce((n, c) => n + c.subs.length, 0);
   const etc = counts.get("etc") ?? 0;
+  // 대분류 목록 구조화 데이터 — 화면 목록과 같은 순서·이름·주소
+  const ld = {
+    "@context": "https://schema.org", "@type": "ItemList", name: t(lang, "home.categories"),
+    itemListElement: CATEGORIES.map((c, i) => ({ "@type": "ListItem", position: i + 1, name: name(lang, c), url: langUrl(`/categories/${c.slug}`, lang) })),
+  };
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-8 md:px-6 md:py-12">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(ld) }} />
       <h1 className="text-[22px] font-extrabold text-ink md:text-3xl">{t(lang, "home.categories")}</h1>
       <p className="mt-2 text-sm text-ink-soft">{t(lang, "cats.sub", { market: t(lang, `market.${other}`) })}</p>
       <p className="mt-1 text-[12px] text-ink-faint">{t(lang, "cats.count", { n: CATEGORIES.length, m: subTotal })}</p>

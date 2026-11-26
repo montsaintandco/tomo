@@ -6,7 +6,7 @@ import { PageTitle, Tabs, Row, Empty, More } from "@/components/mypage/MyNav";
 import { pageLimit } from "@/lib/notifications";
 import { redirect } from "next/navigation";
 
-export const metadata = { title: "가격제안 · 希望価格 | TOMO", robots: { index: false } };
+export const metadata = { title: "가격제안 · 希望価格", robots: { index: false } };
 
 type MiniListing = {
   id: string; title: string; price: number; currency: string; status: string; images: string[];

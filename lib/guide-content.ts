@@ -1,4 +1,6 @@
 import { CUSTOMS_FREE_LIMIT, PROXY_SHIPPING_ESTIMATE_JPY, PROXY_SHIPPING_ESTIMATE_KRW } from "./fees";
+import { t } from "./i18n";
+import { directFeeText } from "./seo";
 
 // 구매대행 랜딩(/guide) 문구 — 화면과 AI 상담(support-ai.server) 지식이 같이 본다. 수치는 lib/fees 상수
 export const GUIDE_C = {
@@ -12,7 +14,7 @@ export const GUIDE_C = {
       ["국제 배송비", `주문당 1회. 무게·부피로 미리 예측 (소형 기준 약 ${PROXY_SHIPPING_ESTIMATE_JPY.toLocaleString()}엔 / ${PROXY_SHIPPING_ESTIMATE_KRW.toLocaleString()}원)`],
       ["통관·관세", `관세·세금·통관·보험 일체. 면세 한도(${CUSTOMS_FREE_LIMIT.KRW.toLocaleString()}원) 이하면 상품가의 10%, 초과 시 관세 8%·부가세 10% + 5%`],
     ],
-    feeNote: "주문서에서 세 항목이 전부 계산된 총액을 보고 결제해요. 받으실 때 관세를 따로 내지 않습니다.",
+    feeNote: `주문서에서 세 항목이 전부 계산된 총액을 보고 결제해요. 받으실 때 관세를 따로 내지 않습니다. ${t("ko", "seo.fee.localShip")}`,
     howTitle: "4단계로 끝나요",
     how: [
       ["링크 붙여넣기", "메루카리·야후 플리마 상품 URL을 검색창에 붙여넣거나 TOMO에서 바로 검색해요."],
@@ -35,6 +37,7 @@ export const GUIDE_C = {
       ["검수에서 문제가 발견되면요?", "파손·오배송·수량 불일치는 센터에서 발견 즉시 안내하고 환불해요. 환불 기준은 취소·환불 정책에 있어요."],
       ["결제는 몇 번 하나요?", "주문 시 1회입니다. 받으실 때 추가 청구는 없어요."],
       ["관세는 언제 내나요?", "주문서의 '통관·관세' 항목에 미리 포함돼 있어 따로 내지 않아요."],
+      [t("ko", "seo.fee.directQ"), directFeeText("ko")],
     ],
     legal: ["취소·환불 정책", "이용약관"],
   },
@@ -48,7 +51,7 @@ export const GUIDE_C = {
       ["国際配送費", `注文ごとに1回。重量・サイズで事前見積もり（小型で約${PROXY_SHIPPING_ESTIMATE_KRW.toLocaleString()}ウォン / ${PROXY_SHIPPING_ESTIMATE_JPY.toLocaleString()}円）`],
       ["通関・関税", `関税・税金・通関・保険一式。免税枠（${CUSTOMS_FREE_LIMIT.JPY.toLocaleString()}円）内なら商品価格の10%、超過時は消費税10% + 5%`],
     ],
-    feeNote: "注文画面で3項目すべてを合算した総額を確認して決済します。お受け取り時に関税を別途支払うことはありません。",
+    feeNote: `注文画面で3項目すべてを合算した総額を確認して決済します。お受け取り時に関税を別途支払うことはありません。${t("ja", "seo.fee.localShip")}`,
     howTitle: "4ステップで完了",
     how: [
       ["リンクを貼る", "タングン・中古ナラの商品URLを検索窓に貼るか、TOMOで直接検索します。"],
@@ -71,6 +74,7 @@ export const GUIDE_C = {
       ["検品で問題が見つかったら？", "破損・誤配送・数量違いはセンターで発見次第ご案内して返金します。基準はキャンセル・返金ポリシーに記載しています。"],
       ["決済は何回ですか？", "注文時の1回だけ。受け取り時の追加請求はありません。"],
       ["関税はいつ払いますか？", "注文画面の「通関・関税」項目に含まれているため、別途支払いはありません。"],
+      [t("ja", "seo.fee.directQ"), directFeeText("ja")],
     ],
     legal: ["キャンセル・返金ポリシー", "利用規約"],
   },

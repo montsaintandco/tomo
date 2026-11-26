@@ -5,7 +5,7 @@ import { notFound, redirect } from "next/navigation";
 import { t } from "@/lib/i18n";
 import { loadPriceLock, PRICE_LOCK_ERR } from "@/app/api/listings/price-lock";
 
-export const metadata = { title: "상품 수정 · 商品を編集 | TOMO" };
+export const metadata = { title: "상품 수정 · 商品を編集", robots: { index: false } };
 
 export default async function EditListingPage(props: { params: Promise<{ id: string }> }) {
   const { id } = await props.params;

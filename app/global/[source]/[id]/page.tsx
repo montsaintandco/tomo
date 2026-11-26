@@ -25,7 +25,8 @@ import { translateTexts } from "@/lib/translate";
 import { unstable_cache } from "next/cache";
 import { withTranslatedTitles } from "@/lib/market/translate-items";
 import PolicyNote from "@/components/PolicyNote";
-import { langAlternates, langFromSearch } from "@/lib/seo";
+import { langAlternates } from "@/lib/seo";
+import { getRequestLang } from "@/lib/locale";
 import { jsonLd } from "@/lib/json-ld";
 import { SITE_URL } from "@/lib/site";
 import { GLOSSARY_VERSION } from "@/lib/goods-glossary";
@@ -48,11 +49,9 @@ const EXTRA_LABEL: Record<string, I18nKey> = {
 export const dynamic = "force-dynamic";
 
 // 외부 마켓 스크랩 콘텐츠 — 색인 안 함(가격·품절은 진입 시점 확인). hreflang 은 언어 변형을 묶어만 둔다(01#13)
-export async function generateMetadata(props: {
-  params: Promise<{ source: string; id: string }>; searchParams: Promise<{ lang?: string }>;
-}): Promise<Metadata> {
-  const [{ source, id }, sp] = await Promise.all([props.params, props.searchParams]);
-  return { robots: { index: false, follow: true }, alternates: langAlternates(`/global/${source}/${id}`, langFromSearch(sp)) };
+export async function generateMetadata(props: { params: Promise<{ source: string; id: string }> }): Promise<Metadata> {
+  const { source, id } = await props.params;
+  return { robots: { index: false, follow: true }, alternates: langAlternates(`/global/${source}/${id}`, await getRequestLang()) };
 }
 
 // 게시 시각 상대 표기 (ListingRow와 같은 규칙)

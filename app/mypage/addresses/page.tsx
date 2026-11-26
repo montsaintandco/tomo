@@ -6,7 +6,7 @@ import AddressBook, { type Addr } from "@/components/AddressBook";
 import { tableMissing } from "@/lib/safe";
 import { redirect } from "next/navigation";
 
-export const metadata = { title: "배송지 · お届け先 | TOMO", robots: { index: false } };
+export const metadata = { title: "배송지 · お届け先", robots: { index: false } };
 
 // 배송지 — 주소록(0028). 테이블이 없으면 안내만(주문서는 기존 profiles.ship_* 프리필로 동작)
 export default async function MyAddresses() {

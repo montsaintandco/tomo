@@ -7,7 +7,7 @@ import { PageTitle, Tabs, Row, Empty, More } from "@/components/mypage/MyNav";
 import { pageLimit, TX_STATUS, PROXY_STATUS } from "@/lib/notifications";
 import { redirect } from "next/navigation";
 
-export const metadata = { title: "구매 · 購入 | TOMO", robots: { index: false } };
+export const metadata = { title: "구매 · 購入", robots: { index: false } };
 
 type MiniListing = { title: string; source_language: string; images: string[]; listing_translations: { language: string; title: string }[] };
 type ExtItem = { source: string; title: string; title_translated: string | null; images: string[] };

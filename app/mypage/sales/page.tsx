@@ -8,7 +8,7 @@ import { pageLimit, TX_STATUS } from "@/lib/notifications";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-export const metadata = { title: "판매 · 販売 | TOMO", robots: { index: false } };
+export const metadata = { title: "판매 · 販売", robots: { index: false } };
 
 type MiniListing = { title: string; source_language: string; images: string[]; listing_translations: { language: string; title: string }[] };
 

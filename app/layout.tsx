@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { websiteJsonLd } from "@/lib/seo";
+import { websiteJsonLd, OG_IMAGE } from "@/lib/seo";
 import { jsonLd } from "@/lib/json-ld";
 import "./globals.css";
 import { Noto_Sans_KR, Noto_Sans_JP } from "next/font/google";
@@ -32,8 +32,9 @@ export const metadata: Metadata = {
     description: "한국과 일본을 잇는 중고마켓 · 韓国と日本をつなぐフリマ",
     type: "website",
     siteName: "TOMO",
+    images: [OG_IMAGE], // 페이지가 openGraph 를 안 정해도 공유 카드에 사진이 나오게
   },
-  twitter: { card: "summary_large_image" },
+  twitter: { card: "summary_large_image", images: [OG_IMAGE.url] },
   // 검색엔진 소유 확인 — 구글은 Search Console HTML 태그, 네이버는 서치어드바이저 태그(값을 Vercel env에 넣으면 출력)
   verification: {
     google: ["vMO5xOzy6MJQOfiOhntsK_EC-NdjUNjUHcLOBCmVDFo", "a9L8hWLQEvBizz8RhjaBd-iHqFpGnoug6eS10E3-Kuw"], // 옛 tomo-delta 속성 + tomo.airship.click(예비, DNS 로도 확인됨)

@@ -1,6 +1,6 @@
 import { getRequestLang } from "@/lib/locale";
 import { jsonLd } from "@/lib/json-ld";
-import { pageMeta, langFromSearch } from "@/lib/seo";
+import { pageMeta } from "@/lib/seo";
 import SupportBot from "@/components/SupportBot";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { company } from "@/lib/company";
@@ -8,8 +8,8 @@ import { t } from "@/lib/i18n";
 import { HELP_C as C } from "@/lib/help-faq";
 import { aiEnabled } from "@/lib/support-ai.server";
 
-export async function generateMetadata(props: { searchParams: Promise<{ lang?: string }> }) {
-  return pageMeta("/help", { title: "고객센터 · サポート", description: "구매대행 수수료, 배송 기간, 관세, 검수 실패 시 환불 등 TOMO 이용 중 자주 묻는 질문과 답변. 1:1 채팅 문의 안내." }, langFromSearch(await props.searchParams));
+export async function generateMetadata() {
+  return pageMeta("/help", "help", await getRequestLang());
 }
 
 // 고객센터 — 사줘의 "고객센터"에 해당. 봇 → FAQ 목록(네이티브 <details>) → 연락처 순. 문의는 채팅. 운영시간 등 미확정 정보는 적지 않는다

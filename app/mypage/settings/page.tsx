@@ -10,7 +10,7 @@ import { rows } from "@/lib/safe";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-export const metadata = { title: "설정 · 設定 | TOMO", robots: { index: false } };
+export const metadata = { title: "설정 · 設定", robots: { index: false } };
 
 // 설정 — 프로필 편집 링크(/mypage/edit 유지)·푸시·로그아웃·탈퇴
 export default async function MySettings() {

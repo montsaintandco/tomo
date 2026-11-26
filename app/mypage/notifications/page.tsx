@@ -7,7 +7,7 @@ import { rows, tableMissing } from "@/lib/safe";
 import { notifHref, notifSub, notifText, pageLimit, type Notif } from "@/lib/notifications";
 import { redirect } from "next/navigation";
 
-export const metadata = { title: "알림 · お知らせ | TOMO", robots: { index: false } };
+export const metadata = { title: "알림 · お知らせ", robots: { index: false } };
 
 // 알림함 — 거래·대행·문의·환불·출금·제안·찜 값내림. 문구는 kind → i18n. 20건씩 더보기
 export default async function MyNotifications(props: { searchParams: Promise<{ page?: string }> }) {

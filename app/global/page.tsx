@@ -1,5 +1,6 @@
 import { createServerSupabase } from "@/lib/supabase/server";
-import { pageMeta, langFromSearch } from "@/lib/seo";
+import { pageMeta } from "@/lib/seo";
+import { getRequestLang } from "@/lib/locale";
 import { getViewerOrGuest, type ViewerOrGuest } from "@/lib/listings";
 import { Suspense } from "react";
 import ResultsSkeleton from "@/components/search/ResultsSkeleton";
@@ -320,6 +321,6 @@ async function Results({ q, source, mySources, filters, scope, live, looksLikeUr
   );
 }
 
-export async function generateMetadata(props: { searchParams: Promise<{ lang?: string }> }) {
-  return pageMeta("/global", { title: "해외직구 · 海外購入", description: "메루카리·Yahoo!フリマ·당근마켓·중고나라 상품을 한 번에 검색하고 구매대행으로 받아보세요. 견적 확인 후 결제, 센터 검수 후 배송." }, langFromSearch(await props.searchParams));
+export async function generateMetadata() {
+  return pageMeta("/global", "global", await getRequestLang());
 }

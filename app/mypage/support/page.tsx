@@ -6,7 +6,7 @@ import { pageLimit } from "@/lib/notifications";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-export const metadata = { title: "문의 내역 · お問い合わせ履歴 | TOMO", robots: { index: false } };
+export const metadata = { title: "문의 내역 · お問い合わせ履歴", robots: { index: false } };
 
 // 문의 내역 — 상담원 연결로 남긴 문의와 운영자 답변. 20건씩 더보기
 export default async function MySupport(props: { searchParams: Promise<{ page?: string }> }) {

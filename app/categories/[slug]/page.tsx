@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
-import { pageMeta, langFromSearch } from "@/lib/seo";
+import { pageMeta, langUrl } from "@/lib/seo";
+import { getRequestLang } from "@/lib/locale";
+import { jsonLd } from "@/lib/json-ld";
 import { t, otherCountry, type Lang } from "@/lib/i18n";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { getViewerOrGuest } from "@/lib/listings";
@@ -12,13 +14,14 @@ import ExternalItemCard, { type ExternalCardItem } from "@/components/ExternalIt
 import type { Currency } from "@/lib/currency";
 import { CATEGORIES, MERCARI_ROOTS, findMajor, name, catScope, krCatIds, catSearchHref, type MajorCategory } from "@/lib/categories";
 
-export async function generateMetadata(props: { params: Promise<{ slug: string }>; searchParams: Promise<{ lang?: string }> }) {
+// 없는 slug 는 proxy.ts 가 스트리밍 전에 404 로 돌린다(소프트 404 방지). 여기 notFound 는 클라이언트 이동용 예비
+export async function generateMetadata(props: { params: Promise<{ slug: string }> }) {
   const { slug } = await props.params;
   const c = findMajor(slug);
-  const lang = langFromSearch(await props.searchParams);
-  const title = c ? `${c.ko} · ${c.ja}` : "카테고리 · カテゴリー";
-  const subs = c ? c.subs.map((x) => x.ko).slice(0, 6).join("·") : "";
-  return pageMeta(`/categories/${slug}`, { title, description: c ? `${c.ko}(${subs} 등) 중고 상품을 일본·한국 마켓에서 찾아 구매대행으로 받아보세요.` : undefined }, lang);
+  if (!c) notFound();
+  const lang = await getRequestLang();
+  const subs = c.subs.map((x) => name(lang, x)).slice(0, 6).join("·");
+  return pageMeta(`/categories/${slug}`, "cat", lang, { name: name(lang, c), subs });
 }
 
 const PREVIEW = 10;
@@ -39,10 +42,21 @@ export default async function CategoryPage(props: { params: Promise<{ slug: stri
     .then((r) => r.count ?? 0, () => 0);
   const label = name(lang, major);
   const sub = "mt-8 text-[17px] font-extrabold text-ink";
+  // 이동 경로 + 세부 분류 목록 구조화 데이터 — 화면의 위치 줄·세부 분류 칸과 같은 값
+  const ld = [
+    { "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [
+      { "@type": "ListItem", position: 1, name: t(lang, "cats.home"), item: langUrl("/", lang) },
+      { "@type": "ListItem", position: 2, name: t(lang, "cats.all"), item: langUrl("/categories", lang) },
+      { "@type": "ListItem", position: 3, name: label, item: langUrl(`/categories/${major.slug}`, lang) },
+    ] },
+    { "@context": "https://schema.org", "@type": "ItemList", name: label, itemListElement: major.subs.map((s, i) => (
+      { "@type": "ListItem", position: i + 1, name: name(lang, s), url: langUrl(catSearchHref(major, s), lang) })) },
+  ];
   const pill = "press block rounded-full px-3.5 py-2.5 text-[13px] font-bold";
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-6 md:px-6 md:py-10">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(ld) }} />
       <nav aria-label={t(lang, "cats.where")} className="flex flex-wrap items-center gap-x-1.5 text-[12px] text-ink-soft md:text-[13px]">
         <Link href="/" className="press py-1 hover:underline">{t(lang, "cats.home")}</Link>
         <span aria-hidden>›</span>

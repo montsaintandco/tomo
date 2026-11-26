@@ -12,6 +12,9 @@ import { Suspense } from "react";
 import { rows as safeRows } from "@/lib/safe";
 import { formatPrice } from "@/lib/currency";
 
+// 개인 화면 — 색인 안 함. 없는 id 는 proxy.ts 가 스트리밍 전에 404 로 돌린다
+export const metadata = { robots: { index: false, follow: false } };
+
 export default async function OrderReceiptPage(props: { params: Promise<{ id: string }> }) {
   const { id } = await props.params;
   const supabase = await createServerSupabase();

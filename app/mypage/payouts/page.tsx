@@ -8,7 +8,7 @@ import PayoutAccountForm from "@/components/PayoutAccountForm";
 import PayoutRequestForm from "@/components/PayoutRequestForm";
 import { redirect } from "next/navigation";
 
-export const metadata = { title: "정산·출금 · 精算・出金 | TOMO", robots: { index: false } };
+export const metadata = { title: "정산·출금 · 精算・出金", robots: { index: false } };
 
 type Bal = { currency: Currency; balance: number; pending: number };
 type Ledger = { id: number; currency: Currency; amount: number; kind: LedgerKind; memo: string; created_at: string };

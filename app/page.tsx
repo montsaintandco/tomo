@@ -10,7 +10,8 @@ import { t } from "@/lib/i18n";
 import { parseMarketUrl } from "@/lib/market/url";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { pageMeta, langFromSearch } from "@/lib/seo";
+import { pageMeta } from "@/lib/seo";
+import { getRequestLang } from "@/lib/locale";
 import { Suspense } from "react";
 import DomesticFallback from "@/components/home/DomesticFallback";
 
@@ -20,10 +21,8 @@ const FEED_LIMIT = 40;
 const FEED_MAX_PAGES = 5; // 더 보기는 40개씩 200개까지 — 그 뒤는 검색·카테고리로 좁힌다
 const FEED_SELECT = "id, title, price, currency, source_language, country, region, status, images, created_at, trade_method, cross_border_enabled, listing_translations(language, title)";
 
-export async function generateMetadata(props: { searchParams: Promise<{ lang?: string }> }) {
-  const lang = langFromSearch(await props.searchParams);
-  const m = pageMeta("/", { title: "TOMO — 한국·일본 중고거래 · 韓国と日本のフリマ" }, lang);
-  return { alternates: m.alternates, openGraph: m.openGraph }; // 홈 제목·설명은 루트 레이아웃 기본값 유지
+export async function generateMetadata() {
+  return pageMeta("/", "home", await getRequestLang());
 }
 
 export default async function Home(props: { searchParams: Promise<{ tab?: string; q?: string; cat?: string; p?: string }> }) {

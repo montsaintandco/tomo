@@ -1,10 +1,10 @@
 import LegalDoc from "@/components/LegalDoc";
 import { REFUND_KO, REFUND_JA } from "@/lib/refund-policy";
-import { pageMeta, langFromSearch } from "@/lib/seo";
+import { pageMeta } from "@/lib/seo";
 import { getRequestLang } from "@/lib/locale";
 
-export async function generateMetadata(props: { searchParams: Promise<{ lang?: string }> }) {
-  return pageMeta("/refund", { title: "취소·환불 정책 · キャンセル・返金ポリシー", description: "TOMO 취소·환불 정책 — 결제 취소 가능 시점, 검수 실패·파손·오배송 시 환불 기준, 구매대행 취소 조건과 처리 기간." }, langFromSearch(await props.searchParams));
+export async function generateMetadata() {
+  return pageMeta("/refund", "refund", await getRequestLang());
 }
 
 // 취소·환불 정책 — 토스 심사가 상세에서 확인하는 항목(배송 업체·기간, 반품 주소·방법·기한·비용)을 문서로도. 세 거래 유형별로 다르다

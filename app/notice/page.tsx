@@ -1,11 +1,11 @@
 import { getRequestLang } from "@/lib/locale";
-import { pageMeta, langFromSearch } from "@/lib/seo";
+import { pageMeta } from "@/lib/seo";
 import { loadNotices } from "@/lib/notices";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { t } from "@/lib/i18n";
 
-export async function generateMetadata(props: { searchParams: Promise<{ lang?: string }> }) {
-  return pageMeta("/notice", { title: "공지사항 · お知らせ", description: "TOMO 서비스 공지사항 — 업데이트, 점검, 정책 변경 안내." }, langFromSearch(await props.searchParams));
+export async function generateMetadata() {
+  return pageMeta("/notice", "notice", await getRequestLang());
 }
 
 // 공지사항 — 사줘의 "공지사항"에 해당. notices 표(어드민 /admin/notices)가 정본, 표 없음·오류·0건이면 lib/notices.ts 코드 목록

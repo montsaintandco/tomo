@@ -24,7 +24,8 @@ import { notFound } from "next/navigation";
 import PolicyNote from "@/components/PolicyNote";
 import { headers } from "next/headers";
 import { SITE_URL } from "@/lib/site";
-import { langAlternates, langFromSearch } from "@/lib/seo";
+import { langAlternates, OG_IMAGE } from "@/lib/seo";
+import { getRequestLang } from "@/lib/locale";
 import { directDetailTotal } from "@/components/detail/total";
 import { DirectTotalBox } from "@/components/detail/TotalBox";
 import { isListingCategory, listingCategoryName, findMajor } from "@/lib/categories";
@@ -149,14 +150,14 @@ export default async function ListingDetail(props: { params: Promise<{ id: strin
   return (
     <main className="mx-auto max-w-md pb-24 standalone:pb-36 md:grid md:max-w-5xl md:grid-cols-2 md:items-start md:gap-10 md:px-6 md:pb-16 md:pt-8">
       <TrackView item={{ href: `/listings/${l.id}`, title: l.title, thumb: (l.images as string[] | null)?.[0] ?? "", price: l.price, currency: l.currency }} />
-      {/* Product 구조화 데이터 — 검색 결과에 가격·재고 리치 스니펫 */}
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd({
+      {/* Product 구조화 데이터 — 검색 결과에 가격·재고 리치 스니펫. 판매중일 때만(끝난 거래는 noindex) */}
+      {l.status === "active" && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd({
         "@context": "https://schema.org", "@type": "Product", name: l.title, image: images.slice(0, 5),
         description: String(l.description ?? "").slice(0, 500),
         itemCondition: `https://schema.org/${l.condition === "new" ? "NewCondition" : "UsedCondition"}`,
         offers: { "@type": "Offer", price: l.price, priceCurrency: l.currency, url: `${SITE_URL}/listings/${l.id}`,
           availability: `https://schema.org/${l.status === "active" ? "InStock" : "SoldOut"}`, seller: { "@type": "Person", name: seller.nickname } },
-      }) }} />
+      }) }} />}
       {/* 이동 경로 구조화 데이터(01#13) — 홈 › 카테고리 › 상품 */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd({
         "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [
@@ -400,20 +401,24 @@ export default async function ListingDetail(props: { params: Promise<{ id: strin
   );
 }
 
-// 웹 문법: 상품명이 탭 제목·공유 카드 제목이다
-export async function generateMetadata(props: { params: Promise<{ id: string }>; searchParams: Promise<{ lang?: string }> }): Promise<import("next").Metadata> {
-  const [{ id }, sp] = await Promise.all([props.params, props.searchParams]);
-  const supabase = await createServerSupabase();
-  const { data } = await supabase.from("listings").select("title, description, price, currency, status, images").eq("id", id).maybeSingle();
-  if (!data) return { title: "TOMO" };
+// 웹 문법: 상품명이 탭 제목·공유 카드 제목이다. 화면 언어(getRequestLang)의 번역 제목·설명을 쓴다
+// 없는 상품은 proxy.ts 가 스트리밍 전에 404 로 돌린다(소프트 404 방지)
+export async function generateMetadata(props: { params: Promise<{ id: string }> }): Promise<import("next").Metadata> {
+  const { id } = await props.params;
+  const [supabase, lang] = await Promise.all([createServerSupabase(), getRequestLang()]);
+  const { data } = await supabase.from("listings").select("title, description, price, currency, status, images, source_language, listing_translations(language, title, description)").eq("id", id).maybeSingle();
+  if (!data) notFound();
+  const tr = data.source_language === lang ? null : (data.listing_translations as { language: string; title: string; description: string | null }[] | null)?.find((x) => x.language === lang);
+  const title = tr?.title || data.title;
   const img = (data.images as string[])?.[0];
-  const price = formatPrice(data.price, data.currency as Currency);
-  const description = `${price} · ${String(data.description ?? "").replace(/\s+/g, " ").slice(0, 120)}`;
+  const price = formatPrice(data.price, data.currency as Currency, lang);
+  const description = `${price} · ${String(tr?.description || data.description || "").replace(/\s+/g, " ").slice(0, 120)}`;
+  const images = img ? [img] : [OG_IMAGE];
   return {
-    title: data.title, description,
-    alternates: langAlternates(`/listings/${id}`, langFromSearch(sp)),
-    openGraph: { type: "website", title: data.title, description, ...(img ? { images: [img] } : {}) },
-    twitter: { card: img ? "summary_large_image" : "summary" },
+    title, description,
+    alternates: langAlternates(`/listings/${id}`, lang),
+    openGraph: { type: "website", siteName: "TOMO", title, description, locale: lang === "ja" ? "ja_JP" : "ko_KR", images },
+    twitter: { card: "summary_large_image", title, description, images: [img ?? OG_IMAGE.url] },
     ...(data.status !== "active" ? { robots: { index: false, follow: true } } : {}),
   };
 }

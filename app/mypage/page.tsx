@@ -12,7 +12,7 @@ import { notifHref, notifText, type Notif } from "@/lib/notifications";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-export const metadata = { title: "마이페이지 · マイページ | TOMO", robots: { index: false } };
+export const metadata = { title: "마이페이지 · マイページ", robots: { index: false } };
 
 // 마이페이지 홈 — 프로필·신뢰온도·할 일·최근 알림. 목록은 하위 화면(/mypage/*)으로 옮겼다.
 export default async function MyPage() {
