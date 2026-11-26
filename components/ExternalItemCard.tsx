@@ -9,6 +9,8 @@ export type ExternalCardItem = {
   source: MarketSource; sourceId: string; title: string; titleTranslated?: string;
   price: number; currency: Currency; thumb: string;
   soldOut?: boolean; auction?: boolean;
+  // 05-roadmap P: 트랙이 값만 채우고 표시는 T1 이 맡는다(모두 선택)
+  shippingIncluded?: boolean; likes?: number; condition?: string; rank?: number; isNew?: boolean;
 };
 
 // 메루카리식 밀집 카드 — 이미지 우선, 구매자 통화 가격이 가장 굵게 (Price-Loudest는 구매자의 숫자다)

@@ -5,6 +5,16 @@ import { PAYOUT_I18N } from "./i18n-port/payout";
 import { MY_I18N } from "./i18n-port/my";
 import { CONTENT_I18N } from "./i18n-port/content";
 import { SUPPORT_AI_I18N } from "./i18n-port/support-ai";
+import { OBS_I18N } from "./i18n-port/obs";
+import { PRICE_I18N } from "./i18n-port/price";
+import { SEARCH_I18N } from "./i18n-port/search";
+import { TRUST_I18N } from "./i18n-port/trust";
+import { PAY_I18N } from "./i18n-port/pay";
+import { SHELL_I18N } from "./i18n-port/shell";
+import { HOME_I18N } from "./i18n-port/home";
+import { DETAIL_I18N } from "./i18n-port/detail";
+import { ADMIN_I18N } from "./i18n-port/admin";
+import { SEO_I18N } from "./i18n-port/seo";
 
 export type Lang = "ko" | "ja";
 
@@ -14,6 +24,16 @@ const D = {
   ...MY_I18N,
   ...CONTENT_I18N,
   ...SUPPORT_AI_I18N,
+  ...OBS_I18N,
+  ...PRICE_I18N,
+  ...SEARCH_I18N,
+  ...TRUST_I18N,
+  ...PAY_I18N,
+  ...SHELL_I18N,
+  ...HOME_I18N,
+  ...DETAIL_I18N,
+  ...ADMIN_I18N,
+  ...SEO_I18N,
   "nav.home": ["홈", "ホーム"],
   "nav.global": ["해외직구", "海外購入"],
   "nav.sell": ["판매", "出品"],

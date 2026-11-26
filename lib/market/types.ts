@@ -21,13 +21,21 @@ export type MarketItem = {
   soldOut: boolean;
   // 경매 물건은 즉시 확정가가 아니므로 UI에서 구분 표시 (구매대행 견적 기준이 달라짐)
   auction?: boolean;    // true = 입찰 진행형 (price는 현재가, 낙찰가 미확정)
+  // 05-roadmap P: 목록·상세 공통 선택 필드(소스가 주면 채운다)
+  shippingIncluded?: boolean; // 판매자 배송비 부담(送料込み)
+  likes?: number;
+  condition?: string;
+  sellerRating?: string; // 원본 마켓의 판매자 평가 요약 ("좋아요 115 · 100%", "★4.8" 등)
+  sellerSales?: number;
+  shipFrom?: string;
+  unbuyable?: string;   // 살 수 없는 출품 사유(専用·取り置き 등). 있으면 구매 버튼을 막는다
 };
 
 export type MarketItemDetail = MarketItem & {
   description: string;
   images: string[];
   sellerName: string;
-  condition: string;    // 상품 상태 표기 (소스 원문)
+  condition: string;    // 상품 상태 표기 (소스 원문) — 상세에서는 필수
   extra: Record<string, string>; // 배송부담·지역 등 소스별 부가정보 (표시용)
   // 원본 페이지가 주는 맥락 — 있으면 상세에 그대로 보여준다 (당근·중고나라·메루카리 공통 형태)
   region?: string;      // 거래 동네
@@ -36,7 +44,7 @@ export type MarketItemDetail = MarketItem & {
   sellerTemp?: number;  // 매너온도 등 판매자 신뢰 지표 (소스 단위 그대로)
   counts?: { views?: number; favorites?: number; chats?: number; bids?: number };
   tradeTags?: string[]; // 직거래·택배·새상품·안전결제 같은 원본 라벨
-  sellerRating?: string; // 원본 마켓의 판매자 평가 요약 ("좋아요 115 · 100%", "★4.8" 등)
+  // sellerRating 은 MarketItem 의 선택 필드를 쓴다
   sellerUrl?: string;    // 원본 마켓 판매자 페이지 (다른 상품 더 보기 링크)
   sellerItems?: MarketItem[]; // 판매자의 다른 판매중 상품 (최대 8)
 };
