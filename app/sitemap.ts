@@ -1,12 +1,16 @@
 import type { MetadataRoute } from "next";
 import { createClient } from "@supabase/supabase-js";
-import { SITE_URL } from "@/lib/site";
+import { SITE_URL } from "../lib/site";
 
 // 정적 페이지 + 판매중 상품. 외부 마켓 상품(/global/…)은 제외 — 스크랩 콘텐츠·항상 동적
 export const revalidate = 3600;
 
+// lastmod 를 요청마다 지금 시각으로 주면 검색엔진이 lastmod 를 믿지 않는다(키라팝 2026-10-26 서치콘솔 '발견됨 - 색인 안 됨').
+// 정적 페이지는 내용을 실제로 고친 날을 준다 — 페이지를 손보면 이 날짜를 올린다. 상품은 끌올·등록 시각.
+const PAGES_UPDATED = new Date("2026-11-26T00:00:00+09:00"); // T9: 고객센터 FAQ 위치·안내 문구
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const now = new Date();
+  const now = PAGES_UPDATED;
   // 정적 페이지는 ko(기본)·ja(?lang=ja) 두 변형 — hreflang과 동일 (lib/seo.ts)
   const withJa = (u: string) => ({ alternates: { languages: { ko: u, ja: `${u}?lang=ja`, "x-default": u } } });
   const statics: MetadataRoute.Sitemap = [

@@ -110,7 +110,7 @@ export default function SupportBot({ lang, compact = false, loggedIn = true, ai 
         {msgs.map((m, i) => (
           <div key={i} className={`flex ${m.who === "me" ? "justify-end" : "justify-start"}`}>
             <div className={`chat-bubble ${m.form ? "w-full" : "max-w-[85%]"} px-3.5 py-2.5 text-[13px] leading-relaxed ${m.who === "me" ? "chat-bubble-mine bg-tomo-coral-deep/10 text-ink" : "chat-bubble-theirs bg-tomo-navy/5 text-ink"}`}>
-              {m.ai && <p className="mb-1 text-[10px] font-bold text-ink-soft">{t(lang, "support.ai.badge")}</p>}
+              {m.ai && <p className="mb-1 text-[11px] font-bold text-ink-soft">{t(lang, "support.ai.badge")}</p>}
               {m.lines.map((line, j) => (
                 <p key={j} className={j > 0 ? "mt-1.5" : ""}>
                   {m.ai ? aiSegments(line).map((g, k) => ("to" in g ? <Link key={k} href={g.to} className="font-bold underline">{g.text}</Link> : <span key={k}>{g.text}</span>)) : line}
@@ -155,9 +155,9 @@ export default function SupportBot({ lang, compact = false, loggedIn = true, ai 
           <div className="flex gap-2">
             <input value={q} onChange={(e) => setQ(e.target.value)} maxLength={AI_LIMITS.maxChars} disabled={busy}
               placeholder={t(lang, "support.ai.placeholder")} aria-label={t(lang, "support.ai.placeholder")} className={field} />
-            <button type="submit" disabled={busy || !q.trim()} className="btn shrink-0 bg-tomo-navy px-3.5 text-[13px] text-white disabled:opacity-40">{t(lang, "support.ai.send")}</button>
+            <button type="submit" disabled={busy} className="btn shrink-0 bg-tomo-navy px-3.5 text-[13px] text-white disabled:opacity-60">{t(lang, "support.ai.send")}</button>
           </div>
-          <p className="mt-1 text-[10px] text-ink-faint">{t(lang, "support.ai.note")}</p>
+          <p className="mt-1 text-[11px] text-ink-soft">{t(lang, "support.ai.note")}</p>
         </form>
       )}
     </div>

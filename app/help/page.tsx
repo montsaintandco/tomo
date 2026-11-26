@@ -12,7 +12,7 @@ export async function generateMetadata(props: { searchParams: Promise<{ lang?: s
   return pageMeta("/help", { title: "고객센터 · サポート", description: "구매대행 수수료, 배송 기간, 관세, 검수 실패 시 환불 등 TOMO 이용 중 자주 묻는 질문과 답변. 1:1 채팅 문의 안내." }, langFromSearch(await props.searchParams));
 }
 
-// 고객센터 — 사줘의 "고객센터"에 해당. FAQ는 네이티브 <details>, 문의는 채팅. 운영시간 등 미확정 정보는 적지 않는다
+// 고객센터 — 사줘의 "고객센터"에 해당. 봇 → FAQ 목록(네이티브 <details>) → 연락처 순. 문의는 채팅. 운영시간 등 미확정 정보는 적지 않는다
 
 export default async function HelpPage() {
   const lang = await getRequestLang();
@@ -29,19 +29,14 @@ export default async function HelpPage() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(faqLd) }} />
       <h1 className="text-[22px] font-extrabold text-ink md:text-3xl">{c.h1}</h1>
       <p className="mt-2 text-sm text-ink-soft">{c.sub}</p>
+      {/* 모바일은 봇이 첫 화면을 다 차지한다 — FAQ 목록으로 바로 내려가는 입구(04 고객센터) */}
+      <a href="#faq" className="mt-2 inline-block text-sm font-bold text-ink underline underline-offset-2">{t(lang, "seo.help.toFaq", { n: c.faq.length })}</a>
       {/* 사조식 봇을 고객센터 첫 화면에 — 버튼 트리로 답하고, 특정 주문은 상담원(채팅)으로 */}
       <div className="mt-5 overflow-hidden rounded-card border border-tomo-navy/10 bg-white shadow-soft">
         <SupportBot lang={lang} loggedIn={loggedIn} ai={aiEnabled()} />
       </div>
 
-      {/* 연락처 — 심사 항목: CS 전화·이메일·운영시간이 사이트에 보여야 한다 */}
-      <section aria-label={t(lang, "help.contact")} className="mt-6 grid gap-2 rounded-card border border-tomo-navy/10 p-4 text-[13px] sm:grid-cols-3">
-        {company.phone && <div><p className="text-[11px] font-bold text-ink-soft">{t(lang, "footer.phone")}</p><a href={`tel:${company.phone.replace(/[^0-9+]/g, "")}`} className="font-bold text-ink">{company.phone}</a></div>}
-        <div><p className="text-[11px] font-bold text-ink-soft">{t(lang, "footer.email")}</p>{company.email ? <a href={`mailto:${company.email}`} className="font-bold text-ink">{company.email}</a> : <p className="text-ink-soft">{t(lang, "footer.pending")}</p>}</div>
-        <div><p className="text-[11px] font-bold text-ink-soft">{t(lang, "footer.hours")}</p><p className="text-ink">{company.hours ?? t(lang, "footer.pending")}</p></div>
-      </section>
-
-      <h2 className="mt-10 text-[17px] font-extrabold text-ink">{c.faqTitle}</h2>
+      <h2 id="faq" className="mt-8 scroll-mt-20 text-[17px] font-extrabold text-ink">{c.faqTitle}</h2>
       <div className="mt-3 divide-y divide-tomo-navy/10 rounded-card border border-tomo-navy/10">
         {c.faq.map(([q, a]) => (
           <details key={q} className="group px-4 py-3">
@@ -53,6 +48,13 @@ export default async function HelpPage() {
           </details>
         ))}
       </div>
+
+      {/* 연락처 — 심사 항목: CS 전화·이메일·운영시간이 사이트에 보여야 한다 */}
+      <section aria-label={t(lang, "help.contact")} className="mt-10 grid gap-2 rounded-card border border-tomo-navy/10 p-4 text-[13px] sm:grid-cols-3">
+        {company.phone && <div><p className="text-[11px] font-bold text-ink-soft">{t(lang, "footer.phone")}</p><a href={`tel:${company.phone.replace(/[^0-9+]/g, "")}`} className="font-bold text-ink">{company.phone}</a></div>}
+        <div><p className="text-[11px] font-bold text-ink-soft">{t(lang, "footer.email")}</p>{company.email ? <a href={`mailto:${company.email}`} className="font-bold text-ink">{company.email}</a> : <p className="text-ink-soft">{t(lang, "footer.pending")}</p>}</div>
+        <div><p className="text-[11px] font-bold text-ink-soft">{t(lang, "footer.hours")}</p><p className="text-ink">{company.hours ?? t(lang, "footer.pending")}</p></div>
+      </section>
     </main>
   );
 }
