@@ -265,3 +265,10 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=<Supabase 대시보드 → Project Settings → AP
 - 연결된 운영자: Ren(mellowdazzle@gmail.com, 소유자). center_actor_id 는 비어 있고 센터의 첫 서명 요청 id 로 채워진다(이후 id 가 다르면 403). 시험 중 채워진 값은 비웠다.
 - 점검 도구: `node node_modules/tsx/dist/cli.mjs scripts/ops-call.mts GET /api/ops/meta`(.env.local 비밀값 사용, 출력 안 함).
 - 되돌리기: Coolify 에서 OPS_BRIDGE_SECRET 삭제 후 재시작 → /api/ops/** 전부 503. DB 는 0043 하단 주석.
+
+### 2026-11-27 A1 에어쉽 연결(이벤트 훅 env)
+- Coolify `tomo-image` env 에 `OPS_HOOK_URL`(=https://airship.click/api/site-hook/tomo)·`OPS_HOOK_TOKEN` 을 넣고(Add 로 하나씩, 미리보기 배포 칸에도 자동 복사됨) Redeploy 했다. 토큰 값은 에어쉽 `integration_secrets` `site:tomo`.hook_token 과 같다(값은 기록하지 않음). 재배포 뒤 /api/ops/health `outbox.hook_configured=true`.
+- 에어쉽 쪽: `integration_secrets` `site:tomo`(base_url·key_id·secret·hook_token, 연결 테스트 meta 성공), 표 `connected_sites`·`connected_site_events`·`connected_site_ops_log`·`connected_site_access`(Ren ops+money), 화면 /admin/sites/tomo. 에어쉽 커밋 `0941d874`, 문서 에어쉽 `docs/connected-sites.md`.
+- 첫 서명 요청(counts)으로 `ops_actors.center_actor_id` 가 Ren 의 에어쉽 user id(7ce8d1c0-…)로 채워졌다.
+- 시험: outbox 에 `ticket.opened`(code 「시험(A1 연결 확인)」) 1건 → 1분 크론이 첫 시도에 전송 → 에어쉽 저장·어드민 알림·텔레그램 1건. 같은 event_id 재전송은 `duplicate` 로 버려짐, 틀린 토큰 401. 시험 행은 양쪽에서 지웠다(텔레그램 메시지 1건은 남음).
+- 되돌리기: Coolify 에서 OPS_HOOK_URL 삭제 후 재시작 → 이벤트 전송 멈춤(outbox 24시간 뒤 포기).
