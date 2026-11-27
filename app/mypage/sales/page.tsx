@@ -7,6 +7,7 @@ import { PageTitle, Tabs, Row, Empty, More } from "@/components/mypage/MyNav";
 import { pageLimit, TX_STATUS } from "@/lib/notifications";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { orderLabel } from "@/lib/order-code";
 
 export const metadata = { title: "판매 · 販売", robots: { index: false } };
 
@@ -48,7 +49,7 @@ export default async function MySales(props: { searchParams: Promise<{ tab?: str
     );
   } else {
     const { data } = await supabase.from("transactions")
-      .select("id, status, item_price, currency, listings(title, source_language, images, listing_translations(language, title))")
+      .select("id, code, status, item_price, currency, listings(title, source_language, images, listing_translations(language, title))")
       .eq("seller_id", viewer.id).order("created_at", { ascending: false }).limit(limit + 1);
     const list = (data ?? []).slice(0, limit);
     body = (
@@ -58,7 +59,7 @@ export default async function MySales(props: { searchParams: Promise<{ tab?: str
             const l = tx.listings as unknown as MiniListing | null;
             return (
               <Row key={tx.id} href={`/transactions/${tx.id}`} image={l?.images?.[0]} title={l ? displayTitle(l, lang) : t(lang, "my.item")}
-                sub={TX_STATUS[tx.status] ? t(lang, TX_STATUS[tx.status]) : tx.status}
+                sub={`${orderLabel(tx.code, tx.id)} · ${TX_STATUS[tx.status] ? t(lang, TX_STATUS[tx.status]) : tx.status}`}
                 right={formatPrice(tx.item_price, tx.currency as Currency, lang)} />
             );
           })}

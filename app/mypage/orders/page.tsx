@@ -6,6 +6,7 @@ import { type MarketSource } from "@/lib/market/types";
 import { PageTitle, Tabs, Row, Empty, More } from "@/components/mypage/MyNav";
 import { pageLimit, TX_STATUS, PROXY_STATUS } from "@/lib/notifications";
 import { redirect } from "next/navigation";
+import { orderLabel } from "@/lib/order-code";
 
 export const metadata = { title: "구매 · 購入", robots: { index: false } };
 
@@ -26,7 +27,7 @@ export default async function MyOrders(props: { searchParams: Promise<{ tab?: st
   let body: React.ReactNode;
   if (tab === "tx") {
     const { data } = await supabase.from("transactions")
-      .select("id, status, item_price, currency, listings(title, source_language, images, listing_translations(language, title))")
+      .select("id, code, status, item_price, currency, listings(title, source_language, images, listing_translations(language, title))")
       .eq("buyer_id", viewer.id).order("created_at", { ascending: false }).limit(limit + 1);
     const list = (data ?? []).slice(0, limit);
     body = (
@@ -36,7 +37,7 @@ export default async function MyOrders(props: { searchParams: Promise<{ tab?: st
             const l = tx.listings as unknown as MiniListing | null;
             return (
               <Row key={tx.id} href={`/transactions/${tx.id}`} image={l?.images?.[0]} title={l ? displayTitle(l, lang) : t(lang, "my.item")}
-                sub={TX_STATUS[tx.status] ? t(lang, TX_STATUS[tx.status]) : tx.status}
+                sub={`${orderLabel(tx.code, tx.id)} · ${TX_STATUS[tx.status] ? t(lang, TX_STATUS[tx.status]) : tx.status}`}
                 right={formatPrice(tx.item_price, tx.currency as Currency, lang)} />
             );
           })}
@@ -53,6 +54,9 @@ export default async function MyOrders(props: { searchParams: Promise<{ tab?: st
     // 같은 주문(order_id)의 항목은 한 줄로
     const seen = new Set<string>();
     const list = all.filter((p) => !p.order_id || (!seen.has(p.order_id) && !!seen.add(p.order_id)));
+    const orderIds = [...seen];
+    const { data: codes } = orderIds.length ? await supabase.from("proxy_orders").select("id, code").in("id", orderIds) : { data: [] };
+    const codeOf = Object.fromEntries((codes ?? []).map((o) => [o.id, o.code as string | null]));
     body = (
       <>
         <div className="flex flex-col gap-2">
@@ -62,7 +66,7 @@ export default async function MyOrders(props: { searchParams: Promise<{ tab?: st
             return (
               <Row key={p.id} href={p.order_id ? `/order/${p.order_id}` : `/proxy/${p.id}`} image={it?.images?.[0]}
                 title={it?.title_translated || it?.title || t(lang, "my.item")}
-                sub={`${it ? t(lang, `source.${it.source as MarketSource}`) : ""} · ${PROXY_STATUS[p.status] ? t(lang, PROXY_STATUS[p.status]) : p.status}`}
+                sub={`${p.order_id ? `${orderLabel(codeOf[p.order_id], p.order_id)} · ` : ""}${it ? t(lang, `source.${it.source as MarketSource}`) : ""} · ${PROXY_STATUS[p.status] ? t(lang, PROXY_STATUS[p.status]) : p.status}`}
                 right={p.order_id ? t(lang, "order.items", { n: cnt }) : p.quote_total ? formatPrice(p.quote_total, "JPY", lang) : t(lang, "proxy.quoteWait")} />
             );
           })}

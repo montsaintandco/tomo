@@ -4,6 +4,7 @@ import { pageOf } from "@/components/admin/paging";
 import Link from "next/link";
 import TxActions from "@/components/TxActions";
 import { rows as safeRows } from "@/lib/safe";
+import { parseOrderCode, orderLabel } from "@/lib/order-code";
 
 // 운영자가 이 화면에서 바로 처리하는 상태: 취소·환불(결제~센터 입고), 센터 입고·국제 발송, 강제 구매확정(배송 도착)
 const ACTIONABLE = ["paid", "shipped_to_center", "center_received", "delivered"];
@@ -18,20 +19,23 @@ const FILTERS = [
 ];
 
 // 전체 거래 — 에스크로 상태 전부. 행은 거래 상세(운영자는 0010 RLS로 열람·센터 액션)
-export default async function AdminTransactionsPage(props: { searchParams: Promise<{ status?: string; page?: string }> }) {
+export default async function AdminTransactionsPage(props: { searchParams: Promise<{ status?: string; page?: string; q?: string }> }) {
   const sp = await props.searchParams;
   const status = FILTERS.some((f) => f.value === sp.status) ? sp.status ?? "" : "";
   const { page, from, to, size } = pageOf(sp.page);
-  const params = { status: status || undefined, page: page > 1 ? String(page) : undefined };
+  const qText = (sp.q ?? "").trim().slice(0, 20);
+  const code = parseOrderCode(qText);
+  const params = { status: status || undefined, page: page > 1 ? String(page) : undefined, q: qText || undefined };
   const supabase = await createServerSupabase();
   let q = supabase.from("transactions")
-    .select("id, status, is_cross_border, meetup, center, item_price, currency, updated_at, listings(title), buyer:profiles!transactions_buyer_id_fkey(nickname), seller:profiles!transactions_seller_id_fkey(nickname)", { count: "exact" })
+    .select("id, code, status, is_cross_border, meetup, center, item_price, currency, updated_at, listings(title), buyer:profiles!transactions_buyer_id_fkey(nickname), seller:profiles!transactions_seller_id_fkey(nickname)", { count: "exact" })
     .order("updated_at", { ascending: false }).range(from, to);
   if (status === "open") q = q.in("status", OPEN);
   else if (status) q = q.eq("status", status);
+  if (qText) q = q.eq("code", code?.kind === "tx" ? code.code : "-");   // 번호가 아니면 0건
   const { data, count } = await q;
   const rows = (data ?? []) as unknown as {
-    id: string; status: string; is_cross_border: boolean; meetup: boolean; center: string | null; item_price: number; currency: string; updated_at: string;
+    id: string; code: string | null; status: string; is_cross_border: boolean; meetup: boolean; center: string | null; item_price: number; currency: string; updated_at: string;
     listings: { title: string } | null; buyer: { nickname: string } | null; seller: { nickname: string } | null;
   }[];
   const cancelledIds = rows.filter((r) => r.status === "cancelled").map((r) => r.id);
@@ -43,11 +47,18 @@ export default async function AdminTransactionsPage(props: { searchParams: Promi
   return (
     <>
       <PageHeader title="거래" sub="에스크로 거래 전체. 최근 갱신순" />
-      <FilterTabs base="/admin/transactions" param="status" options={FILTERS} current={status} keep={params} />
+      <div className="flex flex-wrap items-start gap-3">
+        <FilterTabs base="/admin/transactions" param="status" options={FILTERS} current={status} keep={params} />
+        <form className="mb-3 flex gap-2" role="search">
+          {status && <input type="hidden" name="status" value={status} />}
+          <input name="q" defaultValue={qText} placeholder="거래 번호 TX000123" aria-label="거래 번호 검색" className="h-8 w-48 px-3 text-[13px]" />
+        </form>
+      </div>
       <Panel>
-        <Table head={["상품", "구매자 → 판매자", "금액", "유형", "상태", "갱신", ""]}>
+        <Table head={["번호", "상품", "구매자 → 판매자", "금액", "유형", "상태", "갱신", ""]}>
           {rows.map((r) => (
             <tr key={r.id}>
+              <td className="tnum whitespace-nowrap"><Link href={`/transactions/${r.id}`} className="a-link">{orderLabel(r.code, r.id)}</Link></td>
               <td><Link href={`/transactions/${r.id}`} className="a-link block max-w-[260px] truncate">{r.listings?.title ?? "—"}</Link></td>
               <td className="whitespace-nowrap">{r.buyer?.nickname} <span className="a-faint">→</span> {r.seller?.nickname}</td>
               <td className="tnum whitespace-nowrap">{money(r.item_price, r.currency)}</td>

@@ -3,8 +3,8 @@
 import { t, type I18nKey, type Lang } from "./i18n";
 
 export const NOTIF_KINDS = [
-  "tx_paid", "tx_shipped", "tx_delivered", "tx_completed", "tx_cancelled", "tx_disputed",
-  "proxy_quoted", "proxy_purchasing", "proxy_center", "proxy_shipped", "proxy_delivered", "proxy_cancelled",
+  "tx_paid", "tx_shipped", "tx_to_center", "tx_center_received", "tx_delivered", "tx_completed", "tx_auto_completed", "tx_cancelled", "tx_disputed",
+  "proxy_paid", "proxy_quoted", "proxy_purchasing", "proxy_center", "proxy_shipped", "proxy_delivered", "proxy_cancelled",
   "support_answered", "refund_done", "payout_sent", "payout_rejected",
   "offer_received", "offer_accepted", "offer_declined", "wish_price_drop",
 ] as const;

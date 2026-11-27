@@ -8,6 +8,7 @@ import { agingLevel, nowMs, PROXY_STAGE } from "@/lib/admin-aging";
 import { t, type I18nKey } from "@/lib/i18n";
 import Link from "next/link";
 import { rows as safeRows, tableMissing } from "@/lib/safe";
+import { parseOrderCode, orderLabel } from "@/lib/order-code";
 
 const FILTERS = [{ value: "", label: "전체" }, { value: "paid", label: "결제 완료" }, { value: "pending_payment", label: "결제 대기" }, { value: "cancelled", label: "취소" }];
 const PAY: Record<string, string> = { card: "카드", kakao_pay: "카카오페이", naver_pay: "네이버페이" };
@@ -15,22 +16,25 @@ const UUID = /^[0-9a-f-]{36}$/;
 const pLabel = (s: string) => t("ko", `pstatus.${s}` as I18nKey);
 
 type Order = {
-  id: string; status: string; currency: string; subtotal: number; intl_shipping: number; service_fee: number; total: number; payment_method: string;
+  id: string; code: string | null; status: string; currency: string; subtotal: number; intl_shipping: number; service_fee: number; total: number; payment_method: string;
   ship_name: string; ship_address: string; created_at: string; profiles: { nickname: string } | null; proxy_requests: { count: number }[];
 };
 type Item = { id: string; status: string; updated_at: string; intl_tracking: string | null; external_items: { title: string; images: string[] } | null };
 
 // 대행 주문(카트 결제 단위) — 페이지 넘김·URL 필터. 행의 「상세」는 오른쪽 시트(?open=)에서 항목별 상태를 바꾼다(0037)
-export default async function AdminOrdersPage(props: { searchParams: Promise<{ status?: string; page?: string; open?: string }> }) {
+export default async function AdminOrdersPage(props: { searchParams: Promise<{ status?: string; page?: string; open?: string; q?: string }> }) {
   const sp = await props.searchParams;
   const status = FILTERS.some((f) => f.value === sp.status) ? sp.status ?? "" : "";
   const { page, from, to, size } = pageOf(sp.page);
-  const params = { status: status || undefined, page: page > 1 ? String(page) : undefined };
+  const qText = (sp.q ?? "").trim().slice(0, 20);
+  const code = parseOrderCode(qText);
+  const params = { status: status || undefined, page: page > 1 ? String(page) : undefined, q: qText || undefined };
   const supabase = await createServerSupabase();
   let q = supabase.from("proxy_orders")
-    .select("id, status, currency, subtotal, intl_shipping, service_fee, total, payment_method, ship_name, ship_address, created_at, profiles!proxy_orders_user_id_fkey(nickname), proxy_requests(count)", { count: "exact" })
+    .select("id, code, status, currency, subtotal, intl_shipping, service_fee, total, payment_method, ship_name, ship_address, created_at, profiles!proxy_orders_user_id_fkey(nickname), proxy_requests(count)", { count: "exact" })
     .order("created_at", { ascending: false }).range(from, to);
   if (status) q = q.eq("status", status);
+  if (qText) q = q.eq("code", code?.kind === "po" ? code.code : "-");   // 번호가 아니면 0건
   const { data, error, count } = await q;
   const rows = (data ?? []) as unknown as Order[];
 
@@ -55,13 +59,19 @@ export default async function AdminOrdersPage(props: { searchParams: Promise<{ s
     <>
       <AutoRefresh />
       <PageHeader title="주문" sub="장바구니 결제 단위. 「상세」에서 항목별 진행 상태를 바꿔요. 취소·환불은 대행 요청 화면에서" />
-      <FilterTabs base="/admin/orders" param="status" options={FILTERS} current={status} keep={params} />
+      <div className="flex flex-wrap items-start gap-3">
+        <FilterTabs base="/admin/orders" param="status" options={FILTERS} current={status} keep={params} />
+        <form className="mb-3 flex gap-2" role="search">
+          {status && <input type="hidden" name="status" value={status} />}
+          <input name="q" defaultValue={qText} placeholder="주문 번호 T000123" aria-label="주문 번호 검색" className="h-8 w-48 px-3 text-[13px]" />
+        </form>
+      </div>
       <Panel>
         {error && <p className="a-muted p-4 text-[12px]">{error.message}</p>}
         <Table head={["주문", "주문자", "항목", "총액", "환불", "결제수단", "배송지", "상태", "생성", ""]} empty="주문이 없어요">
           {rows.map((r) => (
             <tr key={r.id}>
-              <td><Link href={`/order/${r.id}`} className="a-link tnum">{r.id.slice(0, 8)}</Link></td>
+              <td><Link href={`/order/${r.id}`} className="a-link tnum">{orderLabel(r.code, r.id)}</Link></td>
               <td className="whitespace-nowrap">{r.profiles?.nickname}</td>
               <td className="tnum">{r.proxy_requests?.[0]?.count ?? 0}</td>
               <td className="tnum whitespace-nowrap">
@@ -93,11 +103,11 @@ export default async function AdminOrdersPage(props: { searchParams: Promise<{ s
 async function OrderSheet({ id, closeHref }: { id: string; closeHref: string }) {
   const supabase = await createServerSupabase();
   const [orderRes, itemRes, transRes] = await Promise.all([
-    supabase.from("proxy_orders").select("id, status, currency, total, created_at, profiles!proxy_orders_user_id_fkey(nickname)").eq("id", id).maybeSingle(),
+    supabase.from("proxy_orders").select("id, code, status, currency, total, created_at, profiles!proxy_orders_user_id_fkey(nickname)").eq("id", id).maybeSingle(),
     supabase.from("proxy_requests").select("id, status, updated_at, intl_tracking, external_items(title, images)").eq("order_id", id).order("created_at"),
     supabase.from("admin_order_transitions").select("from_status, to_status, kind"),
   ]);
-  const o = orderRes.data as unknown as { id: string; status: string; currency: string; total: number; created_at: string; profiles: { nickname: string } | null } | null;
+  const o = orderRes.data as unknown as { id: string; code: string | null; status: string; currency: string; total: number; created_at: string; profiles: { nickname: string } | null } | null;
   const items = (itemRes.data ?? []) as unknown as Item[];
   const transitions = safeRows(transRes) as { from_status: string; to_status: string; kind: "forward" | "correct" }[];
   const actRes = items.length
@@ -110,7 +120,7 @@ async function OrderSheet({ id, closeHref }: { id: string; closeHref: string }) 
   if (!o) return <DetailSheet title="주문" closeHref={closeHref}><p className="a-muted">주문을 찾지 못했어요.</p></DetailSheet>;
   return (
     <DetailSheet closeHref={closeHref}
-      title={<span className="tnum">주문 {o.id.slice(0, 8)}</span>}
+      title={<span className="tnum">주문 {orderLabel(o.code, o.id)}</span>}
       sub={<>{o.profiles?.nickname} · {money(o.total, o.currency)} · {fmtDate(o.created_at)} · <Link href={`/order/${o.id}`} className="a-link">고객 화면 ↗</Link></>}>
       <div className="mb-3 flex items-center gap-2"><Pill tone={ORDER_META[o.status]?.tone}>{ORDER_META[o.status]?.label ?? o.status}</Pill>
         {o.status !== "paid" && <span className="a-muted text-[12px]">결제 완료 주문만 항목 상태를 바꿀 수 있어요</span>}</div>

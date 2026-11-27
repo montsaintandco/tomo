@@ -1,3 +1,4 @@
+import { orderLabel } from "@/lib/order-code";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { getViewer, displayTitle } from "@/lib/listings";
 import { formatPrice, convertPrice, type Currency } from "@/lib/currency";
@@ -15,7 +16,7 @@ import { Suspense } from "react";
 import { rows as safeRows } from "@/lib/safe";
 
 type TxDetail = {
-  id: string; status: string; is_cross_border: boolean; meetup: boolean; center: string | null;
+  id: string; code?: string | null; status: string; is_cross_border: boolean; meetup: boolean; center: string | null;
   buyer_id: string; seller_id: string;
   item_price: number; intl_shipping_fee: number; platform_fee: number; currency: Currency;
   domestic_tracking: string | null; intl_tracking: string | null;
@@ -45,7 +46,7 @@ export default async function TransactionPage(props: { params: Promise<{ id: str
   const lang: Lang = viewer.language;
 
   const { data } = await supabase.from("transactions")
-    .select(`id, status, is_cross_border, meetup, center, buyer_id, seller_id,
+    .select(`id, code, status, is_cross_border, meetup, center, buyer_id, seller_id,
       item_price, intl_shipping_fee, platform_fee, currency, domestic_tracking, intl_tracking, dispute_reason, dispute_resolution,
       listings(id, title, source_language, country, images, listing_translations(language, title)),
       buyer:profiles!transactions_buyer_id_fkey(id, nickname),
@@ -82,7 +83,8 @@ export default async function TransactionPage(props: { params: Promise<{ id: str
   return (
     <main className="mx-auto max-w-md p-4 pb-8 standalone:pb-24 md:max-w-2xl md:px-6 md:pb-16 md:pt-8">
       <Suspense fallback={null}><PayNotice lang={lang} /></Suspense>
-      <h1 className="mb-3 text-[17px] font-extrabold leading-tight text-ink md:text-xl">{t(lang, "tx.title")}</h1>
+      <h1 className="mb-1 text-[17px] font-extrabold leading-tight text-ink md:text-xl">{t(lang, "tx.title")}</h1>
+      <p className="mb-3 text-[12px] text-ink-soft">{t(lang, "pay.orderNo")} <span className="tnum font-bold text-ink">{orderLabel(tx.code, tx.id)}</span></p>
 
       <Link href={`/listings/${l.id}`} className="card mb-4 flex items-center gap-3 p-3">
         <div className="h-14 w-14 shrink-0 overflow-hidden rounded-thumb bg-tomo-navy/5">

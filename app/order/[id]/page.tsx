@@ -1,3 +1,4 @@
+import { orderLabel } from "@/lib/order-code";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createServerSupabase } from "@/lib/supabase/server";
@@ -35,8 +36,8 @@ export default async function OrderReceiptPage(props: { params: Promise<{ id: st
     <main className="mx-auto max-w-md p-4 pb-8 standalone:pb-24 md:max-w-2xl md:px-6 md:pb-16 md:pt-8">
       <Suspense fallback={null}><PayNotice lang={lang} /></Suspense>
       <h1 className="mb-1 text-[17px] font-extrabold text-ink md:text-xl">{t(lang, "order.receipt")}</h1>
-      {/* 주문 번호 = 어드민 주문 목록과 같은 앞 8자리(02#15) — 고객 문의 때 같은 번호로 찾는다 */}
-      <p className="mb-1 text-[12px] text-ink-soft">{t(lang, "pay.orderNo")} <span className="tnum font-bold text-ink">{o.id.slice(0, 8)}</span></p>
+      {/* 주문 번호 = 어드민 주문 목록과 같은 T 번호(0042, 없으면 앞 8자리) — 고객 문의 때 같은 번호로 찾는다 */}
+      <p className="mb-1 text-[12px] text-ink-soft">{t(lang, "pay.orderNo")} <span className="tnum font-bold text-ink">{orderLabel(o.code, o.id)}</span></p>
       <p className={`mb-4 text-[13px] font-bold ${o.status === "paid" ? "text-tomo-navy" : "text-tomo-coral-deep"}`}>{t(lang, statusKey)}</p>
 
       <div className="mb-4"><OrderSummary lang={lang} totals={{ subtotal: o.subtotal, intlShipping: o.intl_shipping, customs: o.service_fee, total: o.total, currency: o.currency as Currency }} /></div>
