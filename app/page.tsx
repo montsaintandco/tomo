@@ -48,6 +48,7 @@ export default async function Home(props: { searchParams: Promise<{ tab?: string
   // 판매중 → 예약중 → 거래완료 순으로 노출 (당근·메루카리 관행: 끝난 거래는 뒤로)
   let query = supabase.from("listings")
     .select(FEED_SELECT)
+    .eq("hidden", false).neq("status", "held") // 숨김(판매자·운영자)·보류 상품은 공개 목록에서 뺀다(운영자·본인 세션은 RLS 로 보이므로)
     .order("status", { ascending: true })   // active < reserved < sold (enum 정의 순)
     .order("bumped_at", { ascending: false })
     .limit(feedLimit);
@@ -89,9 +90,9 @@ export default async function Home(props: { searchParams: Promise<{ tab?: string
   const [hubOwn, hubTravel] = hub
     ? await Promise.all([
         // 홈 허브는 사진 있는 상품만 — 사진 없는 시드·테스트 상품이 빈 마켓처럼 보이는 것을 막는다 (리스트 모드에는 그대로 보임)
-        supabase.from("listings").select(FEED_SELECT).eq("status", "active").not("images", "eq", "{}")
+        supabase.from("listings").select(FEED_SELECT).eq("status", "active").eq("hidden", false).not("images", "eq", "{}")
           .eq("country", viewer.country).order("bumped_at", { ascending: false }).limit(12),
-        supabase.from("listings").select(FEED_SELECT).eq("status", "active").not("images", "eq", "{}")
+        supabase.from("listings").select(FEED_SELECT).eq("status", "active").eq("hidden", false).not("images", "eq", "{}")
           .neq("country", viewer.country).in("trade_method", ["direct", "both"])
           .order("bumped_at", { ascending: false }).limit(8),
       ])

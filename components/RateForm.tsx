@@ -1,4 +1,5 @@
 "use client";
+import { fmtAt } from "@/lib/datetime";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserSupabase } from "@/lib/supabase/client";
@@ -28,7 +29,7 @@ export default function RateForm({ pair, rate, updatedAt }: { pair: string; rate
       <input value={value} onChange={(e) => setValue(e.target.value)} inputMode="decimal"
         className="tnum min-w-0 flex-1 rounded-full bg-tomo-ivory px-4 py-2.5 text-base" />
       <button disabled={busy || isPending} className="btn bg-tomo-navy px-4 py-2 text-sm text-white">저장</button>
-      <span className="w-20 shrink-0 text-right text-[11px] text-ink-faint">{msg || new Date(updatedAt).toLocaleDateString("ko-KR")}</span>
+      <span className="w-20 shrink-0 text-right text-[11px] text-ink-faint">{msg || fmtAt(updatedAt, "ko", { year: "numeric", month: "numeric", day: "numeric" })}</span>
     </form>
   );
 }

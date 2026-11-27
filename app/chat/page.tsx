@@ -1,3 +1,4 @@
+import { fmtAt } from "@/lib/datetime";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { getViewer, displayTitle } from "@/lib/listings";
 import { t, type Lang } from "@/lib/i18n";
@@ -30,7 +31,7 @@ function preview(m: LastMessage | undefined, lang: Lang): string {
 function when(iso: string, lang: Lang): string {
   const d = new Date(iso);
   const sameDay = Date.now() - d.getTime() < 86_400_000;
-  return d.toLocaleString(lang === "ja" ? "ja-JP" : "ko-KR",
+  return fmtAt(d, lang,
     sameDay ? { hour: "2-digit", minute: "2-digit" } : { month: "numeric", day: "numeric" });
 }
 

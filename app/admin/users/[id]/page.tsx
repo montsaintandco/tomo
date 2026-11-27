@@ -49,8 +49,8 @@ export default async function AdminUserDetailPage(props: { params: Promise<{ id:
 
   const recent = { ascending: false } as const;
   const [buyRes, sellRes, proxyRes, orderRes, ticketRes, ledRes, payRes, accRes, email] = await Promise.all([
-    supabase.from("transactions").select("id, status, item_price, currency, created_at, listings(title)").eq("buyer_id", id).order("created_at", recent).limit(LIMIT),
-    supabase.from("transactions").select("id, status, item_price, currency, created_at, listings(title)").eq("seller_id", id).order("created_at", recent).limit(LIMIT),
+    supabase.from("transactions").select("id, status, item_price, currency, created_at, listings!transactions_listing_id_fkey(title)").eq("buyer_id", id).order("created_at", recent).limit(LIMIT),
+    supabase.from("transactions").select("id, status, item_price, currency, created_at, listings!transactions_listing_id_fkey(title)").eq("seller_id", id).order("created_at", recent).limit(LIMIT),
     supabase.from("proxy_requests").select("id, status, quote_total, order_id, created_at, external_items(title)").eq("user_id", id).order("created_at", recent).limit(LIMIT),
     supabase.from("proxy_orders").select("id, status, total, currency, created_at").eq("user_id", id).order("created_at", recent).limit(LIMIT),
     supabase.from("support_tickets").select("id, category, status, body, created_at").eq("user_id", id).order("created_at", recent).limit(LIMIT),

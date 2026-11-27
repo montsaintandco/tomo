@@ -321,3 +321,11 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=<Supabase 대시보드 → Project Settings → AP
 - 플래그 `NEXT_PUBLIC_MARKET_AUCTION` 은 운영에 없음(넣지 말 것 — M6 리허설 뒤).
 - Stripe 테스트 모드 실측: 승인만 결제창 완료 = session complete + payment_status unpaid + PI requires_capture, capture_before = 승인 + 7일(시험 Visa). 부분 매입·취소·만료 뒤 승인 자동 해제 확인. 시험 데이터 정리 완료.
 - 다음: M3(마이그레이션 0051 — 설계 번호에서 한 칸 밀림), M4 고객 화면, M5 운영.
+### 2026-11-27 실결제 시험 뒤 결함 수정 (0051, docs/aaa/index.md 사고 기록)
+- 0051_tx_embed_fix 운영 적용(되돌림 리허설: 0051 없이 결함 재현 → 0051 로 통과, 되돌리기 SQL 로 notify_transaction md5 원복 확인).
+- A: listings.held_tx_id FK 제거(칸 유지, 무결성 대체 검사 없음 — 쓰는 곳이 listing_after_tx_cancel 하나). 거래→상품 임베드는 전부 `listings!transactions_listing_id_fkey(...)`. 새 FK 를 더해 표 쌍 관계가 2개 이상이 되면 `tests/postgrest-embeds.db.test.ts` 가 관계 이름 없는 코드 임베드를 잡는다. 운영 감시는 `/api/health` `embeds`(스모크가 "ok" 확인).
+- B: 결제된 경매 거래를 운영자 취소·분쟁 환불하면 상품을 숨긴다(auctions.tx_id = 그 거래). 판매자 마이페이지 경매 「다시 경매/전환 선택 필요」·할 일 숫자에 paid+판매중 포함(`sellerNeedsChoice`).
+- C: 공개 목록(상세 판매자 다른 상품·비슷한 상품, 홈 목록·허브, 여행, 카테고리 수, 프로필)에서 숨김 상품 제외(`hidden=false`, 운영자 숨김도 hidden 이 같이 켜짐). 상태 필터 없는 홈 목록·프로필은 보류(held)도 제외.
+- D: 화면 시각은 `lib/datetime.ts` `fmtAt`(Asia/Seoul). 어드민 `fmtDate`·상품 표, 고객 채팅 목록·알림·출금·문의·상품 등록일.
+- E: 직거래 결제 완료 때 구매자 알림 `tx_buyer_paid`(ko/ja). notify_transaction 은 paid 줄 하나만 바꿈(0049 방식, 되돌리기 SQL 파일 끝).
+- F: 에어쉽 connected_site_events 의 auction.ended 시험 1건(11/27 16:48)은 남아 있음 — 에어쉽 docs/connected-sites.md 에 DB 접근 방법이 없어 지우지 않았다.

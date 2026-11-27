@@ -28,6 +28,7 @@ export const MY_I18N = {
 
   // 알림 문구 (kind → notif.<kind>, lib/notifications.ts NOTIF_KINDS 와 1:1)
   "notif.tx_paid": ["판매한 상품이 결제됐어요. 발송해 주세요", "商品が購入されました。発送してください"],
+  "notif.tx_buyer_paid": ["결제가 완료됐어요. 진행 상황은 거래 화면에서 볼 수 있어요", "お支払いが完了しました。進み具合は取引画面で確認できます"],
   "notif.tx_shipped": ["구매한 상품이 발송됐어요", "購入した商品が発送されました"],
   "notif.tx_to_center": ["판매자가 상품을 센터로 보냈어요", "出品者が商品をセンターへ発送しました"],
   "notif.tx_center_received": ["상품이 센터에 도착했어요. 검수 후 국제 발송해요", "商品がセンターに到着しました。検品後に国際発送します"],

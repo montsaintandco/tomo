@@ -166,13 +166,16 @@ export const payNeededCount = (rows: { won: boolean; status: string; pay_due_at:
 
 /** 마이페이지 할 일: 유찰·미결제로 끝나 판매자가 다시 경매/전환을 골라야 하는 상품 수.
  *  rows 는 내 경매(최신순). 같은 상품은 가장 최근 경매만 본다(다시 경매했으면 옛 행은 끝난 일), 일반 전환한 상품은 뺀다 */
-export function sellerChoiceCount(rows: { listing_id: string; status: string; listings: { sale_type: string } | null }[]): number {
+export const sellerNeedsChoice = (status: string, l: { sale_type: string; status?: string } | null) =>
+  l?.sale_type === "auction" && (status === "unsold" || status === "unpaid" || (status === "paid" && l.status === "active")); // paid+active: 결제 뒤 운영자 취소·환불로 돌아온 상품(0051, 숨김 상태)
+
+export function sellerChoiceCount(rows: { listing_id: string; status: string; listings: { sale_type: string; status?: string } | null }[]): number {
   const seen = new Set<string>();
   let n = 0;
   for (const a of rows) {
     if (seen.has(a.listing_id)) continue;
     seen.add(a.listing_id);
-    if (a.listings?.sale_type === "auction" && (a.status === "unsold" || a.status === "unpaid")) n++;
+    if (sellerNeedsChoice(a.status, a.listings)) n++;
   }
   return n;
 }

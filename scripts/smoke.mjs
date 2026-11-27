@@ -50,7 +50,7 @@ const CHECKS = [
   [`/global?q=${encodeURIComponent("ポケモン")}`, (r) => r.status === 200],
   ["/help", (r) => r.status === 200],
   ["/robots.txt", (r) => r.status === 200 && /user-agent/i.test(r.text)],
-  ["/api/health", (r) => r.status === 200 && /"ok":true/.test(r.text)],
+  ["/api/health", (r) => r.status === 200 && /"ok":true/.test(r.text) && /"embeds":"ok"/.test(r.text)], // embeds: 거래·경매 임베드(0051)
 ];
 for (const [path, ok] of CHECKS) {
   const r = await get(path);

@@ -1,3 +1,4 @@
+import { fmtAt } from "@/lib/datetime";
 import Link from "next/link";
 import { TomoSymbol } from "@/components/Brand";
 import { hrefWith, pageItems, type Params } from "@/components/admin/paging";
@@ -137,7 +138,7 @@ export function Avatar({ name, size = 24 }: { name: string; size?: number }) {
   );
 }
 
-export const fmtDate = (iso: string) => new Date(iso).toLocaleString("ko-KR", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
+export const fmtDate = (iso: string) => fmtAt(iso, "ko", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" }); // 한국 시간(0051 전에는 서버 UTC 로 찍혔다)
 export const money = (n: number, cur: string) => cur === "JPY" ? `¥${n.toLocaleString("en-US")}` : `${n.toLocaleString("en-US")}원`;
 export const todayIso = () => new Date(new Date().setHours(0, 0, 0, 0)).toISOString();
 

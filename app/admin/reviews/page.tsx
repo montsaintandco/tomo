@@ -9,7 +9,7 @@ const HEART = "M12 21C7.2 17.2 2.5 13.6 2.5 8.9 2.5 5.6 5 3.5 7.8 3.5c1.7 0 3.3.
 export default async function AdminReviewsPage() {
   const supabase = await createServerSupabase();
   const { data } = await supabase.from("reviews")
-    .select("id, rating, comment, created_at, reviewer:profiles!reviews_reviewer_id_fkey(nickname), transactions(id, listings(title))")
+    .select("id, rating, comment, created_at, reviewer:profiles!reviews_reviewer_id_fkey(nickname), transactions(id, listings!transactions_listing_id_fkey(title))")
     .order("created_at", { ascending: false }).limit(100);
   const rows = (data ?? []) as unknown as {
     id: string; rating: number; comment: string | null; created_at: string;

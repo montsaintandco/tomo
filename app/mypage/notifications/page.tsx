@@ -1,3 +1,4 @@
+import { fmtAt } from "@/lib/datetime";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { getViewer } from "@/lib/listings";
 import { t } from "@/lib/i18n";
@@ -22,7 +23,7 @@ export default async function MyNotifications(props: { searchParams: Promise<{ p
   const all = rows(res as { data: Notif[] | null; error: { code?: string } | null });
   const list = all.slice(0, limit);
   const missing = tableMissing(res.error);
-  const fmt = (s: string) => new Date(s).toLocaleString(lang === "ja" ? "ja-JP" : "ko-KR", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  const fmt = (s: string) => fmtAt(s, lang, { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
 
   return (
     <main className="mx-auto max-w-md p-4 pb-8 standalone:pb-24 md:max-w-none md:p-0 md:pb-16">

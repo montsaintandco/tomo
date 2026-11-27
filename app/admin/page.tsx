@@ -21,11 +21,11 @@ export default async function AdminHome() {
     cnt(supabase.from("listings").select("id", { count: "exact", head: true }).gte("created_at", today)),
     cnt(supabase.from("profiles").select("id", { count: "exact", head: true }).gte("created_at", today)),
     cnt(supabase.from("proxy_orders").select("id", { count: "exact", head: true }).eq("status", "paid").gte("updated_at", today)),
-    supabase.from("transactions").select("id, status, item_price, currency, updated_at, dispute_reason, listings(title), buyer:profiles!transactions_buyer_id_fkey(nickname)")
+    supabase.from("transactions").select("id, status, item_price, currency, updated_at, dispute_reason, listings!transactions_listing_id_fkey(title), buyer:profiles!transactions_buyer_id_fkey(nickname)")
       .eq("status", "disputed").order("updated_at", { ascending: false }).limit(5),
     supabase.from("proxy_requests").select("id, status, created_at, external_items(title), profiles!proxy_requests_user_id_fkey(nickname)")
       .in("status", ["requested", "approved", "paid", "purchasing", "center_received"]).order("created_at", { ascending: true }).limit(6),
-    supabase.from("transactions").select("id, status, center, updated_at, listings(title)")
+    supabase.from("transactions").select("id, status, center, updated_at, listings!transactions_listing_id_fkey(title)")
       .in("status", ["shipped_to_center", "center_received"]).order("updated_at", { ascending: true }).limit(6),
     // 0025·0026 미적용이면 오류 → 0
     cnt(supabase.from("refunds").select("id", { count: "exact", head: true }).in("status", ["pending", "failed"])),

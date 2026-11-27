@@ -1,3 +1,4 @@
+import { fmtAt } from "@/lib/datetime";
 import { createServerSupabase } from "@/lib/supabase/server";
 import TrackView from "@/components/home/TrackView";
 import { jsonLd } from "@/lib/json-ld";
@@ -75,9 +76,9 @@ export default async function ListingDetail(props: { params: Promise<{ id: strin
   // 상세 하단 탐색 (당근·메루카리): 판매자의 다른 상품 + 같은 카테고리
   const CARD_SELECT = `id, title, price, currency, source_language, country, region, status, images, created_at, trade_method, cross_border_enabled, listing_translations(language, title)${auctionSelect()}` as const;
   const [{ data: moreFromSeller }, { data: similar }] = await Promise.all([
-    supabase.from("listings").select(CARD_SELECT).eq("seller_id", seller.id).eq("status", "active").neq("id", l.id)
+    supabase.from("listings").select(CARD_SELECT).eq("seller_id", seller.id).eq("status", "active").eq("hidden", false).neq("id", l.id)
       .order("bumped_at", { ascending: false }).limit(6),
-    supabase.from("listings").select(CARD_SELECT).eq("category", l.category).eq("status", "active").neq("id", l.id).neq("seller_id", seller.id)
+    supabase.from("listings").select(CARD_SELECT).eq("category", l.category).eq("status", "active").eq("hidden", false).neq("id", l.id).neq("seller_id", seller.id)
       .order("bumped_at", { ascending: false }).limit(6),
   ]);
   const wishCount = typeof wishRes.data === "number" ? wishRes.data : 0;
@@ -127,7 +128,7 @@ export default async function ListingDetail(props: { params: Promise<{ id: strin
   // 국경 간 택배 결제 합계 — 결제(app/api/checkout)·DB(0035)와 같은 directShippingFee. 첫 화면에서 국제 배송비를 보인다
   const directTotals = foreign && shipAvailable && !free && canAct && !isMine && !isAuction
     ? directDetailTotal(l.price, l.currency === "JPY" ? "JPY" : "KRW", true) : null;
-  const listedAt = new Date(l.created_at).toLocaleDateString(lang === "ja" ? "ja-JP" : "ko-KR", { year: "numeric", month: "long", day: "numeric" });
+  const listedAt = fmtAt(l.created_at, lang, { year: "numeric", month: "long", day: "numeric" });
 
   const info: [string, React.ReactNode][] = [
     [t(lang, "info.category"), categoryName],

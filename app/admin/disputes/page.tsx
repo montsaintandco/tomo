@@ -14,7 +14,7 @@ export default async function AdminDisputesPage() {
   const supabase = await createServerSupabase();
   const { data } = await supabase.from("transactions")
     .select(`id, status, item_price, currency, is_cross_border, meetup, dispute_reason, dispute_resolution, updated_at, listing_id,
-      listings(title, status), buyer:profiles!transactions_buyer_id_fkey(nickname), seller:profiles!transactions_seller_id_fkey(nickname)`)
+      listings!transactions_listing_id_fkey(title, status), buyer:profiles!transactions_buyer_id_fkey(nickname), seller:profiles!transactions_seller_id_fkey(nickname)`)
     .or("status.eq.disputed,dispute_resolution.not.is.null")
     .order("updated_at", { ascending: false }).limit(100);
   const rows = (data ?? []) as unknown as {

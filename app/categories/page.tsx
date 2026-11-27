@@ -23,7 +23,7 @@ export default async function CategoriesPage() {
   const other = otherCountry(country);
   const supabase = await createServerSupabase();
   // 토모 상품 수 — 대분류마다 세지 않고 한 번에 읽어 센다(판매중 최대 2000건)
-  const localCounts = supabase.from("listings").select("category").eq("status", "active").limit(2000)
+  const localCounts = supabase.from("listings").select("category").eq("status", "active").eq("hidden", false).limit(2000)
     .then((r) => {
       const m = new Map<string, number>();
       for (const row of (r.data ?? []) as { category: string }[]) m.set(row.category, (m.get(row.category) ?? 0) + 1);

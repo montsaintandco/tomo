@@ -39,7 +39,7 @@ export default async function ProfilePage(props: { params: Promise<{ id: string 
 
   const { data: listings } = await supabase.from("listings")
     .select(`id, title, price, currency, status, images${auctionSelect()}` as const)
-    .eq("seller_id", targetId).order("created_at", { ascending: false }).limit(20);
+    .eq("seller_id", targetId).eq("hidden", false).neq("status", "held").order("created_at", { ascending: false }).limit(20);
 
   // 받은 후기 = 이 거래의 상대가 남긴 후기 (reviewer가 본인이 아닌 것)
   const { data: reviewsRaw } = await supabase.from("reviews")

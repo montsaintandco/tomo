@@ -3,7 +3,7 @@ import { getViewer } from "@/lib/listings";
 import { formatPrice } from "@/lib/currency";
 import { t, type Lang } from "@/lib/i18n";
 import { PageTitle, Tabs, Row, Empty } from "@/components/mypage/MyNav";
-import { auctionEnabled, timeLeftShort, type AuctionStatus, type Cur } from "@/lib/auction";
+import { auctionEnabled, sellerNeedsChoice, timeLeftShort, type AuctionStatus, type Cur } from "@/lib/auction";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
@@ -19,7 +19,7 @@ type MyBid = {
 type MySale = {
   id: string; listing_id: string; status: AuctionStatus; currency: Cur; current_price: number; bid_count: number;
   ends_at: string; pay_due_at: string | null; final_price: number | null;
-  listings: { title: string; images: string[]; sale_type: string } | null;
+  listings: { title: string; images: string[]; sale_type: string; status: string } | null;
 };
 const TABS = ["bidding", "won", "selling"] as const;
 const leftOf = (iso: string) => new Date(iso).getTime() - Date.now();
@@ -37,7 +37,7 @@ export default async function MyAuctions(props: { searchParams: Promise<{ tab?: 
   let body: React.ReactNode;
   if (tab === "selling") {
     const { data } = await supabase.from("auctions")
-      .select("id, listing_id, status, currency, current_price, bid_count, ends_at, pay_due_at, final_price, listings(title, images, sale_type)")
+      .select("id, listing_id, status, currency, current_price, bid_count, ends_at, pay_due_at, final_price, listings(title, images, sale_type, status)")
       .eq("seller_id", viewer.id).order("created_at", { ascending: false }).limit(100);
     // 같은 상품을 다시 경매했으면 가장 최근 경매만
     const seen = new Set<string>();
@@ -45,7 +45,7 @@ export default async function MyAuctions(props: { searchParams: Promise<{ tab?: 
     body = list.length ? (
       <div className="flex flex-col gap-2">
         {list.map((a) => {
-          const choice = a.listings?.sale_type === "auction" && (a.status === "unsold" || a.status === "unpaid");
+          const choice = sellerNeedsChoice(a.status, a.listings);
           const sub = [
             t(lang, `auction.st.${a.status}`), t(lang, "auction.bids", { n: a.bid_count }),
             ...(a.status === "live" ? [timeLeftShort(lang, leftOf(a.ends_at))] : []),

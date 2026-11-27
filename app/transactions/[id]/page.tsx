@@ -48,7 +48,7 @@ export default async function TransactionPage(props: { params: Promise<{ id: str
   const { data } = await supabase.from("transactions")
     .select(`id, code, status, is_cross_border, meetup, center, buyer_id, seller_id,
       item_price, intl_shipping_fee, platform_fee, currency, domestic_tracking, intl_tracking, dispute_reason, dispute_resolution,
-      listings(id, title, source_language, country, images, listing_translations(language, title)),
+      listings!transactions_listing_id_fkey(id, title, source_language, country, images, listing_translations(language, title)),
       buyer:profiles!transactions_buyer_id_fkey(id, nickname),
       seller:profiles!transactions_seller_id_fkey(id, nickname)`)
     .eq("id", params.id).maybeSingle();

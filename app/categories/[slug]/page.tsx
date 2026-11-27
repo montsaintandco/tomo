@@ -39,7 +39,7 @@ export default async function CategoryPage(props: { params: Promise<{ slug: stri
   const lang: Lang = viewer.language;
   const other = otherCountry(viewer.country);
   const sources = LIVE_SOURCES.filter((s) => SOURCE_CURRENCY[s] === (viewer.country === "KR" ? "JPY" : "KRW"));
-  const local = await supabase.from("listings").select("id", { count: "exact", head: true }).eq("status", "active").eq("category", major.slug)
+  const local = await supabase.from("listings").select("id", { count: "exact", head: true }).eq("status", "active").eq("hidden", false).eq("category", major.slug)
     .then((r) => r.count ?? 0, () => 0);
   const label = name(lang, major);
   const sub = "mt-8 text-[17px] font-extrabold text-ink";

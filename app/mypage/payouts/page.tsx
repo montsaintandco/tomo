@@ -1,3 +1,4 @@
+import { fmtAt } from "@/lib/datetime";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { getViewer } from "@/lib/listings";
 import { t, type Lang } from "@/lib/i18n";
@@ -37,7 +38,7 @@ export default async function PayoutsPage() {
   const shown = CURRENCIES.filter((c) => c === viewer.currency
     || bals.some((b) => b.currency === c && (Number(b.balance) !== 0 || Number(b.pending) !== 0))
     || accounts.some((a) => a.currency === c));
-  const date = (iso: string) => new Date(iso).toLocaleDateString(lang === "ja" ? "ja-JP" : "ko-KR");
+  const date = (iso: string) => fmtAt(iso, lang, { year: "numeric", month: "numeric", day: "numeric" });
 
   return (
     <div className="flex flex-col gap-6">

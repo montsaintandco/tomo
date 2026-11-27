@@ -15,7 +15,7 @@ export default async function MyTurnQueue() {
     supabase.from("proxy_requests").select("id, status, order_id, updated_at, external_items(title), profiles!proxy_requests_user_id_fkey(nickname)")
       .in("status", Object.keys(PROXY_STAGE)).order("updated_at", { ascending: true }).limit(PER),
     supabase.from("proxy_requests").select("id, cancel_requested_at").eq("status", "paid").not("cancel_requested_at", "is", null).limit(PER),
-    supabase.from("transactions").select("id, status, updated_at, listings(title), buyer:profiles!transactions_buyer_id_fkey(nickname)")
+    supabase.from("transactions").select("id, status, updated_at, listings!transactions_listing_id_fkey(title), buyer:profiles!transactions_buyer_id_fkey(nickname)")
       .in("status", ["disputed", "shipped_to_center", "center_received"]).order("updated_at", { ascending: true }).limit(PER),
     supabase.from("refunds").select("id, status, amount, currency, created_at").in("status", ["pending", "failed"]).order("created_at", { ascending: true }).limit(PER),
     supabase.from("payouts").select("id, amount, currency, requested_at, profiles!payouts_user_id_fkey(nickname)").eq("status", "requested").order("requested_at", { ascending: true }).limit(PER),

@@ -31,12 +31,12 @@ export default async function TravelPage() {
   const regions = Array.from(new Set(trips.map((tr) => tr.region)));
 
   // 일정이 있으면 그 동네 우선, 없으면 상대국 직거래 전체
-  let q = supabase.from("listings").select(CARD_SELECT).eq("status", "active").eq("country", dest)
+  let q = supabase.from("listings").select(CARD_SELECT).eq("status", "active").eq("hidden", false).eq("country", dest)
     .in("trade_method", ["direct", "both"]).order("bumped_at", { ascending: false }).limit(24);
   if (regions.length > 0) q = q.in("region", regions);
   const { data: matched } = await q;
   const { data: others } = regions.length > 0 && (matched ?? []).length < 6
-    ? await supabase.from("listings").select(CARD_SELECT).eq("status", "active").eq("country", dest)
+    ? await supabase.from("listings").select(CARD_SELECT).eq("status", "active").eq("hidden", false).eq("country", dest)
         .in("trade_method", ["direct", "both"]).order("bumped_at", { ascending: false }).limit(12)
     : { data: null };
 

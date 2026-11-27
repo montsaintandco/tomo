@@ -1,3 +1,4 @@
+import { fmtAt } from "@/lib/datetime";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { getViewer } from "@/lib/listings";
 import { t } from "@/lib/i18n";
@@ -30,7 +31,7 @@ export default async function MySupport(props: { searchParams: Promise<{ page?: 
         {list.map((k) => (
           <div key={k.id} className="card p-3.5 text-[13px]">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-[11px] font-bold text-ink-soft">{new Date(k.created_at).toLocaleDateString(lang === "ja" ? "ja-JP" : "ko-KR")}</span>
+              <span className="text-[11px] font-bold text-ink-soft">{fmtAt(k.created_at, lang, { year: "numeric", month: "numeric", day: "numeric" })}</span>
               <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${k.status === "open" ? "bg-tomo-coral-deep/10 text-tomo-coral-deep" : "bg-tomo-navy/5 text-ink-soft"}`}>
                 {t(lang, k.status === "open" ? "my.supportOpen" : k.status === "answered" ? "my.supportAnswered" : "my.supportClosed")}
               </span>

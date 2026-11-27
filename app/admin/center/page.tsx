@@ -12,7 +12,7 @@ type Row = {
 export default async function AdminCenterPage() {
   const supabase = await createServerSupabase();
   const { data } = await supabase.from("transactions")
-    .select(`id, status, center, domestic_tracking, is_cross_border, meetup, updated_at, listings(title),
+    .select(`id, status, center, domestic_tracking, is_cross_border, meetup, updated_at, listings!transactions_listing_id_fkey(title),
       buyer:profiles!transactions_buyer_id_fkey(nickname), seller:profiles!transactions_seller_id_fkey(nickname)`)
     .in("status", ["shipped_to_center", "center_received"]).order("updated_at", { ascending: true });
   const rows = (data ?? []) as unknown as Row[];

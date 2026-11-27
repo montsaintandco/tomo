@@ -92,7 +92,7 @@ const KNOWN = new Set(["pending_payment", "paid", "cancelled"]);
 export async function customerContext(supabase: SupabaseClient, userId: string, lang: Lang): Promise<string> {
   const [tx, pr, po] = await Promise.all([
     supabase.from("transactions")
-      .select("id, status, item_price, currency, buyer_id, created_at, is_cross_border, domestic_tracking, intl_tracking, listings(title)")
+      .select("id, status, item_price, currency, buyer_id, created_at, is_cross_border, domestic_tracking, intl_tracking, listings!transactions_listing_id_fkey(title)")
       .or(`buyer_id.eq.${userId},seller_id.eq.${userId}`).order("created_at", { ascending: false }).limit(10),
     supabase.from("proxy_requests")
       .select("id, status, created_at, intl_tracking, external_items(title, title_translated)")

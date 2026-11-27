@@ -52,7 +52,7 @@ export default async function MySales(props: { searchParams: Promise<{ tab?: str
     );
   } else {
     const { data } = await supabase.from("transactions")
-      .select("id, code, status, item_price, currency, listings(title, source_language, images, listing_translations(language, title))")
+      .select("id, code, status, item_price, currency, listings!transactions_listing_id_fkey(title, source_language, images, listing_translations(language, title))")
       .eq("seller_id", viewer.id).order("created_at", { ascending: false }).limit(limit + 1);
     const list = (data ?? []).slice(0, limit);
     body = (

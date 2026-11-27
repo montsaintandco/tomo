@@ -28,7 +28,7 @@ export default async function AdminTransactionsPage(props: { searchParams: Promi
   const params = { status: status || undefined, page: page > 1 ? String(page) : undefined, q: qText || undefined };
   const supabase = await createServerSupabase();
   let q = supabase.from("transactions")
-    .select("id, code, status, is_cross_border, meetup, center, item_price, currency, updated_at, listings(title), buyer:profiles!transactions_buyer_id_fkey(nickname), seller:profiles!transactions_seller_id_fkey(nickname)", { count: "exact" })
+    .select("id, code, status, is_cross_border, meetup, center, item_price, currency, updated_at, listings!transactions_listing_id_fkey(title), buyer:profiles!transactions_buyer_id_fkey(nickname), seller:profiles!transactions_seller_id_fkey(nickname)", { count: "exact" })
     .order("updated_at", { ascending: false }).range(from, to);
   if (status === "open") q = q.in("status", OPEN);
   else if (status) q = q.eq("status", status);

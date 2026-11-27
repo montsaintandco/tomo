@@ -155,7 +155,9 @@ describe("화면 표시(U3·U4)", () => {
       { listing_id: "b", status: "unpaid", listings: { sale_type: "auction" } },
       { listing_id: "c", status: "unsold", listings: { sale_type: "fixed" } },      // 일반 전환함
       { listing_id: "d", status: "cancelled", listings: { sale_type: "auction" } },
-    ])).toBe(1);
+      { listing_id: "e", status: "paid", listings: { sale_type: "auction", status: "active" } },  // 결제 뒤 운영자 취소로 돌아옴(0051)
+      { listing_id: "f", status: "paid", listings: { sale_type: "auction", status: "sold" } },    // 정상 판매
+    ])).toBe(2);
   });
   it("화면 문구 ko/ja 가 다르다(누락·복사 없음)", () => {
     for (const k of I18N_KEYS.filter((x) => x.startsWith("auction."))) expect(t("ko", k), k).not.toBe(t("ja", k));

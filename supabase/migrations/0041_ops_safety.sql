@@ -11,7 +11,7 @@ alter type listing_status add value if not exists 'held';
 
 -- ── ② 컬럼 ──
 alter table listings add column if not exists held_at timestamptz;
-alter table listings add column if not exists held_tx_id uuid references transactions(id);
+alter table listings add column if not exists held_tx_id uuid references transactions(id);  -- 2026-11-27: 이 FK 가 transactions↔listings 임베드를 모호(PGRST201)하게 만들어 거래 화면이 5시간 장애. 0051 이 지운다(칸은 남김)
 alter table transactions add column if not exists disputed_from tx_status;   -- 분쟁 직전 상태(물건 위치 판단용)
 
 -- 분쟁 진입 시 직전 상태를 남긴다 (open_dispute·advance_transaction 둘 다 이 트리거로 잡힌다)

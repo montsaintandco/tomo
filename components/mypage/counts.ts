@@ -30,7 +30,7 @@ async function auctionTodo(supabase: SupabaseClient, me: string): Promise<{ pay:
   if (!auctionEnabled()) return { pay: 0, choice: 0 };
   const [bids, mine] = await Promise.all([
     supabase.rpc("my_auction_bids", { p_limit: 100 }),
-    supabase.from("auctions").select("listing_id, status, listings(sale_type)").eq("seller_id", me).order("created_at", { ascending: false }).limit(200),
+    supabase.from("auctions").select("listing_id, status, listings(sale_type, status)").eq("seller_id", me).order("created_at", { ascending: false }).limit(200),
   ]);
   return {
     pay: payNeededCount(Array.isArray(bids.data) ? bids.data : [], Date.now()),

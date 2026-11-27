@@ -1,4 +1,5 @@
 "use client";
+import { fmtAt } from "@/lib/datetime";
 import { useCallback, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -19,7 +20,7 @@ const STATUS: Record<string, { label: string; tone: string }> = {
   held: { label: "보류(반송 확인 필요)", tone: "red" },   // 0041: 발송 뒤 취소·분쟁 환불
 };
 const money = (n: number, cur: string) => (cur === "JPY" ? `¥${n.toLocaleString("en-US")}` : `${n.toLocaleString("en-US")}원`);
-const date = (iso: string) => new Date(iso).toLocaleString("ko-KR", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
+const date = (iso: string) => fmtAt(iso, "ko", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
 
 // 상품 표 — 체크해서 한꺼번에 운영 숨김·복구(선택 규칙은 use-grid-selection: 화면에 보이는 행만 대상, 성공한 건만 선택에서 뺀다)
 export default function ListingsTable({ rows }: { rows: AdminListingRow[] }) {
