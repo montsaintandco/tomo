@@ -7,13 +7,14 @@ import TripForm, { type Trip } from "@/components/TripForm";
 import ListingCard from "@/components/ListingCard";
 import type { FeedListing } from "@/components/ListingRow";
 import { TomoSymbol } from "@/components/Brand";
+import { auctionSelect } from "@/lib/auction";
 import Link from "next/link";
 
 export async function generateMetadata() {
   return pageMeta("/travel", "travel", await getRequestLang());
 }
 
-const CARD_SELECT = "id, title, price, currency, source_language, country, region, status, images, created_at, trade_method, cross_border_enabled, listing_translations(language, title)";
+const CARD_SELECT = `id, title, price, currency, source_language, country, region, status, images, created_at, trade_method, cross_border_enabled, listing_translations(language, title)${auctionSelect()}` as const;
 
 // 여행 직거래 허브: 내 여행 일정 → 그 동네에서 만나 받을 수 있는 상품. 국제배송비 0원이 이 페이지의 이유
 export default async function TravelPage() {

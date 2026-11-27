@@ -1,24 +1,40 @@
 // 마이페이지 미확인 숫자 — 메뉴 배지(레이아웃·홈 목록)와 홈 「할 일」이 같은 숫자를 본다. 서버 전용.
 // 진행 보드 단계 묶기(progressCounts)는 순수 함수라 tests/unit/my-progress.test.ts 가 본다.
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { auctionEnabled, payNeededCount, sellerChoiceCount } from "@/lib/auction";
 
-export type MyBadges = { orders: number; sales: number; offers: number; notifications: number };
+// auctions = auctionPay(낙찰 결제 필요) + auctionChoice(유찰·미결제 뒤 선택 필요). 플래그가 꺼지면 0(조회도 안 한다)
+export type MyBadges = { orders: number; sales: number; offers: number; notifications: number; auctions: number; auctionPay: number; auctionChoice: number };
 export type BadgeKey = keyof MyBadges;
 
 const RECEIVE = ["shipped", "shipped_international", "delivered"];
 
 export async function myBadges(supabase: SupabaseClient, me: string): Promise<MyBadges> {
-  const [ship, receive, offersIn, unread] = await Promise.all([
+  const [ship, receive, offersIn, unread, { pay, choice }] = await Promise.all([
     supabase.from("transactions").select("id", { count: "exact", head: true }).eq("seller_id", me).eq("status", "paid"),
     supabase.from("transactions").select("id", { count: "exact", head: true }).eq("buyer_id", me).in("status", RECEIVE),
     supabase.from("offers").select("id, listings!inner(seller_id)", { count: "exact", head: true }).eq("listings.seller_id", me).eq("status", "pending"),
     supabase.rpc("unread_notifications"), // 0027 미적용·오류면 0
+    auctionTodo(supabase, me),
   ]);
   return {
     orders: receive.count ?? 0,
     sales: ship.count ?? 0,
     offers: offersIn.count ?? 0,
     notifications: typeof unread.data === "number" ? unread.data : 0,
+    auctions: pay + choice, auctionPay: pay, auctionChoice: choice,
+  };
+}
+
+async function auctionTodo(supabase: SupabaseClient, me: string): Promise<{ pay: number; choice: number }> {
+  if (!auctionEnabled()) return { pay: 0, choice: 0 };
+  const [bids, mine] = await Promise.all([
+    supabase.rpc("my_auction_bids", { p_limit: 100 }),
+    supabase.from("auctions").select("listing_id, status, listings(sale_type)").eq("seller_id", me).order("created_at", { ascending: false }).limit(200),
+  ]);
+  return {
+    pay: payNeededCount(Array.isArray(bids.data) ? bids.data : [], Date.now()),
+    choice: sellerChoiceCount((mine.data ?? []) as unknown as Parameters<typeof sellerChoiceCount>[0]),
   };
 }
 

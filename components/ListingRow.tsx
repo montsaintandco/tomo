@@ -4,6 +4,7 @@ import Price from "@/components/ui/Price";
 import { displayTitle, type Viewer } from "@/lib/listings";
 import { CountryChip, TomoSymbol } from "@/components/Brand";
 import { t, type Lang } from "@/lib/i18n";
+import { AuctionBadge, AuctionMeta, cardAuction, type AuctionFields } from "@/components/auction/AuctionCardMeta";
 
 export type FeedListing = {
   id: string; title: string; price: number; currency: Currency;
@@ -12,7 +13,7 @@ export type FeedListing = {
   trade_method?: "direct" | "shipping" | "both";
   cross_border_enabled?: boolean;
   listing_translations: { language: string; title: string }[];
-};
+} & AuctionFields;
 
 function ago(iso: string, lang: Lang): string {
   const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
@@ -36,6 +37,7 @@ export default function ListingRow({ listing, viewer }: {
   const reserved = listing.status === "reserved" || listing.status === "held";
   // 상대국 상품이면서 직접 만나 거래 가능 → 여행 갔을 때 직거래할 수 있음
   const travelDeal = foreign && (listing.trade_method === "direct" || listing.trade_method === "both");
+  const auction = cardAuction(listing);
 
   return (
     <li className="border-b border-tomo-navy/5 last:border-0 md:border-0">
@@ -57,6 +59,7 @@ export default function ListingRow({ listing, viewer }: {
               {t(lang, sold ? "badge.sold" : listing.status === "held" ? "badge.paused" : "badge.reserved")}
             </span>
           )}
+          {auction && !sold && !reserved && <AuctionBadge lang={lang} className="absolute left-1.5 top-1.5" />}
         </div>
 
         <div className="flex min-w-0 flex-1 flex-col justify-center gap-1 md:justify-start">
@@ -69,7 +72,8 @@ export default function ListingRow({ listing, viewer }: {
           </p>
           {/* 구매자 결정 숫자(내 통화)가 가장 크게, 판매자 원가는 작게 — Price-Loudest는 구매자의 숫자다 */}
           <Price amount={listing.price} currency={listing.currency} viewerCurrency={viewer.currency} rate={viewer.rate}
-            lang={lang} fallback={t(lang, "price.free")} size="md" inline dim={sold} />
+            lang={lang} fallback={t(lang, "price.free")} size="md" inline dim={sold} label={auction ? t(lang, "auction.current") : undefined} />
+          {auction && <AuctionMeta info={auction} lang={lang} />}
           {!sold && (
             <span className="mt-0.5 flex flex-wrap items-center gap-1">
               {travelDeal && (

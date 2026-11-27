@@ -6,6 +6,8 @@ import { t, type I18nKey, type Lang } from "@/lib/i18n";
 import PriceHint from "@/components/PriceHint";
 import { mergePhotos, resizeImage } from "@/lib/image-resize";
 import { LISTING_CATEGORIES, isListingCategory, listingCategoryName } from "@/lib/categories";
+import { AUCTION_DURATIONS, AUCTION_RULES, amountOk, auctionEnabled, endsAt } from "@/lib/auction";
+import { formatPrice } from "@/lib/currency";
 
 const METHODS = ["direct", "shipping", "both"] as const;
 const CONDITIONS = ["new", "like_new", "good", "fair", "poor"] as const;
@@ -17,11 +19,16 @@ const segOn = (on: boolean) => `${SEG} ${on ? "bg-tomo-navy text-white shadow-so
 const INPUT = "w-full rounded-full bg-white px-4 py-3 text-base font-normal shadow-soft placeholder:text-ink-soft";
 const FIELD = `mt-1 ${INPUT}`;
 const LABEL = "text-[13px] font-bold text-ink";
+// 경매 마감 미리보기 — 한·일 같은 시간대라 한 시각으로(서버 endsAt 과 같은 10분 올림)
+const startHint = (cur: "KRW" | "JPY", lang: Lang) =>
+  ({ unit: formatPrice(AUCTION_RULES.unit[cur], cur, lang), min: formatPrice(AUCTION_RULES.min_start[cur], cur, lang) });
+const endsPreview = (days: number, lang: Lang) => endsAt(new Date(), days).toLocaleString(lang === "ja" ? "ja-JP" : "ko-KR",
+  { timeZone: "Asia/Seoul", month: "numeric", day: "numeric", weekday: "short", hour: "2-digit", minute: "2-digit" });
 
 export type SellInitial = {
   id: string; title: string; description: string; price: number; category: string; trade_method: string;
   cross_border_enabled: boolean; condition: string; shipping_payer: string; ship_days: string; allow_offers: boolean;
-  images?: string[];
+  images?: string[]; sale_type?: string;
 };
 const pick = <T extends readonly string[]>(list: T, v: string | undefined, d: T[number]): T[number] =>
   (list as readonly string[]).includes(v ?? "") ? (v as T[number]) : d;
@@ -37,6 +44,11 @@ export default function SellForm({ lang, hint, initial, prefill, importMsg, curr
   lang: Lang; hint: string; initial?: SellInitial; prefill?: SellPrefill; importMsg?: string; currency?: "KRW" | "JPY";
 }) {
   const editing = !!initial;
+  // 경매(U3): 등록 때만 고른다. 경매 상품 수정은 가격·거래 방법·제안·국제 거래 칸을 잠근다(서버 PATCH 도 같은 칸을 무시)
+  const locked = editing && initial?.sale_type === "auction";
+  const [saleType, setSaleType] = useState<"fixed" | "auction">("fixed");
+  const [days, setDays] = useState<number>(3);
+  const auction = saleType === "auction";
   const [title, setTitle] = useState(initial?.title ?? prefill?.title ?? hint);
   const [description, setDescription] = useState(initial?.description ?? prefill?.description ?? "");
   const [price, setPrice] = useState(initial && initial.price > 0 ? String(initial.price) : prefill?.price ? String(prefill.price) : "");
@@ -75,7 +87,10 @@ export default function SellForm({ lang, hint, initial, prefill, importMsg, curr
     const supabase = createBrowserSupabase();
     const uploadedPaths: string[] = [];
     const fail = (key: I18nKey) => new SellError(t(lang, key));
+    const startPrice = parseInt(price, 10);
+    const created: { id: string | null } = { id: null };
     try {
+      if (auction && !amountOk(currency, startPrice, true)) throw new SellError(t(lang, "auction.sell.startBad", startHint(currency, lang)));
       const { data: auth } = await supabase.auth.getUser();
       if (!auth.user) throw fail("sell.errLogin");
       const images: string[] = [];
@@ -90,17 +105,33 @@ export default function SellForm({ lang, hint, initial, prefill, importMsg, curr
         method: editing ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          title, description, price: free ? 0 : parseInt(price, 10), category, tradeMethod, crossBorder, images,
-          condition, shippingPayer, shipDays, allowOffers: !free && allowOffers,
+          title, description, price: free && !auction ? 0 : parseInt(price, 10), category, images,
+          tradeMethod: auction ? "shipping" : tradeMethod, crossBorder,
+          condition, shippingPayer, shipDays, allowOffers: !free && !auction && allowOffers,
+          ...(auction ? { saleType: "auction" } : {}),
         }),
       });
       const json = await res.json().catch(() => ({}));
       // 409 = 가격 잠금(거래 중·예약중) — 서버가 화면 언어로 준 이유를 그대로 보여 준다(apiError)
       if (res.status === 409 && typeof json.error === "string") throw new SellError(json.error);
       if (!res.ok) throw fail(res.status === 429 ? "sell.errRate" : res.status === 401 ? "sell.errLogin" : "sell.errSave");
+      // 경매 등록 순서(구현 기록): 숨긴 일반 상품 → POST /api/auctions 가 경매로 바꾸고 공개. 실패하면 숨긴 상품을 지운다
+      if (auction) {
+        created.id = json.id;
+        const ar = await fetch("/api/auctions", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ listingId: json.id, startPrice, days }),
+        });
+        const aj = await ar.json().catch(() => ({}));
+        if (!ar.ok) throw new SellError(typeof aj.error === "string" ? aj.error : t(lang, "auction.err.generic"));
+        created.id = null;
+      }
       router.push(`/listings/${json.id}`);
       if (editing) router.refresh();
     } catch (err) {
+      if (created.id) {
+        await supabase.from("listings").delete().eq("id", created.id).then(() => {}, () => {});
+      }
       // 리스팅이 만들어지지 못했으면 방금 올린 이미지는 고아 — 즉시 정리 (실패해도 무시)
       if (uploadedPaths.length > 0)
         await supabase.storage.from("listing-images").remove(uploadedPaths).catch(() => {});
@@ -178,22 +209,58 @@ export default function SellForm({ lang, hint, initial, prefill, importMsg, curr
         </div>
 
         <div className="flex flex-col gap-4">
+          {locked && (
+            <div role="status" className="rounded-card bg-tomo-navy/5 p-3.5 text-[13px] text-ink">
+              <p className="font-bold">{t(lang, "auction.sell.locked")}</p>
+              <p className="mt-1 text-[12px] text-ink-soft">{t(lang, "auction.sell.lockedHint")}</p>
+            </div>
+          )}
+          {!editing && auctionEnabled() && (
+            <fieldset>
+              <legend className={`mb-1 ${LABEL}`}>{t(lang, "auction.sell.type")}</legend>
+              <div className="flex gap-2">
+                {(["fixed", "auction"] as const).map((v) => (
+                  <button type="button" key={v} aria-pressed={saleType === v} className={segOn(saleType === v)}
+                    onClick={() => { setSaleType(v); if (v === "auction") setFree(false); }}>{t(lang, `auction.sell.${v}`)}</button>
+                ))}
+              </div>
+            </fieldset>
+          )}
           <div>
-            <label htmlFor="sell-price" className={LABEL}>{t(lang, "sell.price")}</label>
+            <label htmlFor="sell-price" className={LABEL}>{t(lang, auction ? "auction.sell.start" : "sell.price")}</label>
             {/* 시세 버튼은 입력 칸 옆 — PriceHint 겉 div 를 contents 로 풀어 버튼·결과를 이 줄에 놓는다 */}
             <div className="mt-1 flex flex-wrap items-center gap-2 [&>div:last-child>button]:shrink-0 [&>div:last-child>button]:py-2.5 [&>div:last-child]:contents [&_p]:basis-full">
               <div className="relative min-w-[9rem] flex-1">
-                <input id="sell-price" className={`tnum ${INPUT} disabled:opacity-45 ${unit.before ? "pl-9" : "pr-10"}`} type="number" inputMode="numeric" min={1}
-                  value={free ? "" : price} onChange={(e) => setPrice(e.target.value)} required={!free} disabled={free} aria-describedby="sell-price-unit" />
+                <input id="sell-price" className={`tnum ${INPUT} disabled:opacity-45 ${unit.before ? "pl-9" : "pr-10"}`} type="number" inputMode="numeric"
+                  min={auction ? AUCTION_RULES.min_start[currency] : 1} step={auction ? AUCTION_RULES.unit[currency] : undefined}
+                  value={free ? "" : price} onChange={(e) => setPrice(e.target.value)} required={!free} disabled={free || locked}
+                  aria-describedby={auction ? "sell-price-unit sell-start-hint" : "sell-price-unit"} />
                 <span id="sell-price-unit" className={`pointer-events-none absolute top-1/2 -translate-y-1/2 text-[15px] font-bold text-ink-soft ${unit.before ? "left-4" : "right-4"}`}>{unit.text}</span>
               </div>
-              {!free && <PriceHint title={title} currency={currency} lang={lang} onApply={(p) => setPrice(String(p))} />}
+              {!free && !locked && <PriceHint title={title} currency={currency} lang={lang} onApply={(p) => setPrice(String(p))} />}
             </div>
+            {auction && <p id="sell-start-hint" className="mt-1 text-[12px] text-ink-soft">{t(lang, "auction.sell.startHint", startHint(currency, lang))}</p>}
           </div>
-          <label className={`-mt-2 flex items-center gap-2 ${LABEL}`}>
-            <input type="checkbox" className="h-4 w-4 accent-accent" checked={free} onChange={(e) => setFree(e.target.checked)} />
-            {t(lang, "sell.free")}
-          </label>
+          {auction ? (
+            <>
+              <fieldset>
+                <legend className={`mb-1 ${LABEL}`}>{t(lang, "auction.sell.days")}</legend>
+                <div className="flex gap-2">
+                  {AUCTION_DURATIONS.map((d) => (
+                    <button type="button" key={d} aria-pressed={days === d} className={segOn(days === d)}
+                      onClick={() => setDays(d)}>{t(lang, "auction.sell.day", { n: d })}</button>
+                  ))}
+                </div>
+                <p className="mt-1.5 text-[12px] text-ink-soft">{t(lang, "auction.sell.endsPreview", { at: endsPreview(days, lang) })}</p>
+              </fieldset>
+              <p className="rounded-card bg-tomo-navy/5 p-3 text-[12px] leading-relaxed text-ink">{t(lang, "auction.sell.rules")}</p>
+            </>
+          ) : !locked && (
+            <label className={`-mt-2 flex items-center gap-2 ${LABEL}`}>
+              <input type="checkbox" className="h-4 w-4 accent-accent" checked={free} onChange={(e) => setFree(e.target.checked)} />
+              {t(lang, "sell.free")}
+            </label>
+          )}
           <label className={LABEL}>{t(lang, "sell.condition")}
             <select className={FIELD} value={condition} onChange={(e) => setCondition(e.target.value as (typeof CONDITIONS)[number])}>
               {CONDITIONS.map((c) => <option key={c} value={c}>{t(lang, `cond.${c}`)}</option>)}
@@ -204,7 +271,7 @@ export default function SellForm({ lang, hint, initial, prefill, importMsg, curr
               {categoryOptions.map((c) => <option key={c} value={c}>{listingCategoryName(lang, c)}</option>)}
             </select>
           </label>
-          <fieldset>
+          {!auction && !locked && <fieldset>
             <legend className={`mb-1 ${LABEL}`}>{t(lang, "sell.method")}</legend>
             <div className="flex gap-2">
               {METHODS.map((m) => (
@@ -213,8 +280,8 @@ export default function SellForm({ lang, hint, initial, prefill, importMsg, curr
                   onClick={() => setTradeMethod(m)}>{t(lang, `method.${m}`)}</button>
               ))}
             </div>
-          </fieldset>
-          {tradeMethod !== "direct" && (
+          </fieldset>}
+          {(auction || tradeMethod !== "direct") && (
             <>
               <fieldset>
                 <legend className={`mb-1 ${LABEL}`}>{t(lang, "sell.payer")}</legend>
@@ -237,17 +304,17 @@ export default function SellForm({ lang, hint, initial, prefill, importMsg, curr
             </>
           )}
           <label className={`flex items-center gap-2 ${LABEL}`}>
-            <input type="checkbox" className="h-4 w-4 accent-accent" checked={crossBorder} onChange={(e) => setCrossBorder(e.target.checked)} />
+            <input type="checkbox" className="h-4 w-4 accent-accent" checked={crossBorder} onChange={(e) => setCrossBorder(e.target.checked)} disabled={locked} />
             {t(lang, "sell.crossBorder")}
           </label>
-          {!free && (
+          {!free && !auction && !locked && (
             <label className={`flex items-center gap-2 ${LABEL}`}>
               <input type="checkbox" className="h-4 w-4 accent-accent" checked={allowOffers} onChange={(e) => setAllowOffers(e.target.checked)} />
               {t(lang, "sell.allowOffers")}
             </label>
           )}
           <button disabled={busy} className="btn bg-tomo-coral-deep py-3 text-sm text-white">
-            {busy ? t(lang, "sell.submitting") : t(lang, editing ? "sell.update" : "sell.submit")}
+            {busy ? t(lang, "sell.submitting") : t(lang, editing ? "sell.update" : auction ? "auction.sell.submit" : "sell.submit")}
           </button>
           {error && <p role="alert" className="text-sm text-tomo-rose">{error}</p>}
         </div>

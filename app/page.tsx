@@ -14,18 +14,19 @@ import { pageMeta } from "@/lib/seo";
 import { getRequestLang } from "@/lib/locale";
 import { Suspense } from "react";
 import DomesticFallback from "@/components/home/DomesticFallback";
+import { auctionEnabled, auctionSelect } from "@/lib/auction";
 
 // 구매 루트: 전체 / 내 동네 직거래 / 상대국 여행 중 직거래 (해외 대행구매는 /global)
 const TABS = [["all", "tab.all"], ["local", "tab.local"], ["travel", "tab.travel"]] as const;
 const FEED_LIMIT = 40;
 const FEED_MAX_PAGES = 5; // 더 보기는 40개씩 200개까지 — 그 뒤는 검색·카테고리로 좁힌다
-const FEED_SELECT = "id, title, price, currency, source_language, country, region, status, images, created_at, trade_method, cross_border_enabled, listing_translations(language, title)";
+const FEED_SELECT = `id, title, price, currency, source_language, country, region, status, images, created_at, trade_method, cross_border_enabled, listing_translations(language, title)${auctionSelect()}` as const;
 
 export async function generateMetadata() {
   return pageMeta("/", "home", await getRequestLang());
 }
 
-export default async function Home(props: { searchParams: Promise<{ tab?: string; q?: string; cat?: string; p?: string }> }) {
+export default async function Home(props: { searchParams: Promise<{ tab?: string; q?: string; cat?: string; p?: string; auction?: string }> }) {
   const searchParams = await props.searchParams;
   const supabase = await createServerSupabase();
   const viewer = await getViewerOrGuest(supabase);
@@ -35,10 +36,12 @@ export default async function Home(props: { searchParams: Promise<{ tab?: string
   const pasted = q ? parseMarketUrl(q) : null;
   if (pasted) redirect(`/global/${pasted.source}/${pasted.id}`);
   const cat = isCategory(searchParams.cat) ? searchParams.cat : undefined;
+  // 「경매만」(U4) — 진행 중인 경매만. 끝난 경매(결제 대기·판매 완료)는 뺀다. 플래그가 꺼지면 무시
+  const auctionOnly = auctionEnabled() && searchParams.auction === "1";
   const localNeedsLogin = tab === "local" && viewer.guest;
   const lang = viewer.language;
   // 파라미터 없는 첫 진입 = 허브. 검색·탭·카테고리는 기존 리스트 모드
-  const hub = !q && !searchParams.tab && !cat;
+  const hub = !q && !searchParams.tab && !cat && !auctionOnly;
   const page = Math.min(FEED_MAX_PAGES, Math.max(1, Math.floor(Number(searchParams.p)) || 1));
   const feedLimit = FEED_LIMIT * page;
 
@@ -50,6 +53,7 @@ export default async function Home(props: { searchParams: Promise<{ tab?: string
     .limit(feedLimit);
 
   if (cat) query = query.eq("category", cat);
+  if (auctionOnly) query = query.eq("sale_type", "auction").eq("status", "active");
   if (tab === "local" && !viewer.guest) {
     query = query.eq("country", viewer.country).eq("region", viewer.region).in("trade_method", ["direct", "both"]);
   } else if (tab === "travel") {
@@ -132,6 +136,7 @@ export default async function Home(props: { searchParams: Promise<{ tab?: string
             if (v !== "all") params.set("tab", v);
             if (q) params.set("q", q);
             if (cat) params.set("cat", cat);
+            if (auctionOnly) params.set("auction", "1");
             const qs = params.toString();
             return (
               <Link key={v} href={qs ? `/?${qs}` : "/"} aria-current={tab === v ? "page" : undefined}
@@ -141,6 +146,21 @@ export default async function Home(props: { searchParams: Promise<{ tab?: string
               </Link>
             );
           })}
+          {auctionEnabled() && (() => {
+            const params = new URLSearchParams();
+            if (tab !== "all") params.set("tab", tab);
+            if (q) params.set("q", q);
+            if (cat) params.set("cat", cat);
+            if (!auctionOnly) params.set("auction", "1");
+            const qs = params.toString();
+            return (
+              <Link href={qs ? `/?${qs}` : "/"} aria-current={auctionOnly ? "true" : undefined}
+                className={`press ml-auto rounded-full px-3.5 py-3 text-[13px] font-bold transition-colors md:px-5 md:py-2 md:text-sm ${
+                  auctionOnly ? "bg-accent text-white shadow-soft" : "bg-white text-ink-soft hover:text-ink"}`}>
+                {t(lang, "auction.filter")}
+              </Link>
+            );
+          })()}
         </nav>
         )}
       </header>
@@ -207,7 +227,7 @@ export default async function Home(props: { searchParams: Promise<{ tab?: string
             {/* 엔드캡 — 더 있으면 「더 보기」(40개씩, 200개까지). 캡에 걸리면 "다 봤어요"는 거짓이므로 정직하게 캡을 말한다 */}
             <div className="mb-4 mt-10 flex flex-col items-center gap-2">
               {(listings ?? []).length >= feedLimit && page < FEED_MAX_PAGES ? (
-                <Link href={`/?${new URLSearchParams({ ...(tab !== "all" && { tab }), ...(q && { q }), ...(cat && { cat }), p: String(page + 1) })}`}
+                <Link href={`/?${new URLSearchParams({ ...(tab !== "all" && { tab }), ...(q && { q }), ...(cat && { cat }), ...(auctionOnly && { auction: "1" }), p: String(page + 1) })}`}
                   scroll={false} className="btn bg-tomo-navy px-6 py-2.5 text-sm text-white">{t(lang, "home.feedMore")}</Link>
               ) : (
                 <>

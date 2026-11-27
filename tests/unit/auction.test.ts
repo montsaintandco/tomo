@@ -3,6 +3,8 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import {
   AUCTION_RULES, amountOk, auctionErrorKey, endsAt, estimatedTotal, extendedEnd, increment, minBid, pollMs, proxyBid,
+  cardAuctionInfo, clockSkew, countdownText, needsBigConfirm, payNeededCount, pickAuction, sellerCanRelist, sellerChoiceCount,
+  splitMs, timeLeftShort, viewerPhase, type AuctionState,
 } from "@/lib/auction";
 import { NOTIF_KINDS } from "@/lib/notifications";
 import { I18N_KEYS, t } from "@/lib/i18n";
@@ -79,6 +81,84 @@ describe("시각", () => {
     expect(estimatedTotal("KRW", 30000, true)).toBe(38000);
     expect(estimatedTotal("JPY", 3000, true)).toBe(3900);
     expect(estimatedTotal("KRW", 30000, false)).toBe(30000);
+  });
+});
+
+describe("화면 표시(U3·U4)", () => {
+  const H = 3_600_000;
+  it("카운트다운 단위: 일·시·분초, 끝나면 마감", () => {
+    expect(splitMs(90_061_000)).toEqual({ d: 1, h: 1, m: 1, s: 1 });
+    expect(splitMs(-5)).toEqual({ d: 0, h: 0, m: 0, s: 0 });
+    expect(countdownText("ko", 2 * 24 * H + 3 * H + 59_000)).toBe("2일 3시간");
+    expect(countdownText("ko", 3 * H + 5 * 60_000)).toBe("3시간 5분");
+    expect(countdownText("ko", 4 * 60_000 + 5_000)).toBe("4분 05초");
+    expect(countdownText("ja", 4 * 60_000 + 5_000)).toBe("4分05秒");
+    expect(countdownText("ko", 0)).toBe("마감");
+  });
+  it("카드 남은 시간은 한 단위, 1분 미만은 1분", () => {
+    expect(timeLeftShort("ko", 50 * H)).toBe("2일 남음");
+    expect(timeLeftShort("ko", 5 * H + 1)).toBe("5시간 남음");
+    expect(timeLeftShort("ja", 30_000)).toBe("残り1分");
+    expect(timeLeftShort("ko", -1)).toBe("마감");
+  });
+  it("카드: 1시간 이하만 강조, 끝난 경매는 live 아님", () => {
+    const now = Date.parse("2026-11-27T01:00:00Z");
+    const a = { status: "live" as const, bid_count: 3, ends_at: "2026-11-27T01:30:00Z", created_at: "" };
+    expect(cardAuctionInfo(a, now)).toMatchObject({ live: true, soon: true, bids: 3 });
+    expect(cardAuctionInfo({ ...a, ends_at: "2026-11-27T03:00:00Z" }, now).soon).toBe(false);
+    expect(cardAuctionInfo({ ...a, status: "awaiting_payment" }, now)).toMatchObject({ live: false, soon: false });
+    expect(cardAuctionInfo({ ...a, ends_at: "2026-11-27T00:59:00Z" }, now).live).toBe(false); // 크론 전이라도 시간이 지나면 끝난 것으로
+  });
+  it("다시 경매한 상품은 열린 경매, 없으면 가장 최근 경매를 카드에", () => {
+    const old = { status: "unsold", created_at: "2026-11-01T00:00:00Z" };
+    const cur = { status: "live", created_at: "2026-11-02T00:00:00Z" };
+    expect(pickAuction([old, cur])).toBe(cur);
+    expect(pickAuction([old, { ...old, status: "cancelled", created_at: "2026-11-03T00:00:00Z" }])?.status).toBe("cancelled");
+    expect(pickAuction([])).toBeNull();
+  });
+  it("카운트다운은 서버 시각 기준(내 시계가 2초 빠르면 -2초)", () => {
+    expect(clockSkew("2026-11-27T01:00:00.000Z", Date.parse("2026-11-27T01:00:02.000Z"))).toBe(-2000);
+  });
+  it("보는 사람 상태 판정", () => {
+    const v: AuctionState["viewer"] = { signed_in: true, is_seller: false, bidder_no: 1, my_max: 30000, leading: true, won: false, can_pay: false, tx_id: null, bid_banned_until: null };
+    const s = (status: AuctionState["status"], viewer: Partial<typeof v>) => viewerPhase({ status, viewer: { ...v, ...viewer } });
+    expect(s("live", {})).toBe("leading");
+    expect(s("live", { leading: false })).toBe("outbid");
+    expect(s("live", { leading: false, my_max: null })).toBe("none");
+    expect(s("live", { is_seller: true })).toBe("seller");
+    expect(s("awaiting_payment", { leading: false, won: true })).toBe("won");
+    expect(s("awaiting_payment", { leading: false })).toBe("lost");
+    expect(s("unsold", { my_max: null, leading: false })).toBe("ended");
+  });
+  it("판매자 다시 경매·전환 조건 = 0047 auction_relistable", () => {
+    expect(["unsold", "unpaid", "cancelled"].every((x) => sellerCanRelist(x as AuctionState["status"], "active"))).toBe(true);
+    expect(sellerCanRelist("paid", "active")).toBe(true);    // 결제 뒤 환불로 판매중 복귀
+    expect(sellerCanRelist("paid", "sold")).toBe(false);
+    expect(sellerCanRelist("live", "active")).toBe(false);
+    expect(sql47).toMatch(/function auction_relistable/);
+  });
+  it("10배 초과는 한 번 더 확인", () => {
+    expect(needsBigConfirm(100001, 10000)).toBe(true);
+    expect(needsBigConfirm(100000, 10000)).toBe(false);
+  });
+  it("마이페이지 할 일 건수", () => {
+    const now = Date.parse("2026-11-27T01:00:00Z");
+    expect(payNeededCount([
+      { won: true, status: "awaiting_payment", pay_due_at: "2026-11-28T01:00:00Z" },
+      { won: true, status: "awaiting_payment", pay_due_at: "2026-11-27T00:00:00Z" }, // 기한 지남
+      { won: true, status: "paid", pay_due_at: "2026-11-28T01:00:00Z" },
+      { won: false, status: "awaiting_payment", pay_due_at: "2026-11-28T01:00:00Z" },
+    ], now)).toBe(1);
+    expect(sellerChoiceCount([
+      { listing_id: "a", status: "live", listings: { sale_type: "auction" } },      // 다시 경매한 것(최신)
+      { listing_id: "a", status: "unsold", listings: { sale_type: "auction" } },    // 옛 행 — 세지 않는다
+      { listing_id: "b", status: "unpaid", listings: { sale_type: "auction" } },
+      { listing_id: "c", status: "unsold", listings: { sale_type: "fixed" } },      // 일반 전환함
+      { listing_id: "d", status: "cancelled", listings: { sale_type: "auction" } },
+    ])).toBe(1);
+  });
+  it("화면 문구 ko/ja 가 다르다(누락·복사 없음)", () => {
+    for (const k of I18N_KEYS.filter((x) => x.startsWith("auction."))) expect(t("ko", k), k).not.toBe(t("ja", k));
   });
 });
 

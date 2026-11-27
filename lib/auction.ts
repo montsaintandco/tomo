@@ -1,7 +1,7 @@
 // 자체 상품 경매(U1·U2, docs/aaa/14-auction.md). DB 정본은 0046·0047 함수다. 여기는 화면 표시·미리 계산·오류 문구용.
 // AUCTION_RULES 는 0046 auction_settings.rules 기본값과 글자 그대로 같아야 한다(tests/unit/auction.test.ts 가 비교).
 import { directShippingFee } from "./fees";
-import type { I18nKey } from "./i18n";
+import { t, type I18nKey, type Lang } from "./i18n";
 
 export type Cur = "KRW" | "JPY";
 
@@ -95,6 +95,90 @@ export function pollMs(s: Pick<AuctionState, "status" | "ends_at" | "server_now"
   if (s.status !== "live") return null;
   return new Date(s.ends_at).getTime() - new Date(s.server_now).getTime() <= EXTEND_MINUTES * 60_000 ? 2000 : 5000;
 }
+
+// ── 화면 표시(U3·U4) ──
+
+/** 카드·검색에 붙이는 경매 칸(플래그가 꺼져 있으면 빈 글자 — 기존 조회 그대로). auctions 의 공개 열만 고른다(구현 기록 2번) */
+const AUCTION_COLS = ", sale_type, auctions(status, bid_count, ends_at, created_at)";
+/** 타입은 늘 경매 칸이 있는 것으로 둔다(문자열 select 의 결과 타입 추론용). 값은 플래그가 꺼지면 빈 글자 */
+export const auctionSelect = () => (auctionEnabled() ? AUCTION_COLS : "") as typeof AUCTION_COLS;
+export type CardAuction = { status: AuctionStatus; bid_count: number; ends_at: string; created_at: string };
+
+/** 상품에 붙은 경매 행(다시 경매면 여러 줄) 중 열린 것, 없으면 가장 최근 것 */
+export function pickAuction<T extends { status: string; created_at: string }>(rows?: T[] | null): T | null {
+  if (!rows?.length) return null;
+  const open = rows.filter((r) => r.status === "live" || r.status === "awaiting_payment");
+  return [...(open.length ? open : rows)].sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
+}
+
+export const ENDING_SOON_MS = 3_600_000;
+
+/** 남은 밀리초 → 일·시·분·초(음수는 0) */
+export function splitMs(ms: number) {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  return { d: Math.floor(s / 86400), h: Math.floor((s % 86400) / 3600), m: Math.floor((s % 3600) / 60), s: s % 60 };
+}
+
+/** 상세 카운트다운: 하루 이상 「2일 3시간」, 한 시간 이상 「3시간 5분」, 그 아래 「4분 05초」, 끝나면 「마감」 */
+export function countdownText(lang: Lang, ms: number): string {
+  if (ms <= 0) return t(lang, "auction.left.end");
+  const { d, h, m, s } = splitMs(ms);
+  if (d > 0) return t(lang, "auction.left.d", { d, h });
+  if (h > 0) return t(lang, "auction.left.h", { h, m });
+  return t(lang, "auction.left.m", { m, s: String(s).padStart(2, "0") });
+}
+
+/** 카드 남은 시간(한 단위): 「2일 남음」「3시간 남음」「25분 남음」, 1분 미만은 「1분 남음」, 끝나면 「마감」 */
+export function timeLeftShort(lang: Lang, ms: number): string {
+  if (ms <= 0) return t(lang, "auction.left.end");
+  const { d, h, m } = splitMs(ms);
+  if (d > 0) return t(lang, "auction.short.d", { n: d });
+  if (h > 0) return t(lang, "auction.short.h", { n: h });
+  return t(lang, "auction.short.m", { n: Math.max(1, m) });
+}
+
+/** 카드 한 줄 정보. now 는 호출부가 넘긴다(서버 렌더 시각) */
+export function cardAuctionInfo(a: CardAuction, now: number) {
+  const left = new Date(a.ends_at).getTime() - now;
+  return { live: a.status === "live" && left > 0, left, soon: a.status === "live" && left > 0 && left <= ENDING_SOON_MS, bids: a.bid_count };
+}
+
+/** 서버 시각 - 내 시계. 카운트다운은 Date.now() + skew 로 센다 */
+export const clockSkew = (serverNow: string, clientNow: number) => new Date(serverNow).getTime() - clientNow;
+
+export type ViewerPhase = "seller" | "leading" | "outbid" | "none" | "won" | "lost" | "ended";
+/** 보는 사람 기준 상태 — 패널 문구·마이페이지 배지가 같은 판정을 쓴다 */
+export function viewerPhase(s: Pick<AuctionState, "status" | "viewer">): ViewerPhase {
+  const v = s.viewer;
+  if (v.is_seller) return "seller";
+  if (s.status === "live") return v.leading ? "leading" : v.my_max != null ? "outbid" : "none";
+  if (v.won) return "won";
+  return v.my_max != null ? "lost" : "ended";
+}
+
+/** 판매자가 다시 경매·일반 전환을 고를 수 있는가(0047 auction_relistable 과 같은 조건, 가장 최근 경매일 때) */
+export const sellerCanRelist = (status: AuctionStatus, listingStatus: string) =>
+  status === "unsold" || status === "unpaid" || status === "cancelled" || (status === "paid" && listingStatus === "active");
+
+/** 마이페이지 할 일: 내가 낙찰했고 기한 안에 결제해야 하는 건수(my_auction_bids 행) */
+export const payNeededCount = (rows: { won: boolean; status: string; pay_due_at: string | null }[], now: number) =>
+  rows.filter((a) => a.won && a.status === "awaiting_payment" && !!a.pay_due_at && new Date(a.pay_due_at).getTime() > now).length;
+
+/** 마이페이지 할 일: 유찰·미결제로 끝나 판매자가 다시 경매/전환을 골라야 하는 상품 수.
+ *  rows 는 내 경매(최신순). 같은 상품은 가장 최근 경매만 본다(다시 경매했으면 옛 행은 끝난 일), 일반 전환한 상품은 뺀다 */
+export function sellerChoiceCount(rows: { listing_id: string; status: string; listings: { sale_type: string } | null }[]): number {
+  const seen = new Set<string>();
+  let n = 0;
+  for (const a of rows) {
+    if (seen.has(a.listing_id)) continue;
+    seen.add(a.listing_id);
+    if (a.listings?.sale_type === "auction" && (a.status === "unsold" || a.status === "unpaid")) n++;
+  }
+  return n;
+}
+
+/** 현재가의 10배를 넘는 상한은 한 번 더 확인(A-2) */
+export const needsBigConfirm = (amount: number, current: number) => current > 0 && amount > current * 10;
 
 // DB 오류 메시지(raise exception) → i18n 키. 모르는 오류는 일반 문구
 const ERRORS: [string, I18nKey][] = [

@@ -29,6 +29,8 @@ import { getRequestLang } from "@/lib/locale";
 import { directDetailTotal } from "@/components/detail/total";
 import { DirectTotalBox } from "@/components/detail/TotalBox";
 import { isListingCategory, listingCategoryName, findMajor } from "@/lib/categories";
+import { auctionEnabled, auctionSelect, type AuctionState } from "@/lib/auction";
+import AuctionPanel from "@/components/auction/AuctionPanel";
 
 const HEART = "M12 21C7.2 17.2 2.5 13.6 2.5 8.9 2.5 5.6 5 3.5 7.8 3.5c1.7 0 3.3.9 4.2 2.3.9-1.4 2.5-2.3 4.2-2.3 2.8 0 5.3 2.1 5.3 5.4 0 4.7-4.7 8.3-9.5 12.1z";
 const METHODS = ["direct", "shipping", "both"] as const;
@@ -48,6 +50,13 @@ export default async function ListingDetail(props: { params: Promise<{ id: strin
   const seller = l.profiles;
   const isMine = !viewer.guest && viewer.id === seller.id;
   const isBot = /bot|crawl|spider|slurp|facebookexternalhit|preview/i.test((await headers()).get("user-agent") ?? "");
+  // 경매 상품(U3) — 플래그가 켜져 있을 때만 입찰 패널. 첫 상태는 서버에서 받아 넣고 그다음은 패널이 폴링한다
+  const isAuction = auctionEnabled() && l.sale_type === "auction";
+  const [auctionRes, suspendedRes] = isAuction ? await Promise.all([
+    supabase.rpc("auction_state", { p_id: l.id }),
+    viewer.guest ? Promise.resolve({ data: null }) : supabase.from("profiles").select("suspended").eq("id", viewer.id).maybeSingle(),
+  ]) : [null, null];
+  const auctionState = (auctionRes?.data ?? null) as AuctionState | null;
 
   // 카운터(당근 "관심·조회·채팅")는 공개 함수, 내 찜/제안은 본인 행 RLS, 셀러는 받은 제안. 조회수는 렌더마다 +1
   const [wishRes, chatRes, mineRes, myOfferRes, receivedRes] = await Promise.all([
@@ -57,14 +66,14 @@ export default async function ListingDetail(props: { params: Promise<{ id: strin
       : supabase.from("wishlists").select("listing_id").eq("user_id", viewer.id).eq("listing_id", l.id).maybeSingle(),
     viewer.guest || isMine ? Promise.resolve({ data: null })
       : supabase.from("offers").select("id, price, status").eq("buyer_id", viewer.id).eq("listing_id", l.id).maybeSingle(),
-    isMine
+    isMine && !isAuction
       ? supabase.from("offers").select("id, price, status, created_at, profiles!offers_buyer_id_fkey(nickname)")
           .eq("listing_id", l.id).order("created_at", { ascending: false })
       : Promise.resolve({ data: null }),
     isMine || isBot ? Promise.resolve(null) : supabase.rpc("increment_view", { lid: l.id }), // 크롤러는 조회수에서 제외
   ]);
   // 상세 하단 탐색 (당근·메루카리): 판매자의 다른 상품 + 같은 카테고리
-  const CARD_SELECT = "id, title, price, currency, source_language, country, region, status, images, created_at, trade_method, cross_border_enabled, listing_translations(language, title)";
+  const CARD_SELECT = `id, title, price, currency, source_language, country, region, status, images, created_at, trade_method, cross_border_enabled, listing_translations(language, title)${auctionSelect()}` as const;
   const [{ data: moreFromSeller }, { data: similar }] = await Promise.all([
     supabase.from("listings").select(CARD_SELECT).eq("seller_id", seller.id).eq("status", "active").neq("id", l.id)
       .order("bumped_at", { ascending: false }).limit(6),
@@ -116,7 +125,7 @@ export default async function ListingDetail(props: { params: Promise<{ id: strin
   const secondaryCheckout = meetupPrimary ? shipAvailable : method === "both";
   const shipNote = foreign && method !== "direct" ? t(lang, "ship.intl") : methodLabel;
   // 국경 간 택배 결제 합계 — 결제(app/api/checkout)·DB(0035)와 같은 directShippingFee. 첫 화면에서 국제 배송비를 보인다
-  const directTotals = foreign && shipAvailable && !free && canAct && !isMine
+  const directTotals = foreign && shipAvailable && !free && canAct && !isMine && !isAuction
     ? directDetailTotal(l.price, l.currency === "JPY" ? "JPY" : "KRW", true) : null;
   const listedAt = new Date(l.created_at).toLocaleDateString(lang === "ja" ? "ja-JP" : "ko-KR", { year: "numeric", month: "long", day: "numeric" });
 
@@ -136,6 +145,7 @@ export default async function ListingDetail(props: { params: Promise<{ id: strin
   const priceBlock = (
     <div className="mt-2">
       <p className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+        {isAuction && <span className="text-xs font-bold text-ink-soft">{t(lang, "auction.current")}</span>}
         <span className="tnum text-[17px] font-extrabold leading-tight text-ink">{buyerPrice}</span>
         <span className="text-xs text-ink-soft">{shipNote}</span>
       </p>
@@ -223,7 +233,7 @@ export default async function ListingDetail(props: { params: Promise<{ id: strin
             between={priceBlock}
           />
         {/* 하단 바 — 메루카리식: [채팅] 가격 [구매하기]. 모바일 고정, 데스크톱은 가격 바로 아래 흐름 배치(첫 화면에 다음 행동) */}
-        {canAct && !isMine && (
+        {canAct && !isMine && !isAuction && (
           <div className="fixed bottom-0 standalone:bottom-[62px] left-0 right-0 z-20 mx-auto max-w-md border-t border-tomo-navy/5 bg-white/95 px-4 py-3 backdrop-blur md:static md:mx-0 md:mt-4 md:max-w-none md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-0">
             {viewer.guest ? (
               <div className="flex items-center gap-3">
@@ -273,13 +283,18 @@ export default async function ListingDetail(props: { params: Promise<{ id: strin
           </div>
         </div>
 
+        {isAuction && auctionState && (
+          <AuctionPanel initial={auctionState} lang={lang} listingStatus={l.status} foreign={foreign}
+            countryBlocked={foreign && !l.cross_border_enabled} viewerCurrency={viewer.currency} rate={viewer.rate}
+            guest={!!viewer.guest} suspended={!!(suspendedRes?.data as { suspended?: boolean } | null)?.suspended} />
+        )}
         {directTotals && <DirectTotalBox lang={lang} totals={directTotals} viewerCurrency={viewer.currency} rate={viewer.rate} />}
 
         {/* 가격제안 — 판매자가 허용한 판매중 상품, 구매자만 */}
         {canAct && !isMine && !free && l.allow_offers && (
           <OfferButton listingId={l.id} price={l.price} currency={l.currency} initial={myOffer} guest={!!viewer.guest} lang={lang} />
         )}
-        {isMine && (
+        {isMine && !isAuction && (
           <SellerPanel listingId={l.id} currency={l.currency} bumpedAt={l.bumped_at ?? l.created_at}
             active={canAct} offers={receivedOffers} lang={lang}
             status={l.status} hidden={!!l.hidden} hiddenByAdmin={!!l.hidden_by_admin} />

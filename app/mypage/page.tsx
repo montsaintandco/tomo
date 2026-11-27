@@ -44,6 +44,8 @@ export default async function MyPage() {
   const toReceive = badges.orders;
   const travelers = typeof travelersRes.data === "number" ? travelersRes.data : 0;
   const todos: { text: string; href: string }[] = [
+    ...(badges.auctionPay ? [{ text: t(lang, "auction.my.todoPay", { n: badges.auctionPay }), href: "/mypage/auctions?tab=won" }] : []),
+    ...(badges.auctionChoice ? [{ text: t(lang, "auction.my.todoChoice", { n: badges.auctionChoice }), href: "/mypage/auctions?tab=selling" }] : []),
     ...(toShip ? [{ text: t(lang, "my.todoShip", { n: toShip }), href: "/mypage/sales?tab=tx" }] : []),
     ...(toReceive ? [{ text: t(lang, "my.todoReceive", { n: toReceive }), href: "/mypage/orders" }] : []),
     ...(pendingIn ? [{ text: t(lang, "my.todoOffersIn", { n: pendingIn }), href: "/mypage/offers" }] : []),

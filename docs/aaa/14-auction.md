@@ -408,3 +408,15 @@
 | 결함 주입 3종(같은 금액 `>`→`>=`, start_transaction 경매 검사 제거, 예약 유지 가드 제거) | 각각 5·11a·13 번 단언이 실패함을 확인 |
 | 잔여 | 리허설 뒤 경매 표·함수·칸·크론 0, 시험 상품·알림 0 |
 | 동시 입찰(운영, 적용 뒤) | ① 관리 API 연결 2개: A 가 입찰 뒤 3초 잠금 유지, B 는 `Lock/transactionid` 대기(pg_stat_activity 실측) → A 끝난 직후 처리, 결과 일관(현재가 20,000·기록 3줄·먼저 온 bob 1등). ② `tests/auction.db.test.ts`(PostgREST 연결 2개, 같은 금액 동시 3회 + 10건 동시) 통과. 시험 데이터는 지웠다(잔여 0) |
+## 부록. U3·U4 구현 기록 (2026-11-27)
+
+- 플래그: 화면은 빌드 때 `NEXT_PUBLIC_AUCTION=1` 일 때만. 꺼져 있으면 목록 조회에 경매 칸도 붙이지 않는다(`auctionSelect()` 빈 글자 — U1 되돌리기 뒤에도 목록이 깨지지 않게). 운영 Actions Variables 에는 아직 넣지 않았다.
+- 등록 순서: `POST /api/listings` 에 `saleType: "auction"` → 숨긴 일반 상품(택배·제안 끔, IndexNow 안 보냄) → `POST /api/auctions` 가 경매로 바꾸고 공개. 2단계가 실패하면 화면이 숨긴 상품을 지운다. 시작가는 화면에서 `amountOk(cur, n, true)` 로 먼저 검사.
+- 수정 잠금: 경매 상품(`sale_type=auction`) 수정 폼은 가격·거래 방법·제안·국제 거래 칸을 잠그고, `PATCH /api/listings/[id]` 도 그 칸들을 보낸 값 대신 무시한다(제목·설명·사진·상태·카테고리·배송 부담·발송일만 바뀜). 시작가·기간 변경은 취소 뒤 다시 등록.
+- 카드: `listings` 조회에 `sale_type, auctions(status, bid_count, ends_at, created_at)` 를 붙이고 `pickAuction`(열린 경매 우선, 없으면 최신)으로 고른다. 남은 시간은 서버 렌더 시각 기준 정적 표시.
+- 상세 패널: 폴링은 상품 id 로 `/state` 를 부른다(다시 경매 뒤 새 경매를 따라감). 마운트 직후 한 번 새로 받아 시계 차이를 맞춘다. 화면 읽기 프로그램 알림(aria-live polite)은 현재가가 바뀌거나 끝났을 때만. 카운트다운은 `role=timer`·`aria-live=off`. 시각 표시는 `Asia/Seoul` 고정(서버·브라우저 렌더 일치).
+- 입찰 창: 1등이면 최소값 = 내 상한 + 단위(100원/10엔), 아니면 `min_bid`. 예상 최대 결제액 = `directDetailTotal(상한, 통화, 국경 간)`. 다른 통화는 「약」 + 결제 시점 환율 확정 문구(가산 수치 없음). 요청 번호는 확인 단계에 들어갈 때 새로 만들고, 같은 확인 단계의 재시도는 같은 번호.
+- 마이페이지: `/mypage/auctions` 입찰 중(live)·낙찰(won, 결제 필요 강조)·내 경매(같은 상품은 최신 경매 한 줄). 배지·할 일 = `payNeededCount` + `sellerChoiceCount`(유찰·미결제 뒤 아직 고르지 않은 것).
+- 알림 10종 문구·링크는 U1·U2 에서 이미 있었다(`notif.auction_*`, 링크 = 상품 상세). U4 에서 바꾸지 않았다.
+- 검증: tsc·eslint(오류 0)·vitest unit 44파일 319건(표시 계산 11건 추가)·next build(플래그 켬/끔 둘 다). 로컬(build+start, 플래그 켬, 운영 DB): alice 등록 → bob API 입찰 → alice 화면 3초 안 갱신 → bob 화면 상한 올리기(확인 단계) → center 20,000원 입찰 → bob 화면 다음 폴링 차례(5초 안)에 21,000원·자동 줄 표시 → 경매만 목록 → bob 마이페이지. 시험 행은 service role 로 지움(잔여 0).
+- 못 본 것: 낙찰 뒤 결제하기·판매자 다시 경매/전환·수정 폼 잠금은 브라우저로 돌려 보지 않았다(U6 리허설 8~12번에서 본다).

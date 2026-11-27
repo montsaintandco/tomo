@@ -30,22 +30,28 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
       !CONDITIONS.includes(condition) || !PAYERS.includes(shippingPayer) || !SHIP_DAYS.includes(shipDays))
     return NextResponse.json({ error: "invalid fields" }, { status: 400 });
 
-  const { data: current } = await supabase.from("listings").select("seller_id, source_language, price, status").eq("id", id).maybeSingle();
+  const { data: current } = await supabase.from("listings")
+    .select("seller_id, source_language, price, status, sale_type").eq("id", id).maybeSingle();
   if (!current || current.seller_id !== auth.user.id) return NextResponse.json({ error: "not found" }, { status: 404 });
-  if (price !== current.price) {
+  // 경매 상품(U3): 가격·거래 방법·국제 거래·제안은 경매 함수만 바꾼다(0046 잠금 트리거). 폼이 보낸 값 대신 지금 값을 그대로 쓴다
+  const auctionLock = current.sale_type === "auction";
+  if (!auctionLock && price !== current.price) {
     const lock = await loadPriceLock(supabase, id, current.status);
     if (lock) return apiError(reqLang(req), PRICE_LOCK_ERR[lock], 409);
   }
 
-  const patch: Record<string, unknown> = {
-    title, description, price, category, trade_method: tradeMethod, cross_border_enabled: !!crossBorder,
-    condition, shipping_payer: shippingPayer, ship_days: shipDays, allow_offers: price > 0 && !!allowOffers,
-  };
+  const patch: Record<string, unknown> = auctionLock
+    ? { title, description, category, condition, shipping_payer: shippingPayer, ship_days: shipDays }
+    : {
+      title, description, price, category, trade_method: tradeMethod, cross_border_enabled: !!crossBorder,
+      condition, shipping_payer: shippingPayer, ship_days: shipDays, allow_offers: price > 0 && !!allowOffers,
+    };
   if (Array.isArray(images) && images.length > 0) patch.images = images.filter(imageOk).slice(0, 5);
 
   const { error } = await supabase.from("listings").update(patch).eq("id", id);
   if (error) {
     if (/price locked/.test(error.message)) return apiError(reqLang(req), PRICE_LOCK_ERR.activeTx, 409); // 0039 트리거(경합)
+    if (/auction listing locked|auction in progress/.test(error.message)) return apiError(reqLang(req), "auction.err.locked", 409);
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
 

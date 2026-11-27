@@ -290,3 +290,11 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=<Supabase 대시보드 → Project Settings → AP
 - 동시 입찰: 운영에서 연결 2개 실측(잠금 대기 확인) + `tests/auction.db.test.ts`.
 - 다음: U3(등록·상세·카드), U4(마이페이지·검색·알림 화면), U5(운영), U6(리허설·켜기).
 - 되돌리기: 0047 → 0046 파일 하단 주석 순서.
+
+### 2026-11-27 U3·U4 경매 화면 (플래그 꺼진 채 배포, docs/aaa/14-auction.md 부록 「U3·U4 구현 기록」)
+- 화면은 빌드 때 `NEXT_PUBLIC_AUCTION=1` 일 때만 나온다. 운영 Actions Variables 에는 아직 없다(U6 에서 켠다). 꺼져 있으면 목록 조회도 경매 칸을 안 붙인다(`auctionSelect()` 빈 글자).
+- 등록: `SellForm` 판매 방식(바로 판매/경매)·시작가 단위 검사·기간 1·3·5·7일·마감 미리보기. 순서 = `POST /api/listings {saleType:"auction"}`(숨김·택배·제안 끔) → `POST /api/auctions`(공개). 2단계 실패면 숨긴 상품을 지운다. 경매 상품 수정은 가격·거래 방법·제안·국제 거래 칸 잠금(PATCH 도 그 칸을 무시).
+- 카드(홈·검색·상세 하단·여행·프로필): 「경매」 배지·현재가 라벨·입찰 수·남은 시간(1시간 이하 경고색). `components/auction/AuctionCardMeta.tsx`.
+- 상세: `components/auction/AuctionPanel.tsx` — 폴링(pollMs, 가린 탭 멈춤, 상품 id 로 조회해 다시 경매도 따라감), server_now 기준 카운트다운, 상한가 입력·예상 최대 결제액(directDetailTotal 재사용)·확인 단계(10배 초과 한 번 더)·입찰 기록(번호 마스킹)·낙찰 결제·판매자 취소/다시 경매/전환. 경매 상품은 하단 구매 바·제안·SellerPanel(끌올) 안 보임.
+- 마이페이지 `/mypage/auctions`(입찰 중·낙찰·내 경매), 메뉴 배지·할 일(낙찰 결제 필요·유찰/미결제 뒤 선택 필요). 홈 목록 「경매만」(`?auction=1`, 진행 중만). 찜은 「경매」 표시·값내림 끔. 내 상품 목록은 경매 상품에 숨기기·삭제 버튼을 안 둔다.
+- 다음: U5(운영 함수·/admin/auctions·ops capability), U6(운영 리허설 14항목 뒤 Actions Variables 에 `NEXT_PUBLIC_AUCTION=1` 넣고 재빌드).

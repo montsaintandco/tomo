@@ -8,6 +8,7 @@ import { pageLimit, TX_STATUS } from "@/lib/notifications";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { orderLabel } from "@/lib/order-code";
+import { auctionEnabled } from "@/lib/auction";
 
 export const metadata = { title: "판매 · 販売", robots: { index: false } };
 
@@ -21,6 +22,7 @@ export default async function MySales(props: { searchParams: Promise<{ tab?: str
   if (!viewer) redirect("/login?next=/mypage/sales");
   const lang = viewer.language;
   const tab = sp.tab === "tx" ? "tx" : "listings";
+  const auctionOn = auctionEnabled();
   const { n, limit } = pageLimit(sp.page);
   const more = (has: boolean) => (has ? `/mypage/sales?tab=${tab}&page=${n + 1}` : null);
   const priceOf = (l: { price: number; currency: string }) => l.price === 0 ? t(lang, "price.free") : formatPrice(l.price, l.currency as Currency, lang);
@@ -29,7 +31,7 @@ export default async function MySales(props: { searchParams: Promise<{ tab?: str
   let body: React.ReactNode;
   if (tab === "listings") {
     const { data } = await supabase.from("listings")
-      .select("id, title, price, currency, status, images, hidden, hidden_by_admin")
+      .select("id, title, price, currency, status, images, hidden, hidden_by_admin, sale_type")
       .eq("seller_id", viewer.id).order("created_at", { ascending: false }).limit(limit + 1);
     const list = (data ?? []).slice(0, limit);
     body = (
@@ -38,8 +40,9 @@ export default async function MySales(props: { searchParams: Promise<{ tab?: str
           {list.map((l) => (
             <div key={l.id} className="card p-3">
               <Row href={`/listings/${l.id}`} image={(l.images as string[])?.[0]} title={l.title} bare
-                sub={`${statusOf(l.status)}${l.hidden ? ` · ${t(lang, "own.hidden")}` : ""}`} right={priceOf(l)} />
-              <ListingOwnerActions listingId={l.id} status={l.status} hidden={!!l.hidden} hiddenByAdmin={!!l.hidden_by_admin} lang={lang} />
+                sub={`${auctionOn && l.sale_type === "auction" ? `${t(lang, "auction.badge")} · ` : ""}${statusOf(l.status)}${l.hidden ? ` · ${t(lang, "own.hidden")}` : ""}`} right={priceOf(l)} />
+              {/* 경매 상품은 숨기기·삭제 대신 상세의 경매 조치(취소·다시 경매·전환)를 쓴다 */}
+              {!(auctionOn && l.sale_type === "auction") && <ListingOwnerActions listingId={l.id} status={l.status} hidden={!!l.hidden} hiddenByAdmin={!!l.hidden_by_admin} lang={lang} />}
             </div>
           ))}
           {list.length === 0 && <Empty text={t(lang, "profile.noListings")} />}

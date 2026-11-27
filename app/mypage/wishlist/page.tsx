@@ -11,12 +11,13 @@ import { redirect } from "next/navigation";
 import { rows, tableMissing } from "@/lib/safe";
 import type { MarketSource } from "@/lib/market/types";
 import ExternalUnwish from "./ExternalUnwish";
+import { auctionEnabled } from "@/lib/auction";
 
 export const metadata = { title: "찜 · いいね", robots: { index: false } };
 
 type MiniListing = {
   id: string; title: string; price: number; currency: string; status: string; images: string[];
-  source_language: string; listing_translations: { language: string; title: string }[];
+  source_language: string; listing_translations: { language: string; title: string }[]; sale_type?: string;
 };
 
 type ExtWish = { source: MarketSource; source_id: string; title: string; price: number; currency: Currency; thumb: string };
@@ -33,7 +34,7 @@ export default async function MyWishlist(props: { searchParams: Promise<{ page?:
   const g = pageLimit(sp.gpage);
   const [{ data }, extRes] = await Promise.all([
     supabase.from("wishlists")
-      .select("listing_id, price_at_wish, listings(id, title, price, currency, status, images, source_language, listing_translations(language, title))")
+      .select("listing_id, price_at_wish, listings(id, title, price, currency, status, images, source_language, sale_type, listing_translations(language, title))")
       .eq("user_id", viewer.id).order("created_at", { ascending: false }).limit(limit + 1),
     supabase.from("external_wishlists").select("source, source_id, title, price, currency, thumb")
       .eq("user_id", viewer.id).order("created_at", { ascending: false }).limit(g.limit + 1),
@@ -52,7 +53,9 @@ export default async function MyWishlist(props: { searchParams: Promise<{ page?:
       <div className="flex flex-col gap-2">
         {list.map((w) => {
           const l = w.listings!;
-          const drop = w.price_at_wish && l.price < w.price_at_wish
+          // 경매는 값내림 표시를 끄고 「경매」만 붙인다(A-5)
+          const isAuction = auctionEnabled() && l.sale_type === "auction";
+          const drop = isAuction ? `${t(lang, "auction.badge")} · ` : w.price_at_wish && l.price < w.price_at_wish
             ? `${t(lang, "my.priceDrop", { diff: formatMoney(w.price_at_wish - l.price, l.currency as Currency, lang) })} · ` : "";
           return (
             <Row key={l.id} href={`/listings/${l.id}`} image={l.images?.[0]} title={displayTitle(l, lang)}

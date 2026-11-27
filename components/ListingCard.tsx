@@ -5,6 +5,7 @@ import { CountryChip, TomoSymbol } from "@/components/Brand";
 import Price from "@/components/ui/Price";
 import WishButton from "@/components/WishButton";
 import type { FeedListing } from "@/components/ListingRow";
+import { AuctionBadge, AuctionMeta, cardAuction } from "@/components/auction/AuctionCardMeta";
 
 // 2열 그리드 카드 — 사진 → 제목 한 줄 → 가격 두 줄(큰 줄 구매자 통화, 작은 줄 판매자 원가) → 지역.
 // 찜 하트는 사진 오른쪽 위(누르는 자리 44px). 링크 안에 버튼을 넣지 않으려고 하트는 링크 옆 형제로 둔다.
@@ -18,6 +19,7 @@ export default function ListingCard({ listing, viewer, wished = false }: {
   const title = displayTitle(listing, lang);
   const sold = listing.status === "sold";
   const reserved = listing.status === "reserved" || listing.status === "held";
+  const auction = cardAuction(listing);
   return (
     <div className="relative">
       <Link href={`/listings/${listing.id}`} title={title !== listing.title ? listing.title : undefined} className="press flex flex-col">
@@ -35,10 +37,12 @@ export default function ListingCard({ listing, viewer, wished = false }: {
               {t(lang, sold ? "badge.sold" : listing.status === "held" ? "badge.paused" : "badge.reserved")}
             </span>
           )}
+          {auction && !sold && !reserved && <AuctionBadge lang={lang} className="absolute left-1.5 top-1.5" />}
         </div>
         <p className="mt-1.5 line-clamp-1 text-[13px] leading-snug text-ink">{title}</p>
         <Price className="mt-0.5" amount={listing.price} currency={listing.currency} viewerCurrency={viewer.currency}
-          rate={viewer.rate} lang={lang} fallback={t(lang, "price.free")} dim={sold} fixed />
+          rate={viewer.rate} lang={lang} fallback={t(lang, "price.free")} dim={sold} fixed label={auction ? t(lang, "auction.current") : undefined} />
+        {auction && <AuctionMeta info={auction} lang={lang} className="mt-0.5" />}
         <p className="mt-0.5 flex items-center gap-1 text-[11px] text-ink-soft">
           <CountryChip country={listing.country} />
           <span className="truncate" lang={listing.country === "JP" ? "ja" : "ko"}>{listing.region}</span>

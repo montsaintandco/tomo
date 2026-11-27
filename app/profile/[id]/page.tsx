@@ -11,6 +11,8 @@ import ReportButton from "@/components/safety/ReportButton";
 import BlockButton from "@/components/safety/BlockButton";
 import { rows } from "@/lib/safe";
 import Link from "next/link";
+import { auctionSelect } from "@/lib/auction";
+import { AuctionBadge, AuctionMeta, cardAuction, type AuctionFields } from "@/components/auction/AuctionCardMeta";
 import { notFound, redirect } from "next/navigation";
 
 const HEART = "M12 21C7.2 17.2 2.5 13.6 2.5 8.9 2.5 5.6 5 3.5 7.8 3.5c1.7 0 3.3.9 4.2 2.3.9-1.4 2.5-2.3 4.2-2.3 2.8 0 5.3 2.1 5.3 5.4 0 4.7-4.7 8.3-9.5 12.1z";
@@ -36,7 +38,7 @@ export default async function ProfilePage(props: { params: Promise<{ id: string 
   if (!p) notFound();
 
   const { data: listings } = await supabase.from("listings")
-    .select("id, title, price, currency, status, images")
+    .select(`id, title, price, currency, status, images${auctionSelect()}` as const)
     .eq("seller_id", targetId).order("created_at", { ascending: false }).limit(20);
 
   // 받은 후기 = 이 거래의 상대가 남긴 후기 (reviewer가 본인이 아닌 것)
@@ -85,6 +87,7 @@ export default async function ProfilePage(props: { params: Promise<{ id: string 
             {(listings ?? []).map((l) => {
               const img = (l.images as string[])[0];
               const inactive = l.status !== "active";
+              const auction = cardAuction(l as AuctionFields);
               return (
                 <li key={l.id}>
                   <Link href={`/listings/${l.id}`} className="press block">
@@ -100,10 +103,12 @@ export default async function ProfilePage(props: { params: Promise<{ id: string 
                           {t(lang, l.status === "sold" ? "badge.sold" : l.status === "held" ? "badge.paused" : "badge.reserved")}
                         </span>
                       )}
+                      {auction && !inactive && <AuctionBadge lang={lang} className="absolute left-1 top-1" />}
                     </div>
                     <p className={`tnum mt-1 truncate text-[13px] font-extrabold ${inactive ? "text-ink-faint" : "text-ink"}`}>
                       {formatPrice(l.price, l.currency as Currency, lang)}
                     </p>
+                    {auction && <AuctionMeta info={auction} lang={lang} />}
                   </Link>
                 </li>
               );
