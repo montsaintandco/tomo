@@ -21,16 +21,16 @@ describe("parseOrderCode", () => {
 });
 
 describe("decideRate", () => {
-  it("3% 안이면 적용, 역방향 값도 만든다", () => {
-    const d = decideRate(8.36, 8.4);
+  it("3% 안이면 적용, 엔→원은 에어쉽과 같은 가산, 원→엔은 고시환율 역수", () => {
+    const d = decideRate(8.36, 8.9);
     expect(d.hold).toBe(false);
-    expect(d.jpyKrw).toBe(8.36);
+    expect(d.jpyKrw).toBe(8.8616);
     expect(d.krwJpy).toBeCloseTo(1 / 8.36, 6);
   });
   it("3% 넘게 바뀌면 보류(오르든 내리든)", () => {
-    expect(decideRate(8.36, 9.0).hold).toBe(true);
-    expect(decideRate(9.3, 9.0).hold).toBe(true);
-    expect(decideRate(9.26, 9.0).hold).toBe(false);
+    expect(decideRate(8.0, 9.0).hold).toBe(true);
+    expect(decideRate(8.8, 9.0).hold).toBe(true);
+    expect(decideRate(8.36, 9.0).hold).toBe(false);
   });
   it("지금 값이 없으면 비교 없이 적용", () => {
     expect(decideRate(8.36, null)).toMatchObject({ hold: false, change: null });

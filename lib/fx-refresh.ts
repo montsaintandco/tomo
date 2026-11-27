@@ -1,11 +1,12 @@
 // 환율 자동 갱신(0042, Ren 결정 6). 원천 = 에어쉽 공개 /api/fx-rate(관세청 주간 고시환율, 에어쉽과 같은 원천).
-// tomo 는 지금 환율에 가산을 하지 않는다(exchange_rates 에 원값) → FX_MARKUP 0 그대로 유지.
+// 엔→원(JPY_KRW, 원화 청구에 쓰는 값)은 에어쉽과 같은 공식: 고시환율 × (1 + FX_MARKUP). 에어쉽 NEGO_FX_SPREAD_JPY 와 같은 값으로 맞춘다(Ren 2026-11-27 「에어쉽이랑 똑같이」).
+// 원→엔(KRW_JPY)은 화면 참고 환산뿐(청구는 항상 KRW)이라 가산 없이 고시환율 역수. 가산 수치는 고객 화면에 드러내지 않는다.
 // 지금 적용된 값보다 3% 넘게 바뀌면 적용하지 않고 보류 + 운영자 알림(cron_runs job='rates', 텔레그램 「[TOMO]」).
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { notifyOps } from "./notify-ops";
 
 export const FX_SOURCE = "https://airship.click/api/fx-rate";
-export const FX_MARKUP = 0;
+export const FX_MARKUP = 0.06;
 export const FX_MAX_CHANGE = 0.03;
 
 export type FxDecision = { jpyKrw: number; krwJpy: number; change: number | null; hold: boolean };
@@ -13,7 +14,7 @@ export type FxDecision = { jpyKrw: number; krwJpy: number; change: number | null
 /** 원천 값(1엔당 원) → 적용할 두 값과 보류 여부. current 가 없으면 비교 없이 적용 */
 export function decideRate(krwPerJpyRaw: number, current: number | null): FxDecision {
   const jpyKrw = Math.round(krwPerJpyRaw * (1 + FX_MARKUP) * 10000) / 10000;
-  const krwJpy = Math.round((1 / krwPerJpyRaw) * (1 + FX_MARKUP) * 1e6) / 1e6;
+  const krwJpy = Math.round((1 / krwPerJpyRaw) * 1e6) / 1e6;
   const change = current && current > 0 ? jpyKrw / current - 1 : null;
   return { jpyKrw, krwJpy, change, hold: change !== null && Math.abs(change) > FX_MAX_CHANGE };
 }
