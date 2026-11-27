@@ -4,7 +4,7 @@ import { runRefund, loadCancelPreviews } from "@/lib/refunds";
 import { agingLevel, PROXY_STAGE, type AgingStage } from "@/lib/admin-aging";
 import { SITE_URL } from "@/lib/site";
 import { CENTER_COUNTRY, OPS_API_VERSION, OPS_CAPABILITIES, OPS_EVENT_TYPES, OPS_SITE, UUID_RE, type OpResult, type OpsScope } from "@/lib/ops-bridge";
-import { listParam, opsFail, opsOk, paging, runOp, type OpsCtx } from "@/lib/ops-server";
+import { listParam, opsFail, opsOk, paging, runOp, withActorSession, type OpsCtx } from "@/lib/ops-server";
 
 // 운영 API v1 경로 표. 경로·요청·응답 형태는 docs/aaa/12 9장. 조작은 모두 기존 RPC·lib/admin-actions.ts 를 운영자 세션으로 부른다.
 
@@ -56,7 +56,7 @@ const centerOf = (s: string) => ({ KR: "SEOUL", JP: "NARITA", SEOUL: "SEOUL", NA
 // ── 조회 ──
 const meta: Handler = async () => opsOk({
   api_version: OPS_API_VERSION, site: { ...OPS_SITE, url: SITE_URL }, capabilities: OPS_CAPABILITIES, events: OPS_EVENT_TYPES,
-  money_actions: ["proxy.cancel", "trades.cancel", "trades.complete", "disputes.resolve", "refunds.run", "payouts.paid", "payouts.reject", "users.delete"],
+  money_actions: ["proxy.cancel", "trades.cancel", "trades.complete", "disputes.resolve", "refunds.run", "payouts.paid", "payouts.reject", "users.delete", "ledger.adjust"],
 });
 
 const health: Handler = async ({ admin }) => {
@@ -244,6 +244,17 @@ const rates: Handler = async ({ admin }) => {
       raw: lr.detail?.raw ?? null, jpy_krw: lr.detail?.jpy_krw ?? null, change: lr.detail?.change ?? null, error: lr.detail?.error ?? null } : null });
 };
 
+/** 판매자 원장 통화별 잔액(원장 합, DB seller_balances 와 같은 규칙). 1000행씩 끝까지 읽는다. 조회 실패는 null */
+async function ledgerBalance(admin: SupabaseClient, user: string): Promise<Record<string, number> | null> {
+  const out: Record<string, number> = { KRW: 0, JPY: 0 };
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await admin.from("seller_ledger").select("currency, amount").eq("user_id", user).order("id").range(from, from + 999);
+    if (error) return null;
+    for (const r of (data ?? []) as { currency: string; amount: number }[]) out[r.currency] = (out[r.currency] ?? 0) + Number(r.amount);
+    if (!data || data.length < 1000) return out;
+  }
+}
+
 // ── 조작(모두 request_id + expected_status) ──
 const txAdvance = (checkCenter: boolean): Handler => async (ctx, p) => {
   const id = checkCenter ? p[1] : p[0];
@@ -374,6 +385,38 @@ const ROUTES: Route[] = [
     };
     return runOp(ctx, { action: "users.delete", target: id, current: userState,
       run: async (sb, uid) => res(await adminDeleteUser(sb!, uid, id)) });
+  } },
+  // A3: 미지급 합계(admin_seller_liability, 운영자 세션), 판매자 원장 잔액·조정, 보류 상품 반송 확인·해제
+  { method: "GET", path: "payouts/summary", need: "money", h: async ({ admin, actor }) => {
+    const r = await withActorSession(admin, actor!.profile_id, async (sb) => sb.rpc("admin_seller_liability"));
+    return r.error ? opsFail(502, `db: ${r.error.message}`) : opsOk({ items: r.data ?? [] });
+  } },
+  { method: "GET", path: "users/:id/ledger", need: "money", h: async ({ admin }, [id]) => {
+    const nf = uuidOr404(id); if (nf) return nf;
+    const [bal, recent] = await Promise.all([ledgerBalance(admin, id),
+      admin.from("seller_ledger").select("id, currency, amount, kind, memo, created_at").eq("user_id", id).order("id", { ascending: false }).limit(20)]);
+    if (!bal || recent.error) return opsFail(502, `db: ${recent.error?.message ?? "ledger"}`);
+    return opsOk({ balances: bal, recent: recent.data ?? [] });
+  } },
+  // expected_status = "<통화>:<지금 잔액>" — 화면에서 본 잔액이 그사이 바뀌었으면 409
+  { method: "POST", path: "users/:id/ledger_adjust", need: "money", h: async (ctx, [id]) => {
+    const nf = uuidOr404(id); if (nf) return nf;
+    const cur = str(ctx.body.currency, 3);
+    const amt = Number(ctx.body.amount);
+    const memo = str(ctx.body.memo, 500);
+    if (cur !== "KRW" && cur !== "JPY") return bad("currency must be KRW|JPY");
+    if (!Number.isInteger(amt) || amt === 0 || Math.abs(amt) > 100_000_000) return bad("amount must be a non-zero integer");
+    if (!memo) return bad("memo required");
+    return runOp(ctx, { action: "ledger.adjust", target: id,
+      current: async () => { const b = await ledgerBalance(ctx.admin, id); return b ? `${cur}:${b[cur] ?? 0}` : null; },
+      run: async (sb) => rpcRes(await sb!.rpc("admin_adjust_seller_ledger", { p_user: id, p_currency: cur, p_amount: amt, p_memo: memo })) });
+  } },
+  { method: "POST", path: "listings/:id/release", need: "ops", h: async (ctx, [id]) => {
+    const nf = uuidOr404(id); if (nf) return nf;
+    const note = str(ctx.body.note, 300);
+    if (!note) return bad("note required");
+    return runOp(ctx, { action: "listings.release", target: id, current: statusOf(ctx.admin, "listings", id),
+      run: async (sb) => rpcRes(await sb!.rpc("admin_release_listing_hold", { p_id: id, p_note: note })) });
   } },
   { method: "GET", path: "activity", need: "ops", h: activityList },
 ];

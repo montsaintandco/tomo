@@ -277,3 +277,8 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=<Supabase 대시보드 → Project Settings → AP
 - 코드: lib/market/mercari.ts 가 경매를 `auction: true` + `unbuyable: "auction"`(야후옥션과 같은 「구경만」)으로 표시. 상세는 구매 영역이 「경매 상품은 지금 지원하지 않아요 (구경만)」 비활성 버튼으로 바뀌고 장바구니·바로 구매가 사라진다. 카드 배지 「경매 · 구경만」(야후 포함, 옛 「입찰중」), 검색은 맨 뒤, 홈 줄·비슷한 상품·시세 힌트에서는 빠진다.
 - 서버 차단: upsertExternalItem 이 경매면 409 `code: auction`(장바구니 /api/cart → `pay.err.auction`, 대행 신청 /api/proxy 도 거부, 스냅샷 안 적음). /api/order 재확인(lib/price-check)은 경매면 `auction`(BLOCKING) → 409 `pay.err.changed`, 이미 장바구니에 있던 경매도 결제 전에 막힌다. 경매는 external_items.fetched_at 을 새로 쓰지 않아 마켓을 못 읽을 때 15분 캐시로 통과하지 못한다. DB 변경 없음.
 - vitest.unit.config.ts 에 `@` 별칭 추가(앱 코드 `@/` 경로 모듈을 단위 테스트에서 읽게). 테스트 tests/unit/mercari-auction.test.ts 11개(가드를 끄면 3개 실패 확인).
+### 2026-11-27 A3 에어쉽 돈 화면용 운영 API(docs/aaa/12 9.4 A3)
+- lib/ops-api.ts 경로 4개 추가: GET payouts/summary(money, admin_seller_liability 를 운영자 세션으로), GET users/:id/ledger(money, 원장 잔액·최근 20줄), POST users/:id/ledger_adjust(money, expected_status = 「통화:지금 잔액」, admin_adjust_seller_ledger), POST listings/:id/release(ops, 메모 필수, admin_release_listing_hold). meta.money_actions 에 ledger.adjust.
+- SQL 변경 없음(0045 없음). 기존 RPC 그대로.
+- 검사: tests/unit/ops-routes-a3.test.ts(돈 경로 scope money, 보류 해제 ops). (`@` 별칭은 B0 에서 이미 들어감.)
+- 에어쉽 쪽 화면·가드는 에어쉽 docs/connected-sites.md 「A3」.

@@ -276,6 +276,7 @@
 
 - 구현: 2026-11-27 T3. 코드 `lib/ops-bridge.ts`(서명·멱등·이벤트 본문, 순수 함수), `lib/ops-server.ts`(인증·운영자 세션·멱등 저장), `lib/ops-api.ts`(경로 표), `app/api/ops/[...path]/route.ts`, `app/api/cron/ops-outbox/route.ts`. DB `0043_ops_bridge.sql`(운영 적용 완료).
 - 이 절이 7장·8.3 과 다르면 이 절이 실제 동작이다. 서명 호출 예시는 `scripts/ops-call.mts`.
+- A3(2026-11-27): 경로 4개 추가(미지급 합계·원장 잔액·원장 조정·보류 해제). `meta.money_actions` 에 `ledger.adjust`. 경로 scope 는 `tests/unit/ops-routes-a3.test.ts` 가 지킨다. SQL 변경 없음(0045 없음).
 
 ### 9.1 공통 규칙
 
@@ -359,6 +360,10 @@
 | `/api/ops/users/:id/suspend` | POST | ops | `suspended`(boolean) → `admin_set_user`(운영자 여부는 그대로) | `{ result: null }` | `active`·`suspended` |
 | `/api/ops/users/:id/delete` | POST | money | — → `adminDeleteUser`(진행 거래 등 있으면 409 + `blockers`) | `{ deleted: true }` | `active`·`suspended`·`deleted` |
 | `/api/ops/activity` | GET | ops | `limit`, `before_id`, `action` | `{ items[admin_actions + admin{nickname}] }`(id 내림차순) | — |
+| `/api/ops/payouts/summary` | GET | money | — → `admin_seller_liability`(운영자 세션, A3) | `{ items[{ currency, balance, pending, users }] }` 미지급 합계 = balance + pending | — |
+| `/api/ops/users/:id/ledger` | GET | money | — (A3) | `{ balances{KRW,JPY}(원장 합, 1000행씩 끝까지), recent[20] }` | — |
+| `/api/ops/users/:id/ledger_adjust` | POST | money | `currency`(KRW\|JPY), `amount`(0 아닌 정수, 차감은 음수), `memo`(필수) → `admin_adjust_seller_ledger` (A3) | `{ result: seller_ledger 행 }` | **`<통화>:<지금 잔액>`**(예 `KRW:12000`) — 화면에서 본 잔액이 그사이 바뀌면 409 |
+| `/api/ops/listings/:id/release` | POST | ops | `note`(필수) → `admin_release_listing_hold`(0041, 반송 확인 → 판매중 + 판매자 숨김, 판매자 알림 0044) (A3) | `{ result: listings 행 }` | listings.status(`held`) |
 
 ### 9.5 이벤트(tomo → 센터)
 
