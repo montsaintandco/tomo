@@ -407,7 +407,9 @@ money 경로 거절(시스템 주체가 `won`·`missed`·`cancel`·`settings` �
 
 멱등: 같은 `request_id` 는 한 번만 실행되고 다시 보내면 저장된 응답(`replayed: true`). request_id 는 uuid 여야 하므로 설계 3절의 `armed:<행 id>` 같은 문자열은 uuid v5(이름 기반)로 바꿔 보낸다. `expected_status` 가 지금 상태와 다르면 409 `{ current_status, expected_status }` — 다리 작업은 `worker-queue?ids=` 로 지금 상태를 읽고 보낸다.
 
-**검증**: tsc 0, eslint 오류 0, vitest unit 48파일 378개 통과(새 `tests/unit/market-bid-worker.test.ts`), next build 성공. 운영 확인은 HANDOFF·결과 보고 참고.
+**검증**: tsc 0, eslint 오류 0, vitest unit 48파일 378개 통과(새 `tests/unit/market-bid-worker.test.ts`), next build 성공. 커밋 `fd500ed`, Actions server-image·db-tests·smoke 성공, `/api/health` version fd500ed·embeds ok.
+
+**운영 서명 호출(데이터 쓰기 없음)**: 시스템 worker-queue 200(빈 목록) · 시스템 settings(money) 403 `system actor: money not allowed` · 시스템 won(ops) 403 `money scope required` · 시스템 사람 경로(GET market-bids) 403 `system actor: route not allowed` · 사람 worker-queue 403 `system route only` · health 잘못된 본문 400 `mb: bad health` · armed request_id 없음 400 · 사람 기존 목록 200. 첫 호출로 시스템 행의 `center_actor_id` 가 **`site-bids`** 로 묶였다 — A2 는 `x-ops-actor-id: site-bids` 를 그대로 쓴다.
 
 ### 12.5 A2 가 알아야 할 것(T1 뒤)
 
