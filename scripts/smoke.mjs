@@ -53,8 +53,10 @@ const CHECKS = [
   ["/api/health", (r) => r.status === 200 && /"ok":true/.test(r.text) && /"embeds":"ok"/.test(r.text)], // embeds: 거래·경매 임베드(0051)
 ];
 for (const [path, ok] of CHECKS) {
-  const r = await get(path);
-  const pass = ok(r);
+  let r = await get(path);
+  let pass = ok(r);
+  // 배포 직후엔 옛 컨테이너가 잠깐 같이 응답한다(2fd352d 스모크: 버전 확인 뒤 /api/health 가 옛 버전 응답). health 만 10초 간격 5번 더 본다
+  for (let k = 0; !pass && path === "/api/health" && k < 5; k++) { await sleep(10_000); r = await get(path); pass = ok(r); }
   console.log(`${pass ? "OK  " : "FAIL"} ${r.status} ${path}`);
   if (!pass) fails.push(`${path} → ${r.status}${path === "/api/health" ? ` ${r.text.slice(0, 120)}` : ""}`);
 }
