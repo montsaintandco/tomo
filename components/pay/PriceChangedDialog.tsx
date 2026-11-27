@@ -18,8 +18,9 @@ export default function PriceChangedDialog({ lang, changes, newTotal, onAgree, o
     window.addEventListener("keydown", k);
     return () => window.removeEventListener("keydown", k);
   }, [onClose]);
-  const hard = changes.some((c) => c.kind === "sold" || c.kind === "unverified");
+  const hard = changes.some((c) => c.kind === "sold" || c.kind === "unverified" || c.kind === "auction");
   const label = (c: RecheckChange) => c.kind === "sold" ? t(lang, "pay.recheck.sold")
+    : c.kind === "auction" ? t(lang, "pay.recheck.auction")
     : c.kind === "unverified" ? t(lang, "pay.recheck.unverified") : t(lang, "pay.recheck.up");
   const shown = changes.filter((c) => c.kind !== "down" || !hard); // 막힌 경우엔 내림 줄은 빼고 막힌 이유만
 

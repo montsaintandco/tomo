@@ -272,3 +272,8 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=<Supabase 대시보드 → Project Settings → AP
 - 첫 서명 요청(counts)으로 `ops_actors.center_actor_id` 가 Ren 의 에어쉽 user id(7ce8d1c0-…)로 채워졌다.
 - 시험: outbox 에 `ticket.opened`(code 「시험(A1 연결 확인)」) 1건 → 1분 크론이 첫 시도에 전송 → 에어쉽 저장·어드민 알림·텔레그램 1건. 같은 event_id 재전송은 `duplicate` 로 버려짐, 틀린 토큰 401. 시험 행은 양쪽에서 지웠다(텔레그램 메시지 1건은 남음).
 - 되돌리기: Coolify 에서 OPS_HOOK_URL 삭제 후 재시작 → 이벤트 전송 멈춤(outbox 24시간 뒤 포기).
+### 2026-11-27 B0 메루카리 경매 인식·차단 (docs/aaa/14-auction.md B·C절)
+- 실측(2026-11-27): 검색 v2 는 body 에 `withAuction: true` 를 넣어야 항목 `auction` 칸이 온다(없으면 경매도 null — 「ワンピースカード」 20건 중 경매 6건이 전부 null). 경매면 `{id, bidDeadline, totalBid, highestBid, initialPrice, state}`, 입찰 0건도 id·bidDeadline 이 있다. 상세 items/get 은 `include_auction=true` 를 붙여야 `auction_info`(`state` STATE_ONGOING·STATE_NO_BID, total_bids, highest_bid=표시 가격)가 온다. 일반 상품은 두 칸 다 없다.
+- 코드: lib/market/mercari.ts 가 경매를 `auction: true` + `unbuyable: "auction"`(야후옥션과 같은 「구경만」)으로 표시. 상세는 구매 영역이 「경매 상품은 지금 지원하지 않아요 (구경만)」 비활성 버튼으로 바뀌고 장바구니·바로 구매가 사라진다. 카드 배지 「경매 · 구경만」(야후 포함, 옛 「입찰중」), 검색은 맨 뒤, 홈 줄·비슷한 상품·시세 힌트에서는 빠진다.
+- 서버 차단: upsertExternalItem 이 경매면 409 `code: auction`(장바구니 /api/cart → `pay.err.auction`, 대행 신청 /api/proxy 도 거부, 스냅샷 안 적음). /api/order 재확인(lib/price-check)은 경매면 `auction`(BLOCKING) → 409 `pay.err.changed`, 이미 장바구니에 있던 경매도 결제 전에 막힌다. 경매는 external_items.fetched_at 을 새로 쓰지 않아 마켓을 못 읽을 때 15분 캐시로 통과하지 못한다. DB 변경 없음.
+- vitest.unit.config.ts 에 `@` 별칭 추가(앱 코드 `@/` 경로 모듈을 단위 테스트에서 읽게). 테스트 tests/unit/mercari-auction.test.ts 11개(가드를 끄면 3개 실패 확인).

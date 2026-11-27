@@ -9,11 +9,11 @@ export function isShipUnfit(title: string | null | undefined): boolean {
   return !!title && SHIP_UNFIT.test(title.normalize("NFKC"));
 }
 
-export type HomeQualityInput = { title: string; price: number; thumb?: string | null; soldOut?: boolean };
+export type HomeQualityInput = { title: string; price: number; thumb?: string | null; soldOut?: boolean; unbuyable?: string };
 
 /** 홈 줄에 올려도 되는 매물인가 — 사진·가격 있음, 판매 중, 살 수 있음, 항공 발송 가능 */
 export function passesHome(it: HomeQualityInput): boolean {
-  if (!it.thumb || it.soldOut || !(it.price > 0)) return false;
+  if (!it.thumb || it.soldOut || !(it.price > 0) || it.unbuyable) return false; // 파서가 막은 것(경매 구경만 등)도 홈에는 안 건다
   return !unbuyableReason(it.title) && !isShipUnfit(it.title);
 }
 

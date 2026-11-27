@@ -6,7 +6,7 @@ import { unstable_cache } from "next/cache";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { fetchWithRetry } from "./http";
 import type { SearchFilters, MarketItem, MarketItemDetail } from "./types";
-import { unbuyableReason, unbuyableDetail } from "../unbuyable";
+import { unbuyableReason, unbuyableDetail, UNBUYABLE_AUCTION } from "../unbuyable";
 
 const API_BASE = "https://api.mercari.jp";
 
@@ -69,10 +69,22 @@ async function mercariFetchLive(method: "GET" | "POST", path: string, body?: unk
 const MERCARI_SORT = { rec: ["SORT_SCORE", "ORDER_DESC"], new: ["SORT_CREATED_TIME", "ORDER_DESC"], price_asc: ["SORT_PRICE", "ORDER_ASC"], price_desc: ["SORT_PRICE", "ORDER_DESC"] } as const;
 const CONDITION: Record<string, string> = { "1": "新品、未使用", "2": "未使用に近い", "3": "目立った傷や汚れなし", "4": "やや傷や汚れあり", "5": "傷や汚れあり", "6": "全体的に状態が悪い" };
 
+// 메루카리 경매 출품(B0). 경매는 정액 구매대행을 할 수 없어 「구경만」(UNBUYABLE_AUCTION)으로 막는다. 2026-11-23 실측:
+// · 검색(v2)은 body 에 withAuction:true 를 넣어야 auction 칸이 온다(없으면 경매도 null — 20건 중 경매 6건이 전부 null).
+//   경매면 {id, bidDeadline, totalBid, highestBid, initialPrice, state}, 입찰 0건도 id·bidDeadline 이 있다. 일반은 null.
+// · 상세(items/get)는 include_auction=true 를 붙여야 auction_info 가 온다. 경매면 {id, state: STATE_ONGOING|STATE_NO_BID…, total_bids…}.
+export function isMercariSearchAuction(a: any): boolean {
+  return !!a && typeof a === "object" && !!(a.id || a.bidDeadline);
+}
+export function isMercariItemAuction(ai: any): boolean {
+  return !!ai && typeof ai === "object" && !!(ai.id || /^STATE_/.test(String(ai.state ?? "")));
+}
+
 // v2 검색 응답 항목 → 카드. shippingPayerId 2 = 送料込み(出品者負担)
 export function toSearchItem(it: any): MarketItem {
   const name = String(it.name ?? "");
-  const unbuyable = unbuyableReason(name);
+  const auction = isMercariSearchAuction(it.auction);
+  const unbuyable = auction ? UNBUYABLE_AUCTION : unbuyableReason(name);
   return {
     source: "mercari", sourceId: it.id,
     url: `https://jp.mercari.com/item/${it.id}`,
@@ -80,6 +92,7 @@ export function toSearchItem(it: any): MarketItem {
     thumb: it.thumbnails?.[0] ?? "", soldOut: it.status !== "ITEM_STATUS_ON_SALE",
     ...(it.shippingPayerId != null ? { shippingIncluded: String(it.shippingPayerId) === "2" } : {}),
     ...(CONDITION[String(it.itemConditionId)] ? { condition: CONDITION[String(it.itemConditionId)] } : {}),
+    ...(auction ? { auction: true } : {}),
     ...(unbuyable ? { unbuyable } : {}),
   };
 }
@@ -101,7 +114,7 @@ export async function mercariSearchPage(keyword: string, f: SearchFilters = {}, 
       categoryId: f.catIds ?? [], priceMin: f.min ?? 0, priceMax: f.max ?? 0,
       itemConditionId: f.cond === "new" ? [1] : f.cond === "used" ? [2, 3, 4, 5, 6] : [],
     },
-    defaultDatasets: ["DATASET_TYPE_MERCARI"], serviceFrom: "suruga",
+    defaultDatasets: ["DATASET_TYPE_MERCARI"], serviceFrom: "suruga", withAuction: true,
   });
   return { items: (data.items ?? []).map(toSearchItem), next: String(data.meta?.nextPageToken ?? "") };
 }
@@ -118,8 +131,9 @@ export async function mercariSellerItems(sellerId: string | number, limit = 12):
 }
 
 export async function mercariItem(id: string): Promise<MarketItemDetail> {
-  const res = await mercariFetch("GET", `/items/get?id=${encodeURIComponent(id)}`);
+  const res = await mercariFetch("GET", `/items/get?id=${encodeURIComponent(id)}&include_auction=true`);
   const d = res.data;
+  const auction = isMercariItemAuction(d.auction_info);
   const s = d.seller ?? {};
   const r = s.ratings ?? {};
   const ratingTotal = Number(s.num_ratings ?? 0);
@@ -142,7 +156,7 @@ export async function mercariItem(id: string): Promise<MarketItemDetail> {
     },
     category: cat ? [cat.root_category_name, cat.parent_category_name, cat.name].filter(Boolean).join(" › ") : undefined,
     postedAt: d.updated ? new Date(Number(d.updated) * 1000).toISOString() : undefined,
-    counts: { favorites: Number(d.num_likes ?? 0), chats: Number(d.num_comments ?? 0) },
+    counts: { favorites: Number(d.num_likes ?? 0), chats: Number(d.num_comments ?? 0), ...(auction ? { bids: Number(d.auction_info.total_bids ?? 0) } : {}) },
     // 메루카리 평가는 좋아요/보통/나쁨 개수 — 총 건수와 좋아요 비율로 요약
     sellerRating: ratingTotal > 0
       ? `👍 ${Number(r.good ?? 0)} · ${Math.round((Number(r.good ?? 0) / ratingTotal) * 100)}% (${ratingTotal})`
@@ -151,6 +165,7 @@ export async function mercariItem(id: string): Promise<MarketItemDetail> {
     sellerItems,
     tradeTags: [d.is_anonymous_shipping ? "匿名配送" : "", d.shipping_payer?.name ?? ""].filter(Boolean),
     ...(d.shipping_payer?.id != null ? { shippingIncluded: Number(d.shipping_payer.id) === 2 } : {}),
-    unbuyable: unbuyableDetail(String(d.name ?? ""), d.description),
+    ...(auction ? { auction: true } : {}),
+    unbuyable: auction ? UNBUYABLE_AUCTION : unbuyableDetail(String(d.name ?? ""), d.description),
   };
 }

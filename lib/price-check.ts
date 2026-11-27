@@ -9,14 +9,16 @@ import { LIVE_SOURCES, type MarketSource, type MarketItemDetail } from "./market
 // DB create_proxy_order(0035)의 신선도 기준과 같다. 바꾸면 SQL 도 같이 바꾼다.
 export const ORDER_FRESH_MS = 15 * 60_000;
 
-export type RecheckKind = "ok" | "down" | "up" | "sold" | "unverified";
+export type RecheckKind = "ok" | "down" | "up" | "sold" | "unverified" | "auction";
 export type Cached = { price: number; status: string; fetchedAt: string };
-export type Live = { price: number; soldOut: boolean } | null;
+export type Live = { price: number; soldOut: boolean; auction?: boolean } | null;
 
 // 순수 판정. live=null 은 다시 읽지 못한 것(파서 실패·차단·지원 안 하는 마켓).
 // 다시 못 읽어도 마지막 확인이 15분 안이면 그 값을 믿는다(DB 기준과 같다).
 export function recheckDecision(seen: number, cached: Cached, live: Live, now: number): { kind: RecheckKind; price: number } {
   let price: number;
+  // 경매는 가격·품절보다 먼저 막는다(B0) — 이미 장바구니에 담긴 것도 결제 직전에 거부
+  if (live?.auction) return { kind: "auction", price: Math.round(Number(live.price) || cached.price) };
   if (live && Number.isFinite(live.price) && live.price > 0) {
     if (live.soldOut) return { kind: "sold", price: Math.round(live.price) };
     price = Math.round(live.price);
@@ -33,7 +35,7 @@ export function recheckDecision(seen: number, cached: Cached, live: Live, now: n
   return { kind: "ok", price };
 }
 
-export const BLOCKING: readonly RecheckKind[] = ["up", "sold", "unverified"];
+export const BLOCKING: readonly RecheckKind[] = ["up", "sold", "unverified", "auction"];
 
 export type RecheckRow = { id: string; source: MarketSource; source_id: string; title: string; price: number; currency: "KRW" | "JPY"; status: string; fetched_at: string };
 export type RecheckChange = { id: string; title: string; kind: RecheckKind; from: number; to: number; currency: "KRW" | "JPY" };
@@ -52,9 +54,10 @@ export async function recheckItems(admin: SupabaseClient, rows: RecheckRow[], se
       const live: MarketItemDetail | null = lives[j];
       const s = Number(seen[r.id]);
       const shown = Number.isFinite(s) && s >= 0 ? s : r.price;
-      const d = recheckDecision(shown, { price: r.price, status: r.status, fetchedAt: r.fetched_at }, live ? { price: live.price, soldOut: !!live.soldOut } : null, now);
+      const d = recheckDecision(shown, { price: r.price, status: r.status, fetchedAt: r.fetched_at }, live ? { price: live.price, soldOut: !!live.soldOut, auction: !!live.auction } : null, now);
       const priced = !!live && Number.isFinite(live.price) && live.price > 0;
-      if (live && (priced || live.soldOut)) {
+      // 경매는 fetched_at 을 새로 쓰지 않는다(다음 재확인이 마켓을 못 읽어도 신선한 캐시로 통과하지 않게)
+      if (live && !live.auction && (priced || live.soldOut)) {
         const { error } = await admin.from("external_items")
           .update({ ...(priced ? { price: Math.round(live.price) } : {}), status: live.soldOut ? "sold" : "active", fetched_at: new Date(now).toISOString() })
           .eq("id", r.id);

@@ -29,9 +29,12 @@ export async function upsertExternalItem(
   sourceId: string,
   body: { title?: unknown; url?: unknown; images?: unknown; sellerName?: unknown },
   opts: { allowClientSnapshot: boolean }
-): Promise<{ id: string } | { error: string; status: number }> {
+): Promise<{ id: string } | { error: string; status: number; code?: "auction" }> {
   const live = LIVE_SOURCES.includes(source) ? await loadItem(source, sourceId) : null;
   const now = new Date().toISOString();
+  // 경매(입찰형)는 현재가로 살 수 없다 — 담기·대행 신청 모두 거부(B0). 스냅샷도 적지 않는다:
+  // fetched_at 을 새로 쓰면 재확인이 마켓을 못 읽었을 때 15분 캐시를 믿고 진행할 수 있다
+  if (live?.auction) return { error: "경매 상품은 지금 지원하지 않아요", status: 409, code: "auction" };
 
   if (live) {
     const { data, error } = await admin.from("external_items").upsert({

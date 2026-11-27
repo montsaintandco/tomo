@@ -27,6 +27,7 @@ export async function POST(req: Request) {
     const result = await upsertExternalItem(admin, source, sourceId, body, { allowClientSnapshot: false });
     // upsertExternalItem 문구는 한국어 고정 — 상태로 언어별 키를 고른다(409 품절 / 409 확인 불가 / 그 밖)
     if ("error" in result) {
+      if ("code" in result && result.code === "auction") return apiError(lang, "pay.err.auction", 409);
       if (result.status === 409) return apiError(lang, result.error.includes("품절") ? "pay.err.soldOut" : "pay.err.cannotVerify", 409);
       return apiError(lang, "pay.err.cart", result.status);
     }

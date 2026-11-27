@@ -125,7 +125,7 @@ const D = {
   "badge.sold": ["거래완료", "取引完了"],
   "badge.reserved": ["예약중", "予約中"],
   "badge.paused": ["판매 일시 중지", "販売一時停止中"],
-  "badge.auction": ["입찰중", "入札中"],
+  "badge.auction": ["경매 · 구경만", "オークション・閲覧のみ"],
   "badge.soldOut": ["품절", "売り切れ"],
 
   "time.now": ["방금", "たった今"],
