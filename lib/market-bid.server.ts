@@ -14,10 +14,11 @@ const must = <T,>(r: { data: T; error: { message: string } | null }, what: strin
   return r.data;
 };
 
-async function backFor(admin: SupabaseClient, bidId: string): Promise<string> {
-  const { data } = await admin.from("market_bids").select("source, source_id").eq("id", bidId).maybeSingle();
-  return data ? `/global/${data.source}/${data.source_id}` : "/mypage/notifications";
+// 결제 복귀는 신청 상세(M4). 결제창의 「뒤로」(cancel_url)는 상품 화면 그대로
+async function backFor(_admin: SupabaseClient, bidId: string): Promise<string> {
+  return `/bids/${bidId}`;
 }
+
 
 /** 신청(pending_auth)에 결제창을 연다. 열린 창이 있으면 그대로, 이미 끝난 창이면 확정 경로로. 앞 창은 만료시킨다 */
 export async function openBidCheckout(stripe: Stripe, admin: SupabaseClient, o: {
@@ -115,4 +116,55 @@ export async function captureAuth(stripe: Stripe, admin: SupabaseClient, authId:
   }
   if (got.status !== "succeeded") throw new Error(`capture not succeeded ${got.status}`);
   return must(await admin.rpc("market_bid_auth_captured", { p_auth: a.id, p_captured_krw: got.amount_received }), "market_bid_auth_captured") as AuthRow;
+}
+
+export type WonResult = { status: "ordered" | "capture_failed" | "pending"; orderId?: string; orderCode?: string; error?: string };
+
+/**
+ * 낙찰(won) 뒤 매입 → 대행 주문 전환(M3). 운영자 낙찰 처리 직후와 크론 재시도가 같이 부른다(멱등).
+ * 매입 금액은 DB 가 저장한 capture_krw 만 쓴다. Stripe 가 매입을 확실히 거절했고 PI 가 canceled(승인 만료·카드사 취소)면 capture_failed.
+ * 그 밖의 오류(네트워크 등)는 won 으로 남겨 크론이 다시 한다. 매입이 끝났는데 주문 전환만 실패해도 같은 길로 다시 한다.
+ */
+export async function settleWon(stripe: Stripe, admin: SupabaseClient, bidId: string): Promise<WonResult> {
+  const b = must(await admin.from("market_bids").select("id, status, auth_id, capture_krw, order_id").eq("id", bidId).maybeSingle(), "bid read") as
+    { id: string; status: string; auth_id: string | null; capture_krw: number | null; order_id: string | null } | null;
+  if (!b) throw new Error(`bid not found ${bidId}`);
+  if (b.status === "ordered" || b.order_id) {
+    const o = must(await admin.rpc("market_bid_to_order", { p_id: bidId }), "market_bid_to_order") as { order_id: string; code: string };
+    return { status: "ordered", orderId: o.order_id, orderCode: o.code };
+  }
+  if (b.status === "capture_failed") return { status: "capture_failed" };
+  if (b.status !== "won" || !b.auth_id || !b.capture_krw) throw new Error(`bid ${bidId} not won (${b.status})`);
+  try {
+    await captureAuth(stripe, admin, b.auth_id, b.capture_krw);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    const a = must(await admin.from("market_bid_auths").select("payment_intent_id").eq("id", b.auth_id).maybeSingle(), "auth read") as { payment_intent_id: string | null } | null;
+    const pi = a?.payment_intent_id ? await stripe.paymentIntents.retrieve(a.payment_intent_id).catch(() => null) : null;
+    if (pi?.status === "canceled") {
+      must(await admin.rpc("market_bid_capture_failed", { p_id: bidId, p_reason: `PI canceled (${pi.cancellation_reason ?? "unknown"})` }), "market_bid_capture_failed");
+      return { status: "capture_failed", error: msg };
+    }
+    return { status: "pending", error: msg };
+  }
+  const o = must(await admin.rpc("market_bid_to_order", { p_id: bidId }), "market_bid_to_order") as { order_id: string; code: string };
+  return { status: "ordered", orderId: o.order_id, orderCode: o.code };
+}
+
+/** 크론(1분): 해제 대기 승인(releasing) 다시 해제, 2분 넘은 낙찰(won) 매입·주문 전환 재시도. DB 판정(cron_market_bids)은 pg_cron 이 따로 돈다 */
+export async function runMarketBidStripeCron(stripe: Stripe, admin: SupabaseClient) {
+  const out = { released: 0, releaseFailed: 0, ordered: 0, captureFailed: 0, pending: 0, errors: [] as string[] };
+  const rel = must(await admin.from("market_bid_auths").select("id").eq("status", "releasing").limit(50), "releasing read") as { id: string }[];
+  for (const r of rel) {
+    try { await releaseAuth(stripe, admin, r.id); out.released++; } catch (e) { out.releaseFailed++; out.errors.push(`release ${r.id}: ${e instanceof Error ? e.message : e}`); }
+  }
+  const cutoff = new Date(Date.now() - 120_000).toISOString();
+  const won = must(await admin.from("market_bids").select("id").eq("status", "won").lt("updated_at", cutoff).limit(20), "won read") as { id: string }[];
+  for (const w of won) {
+    try {
+      const r = await settleWon(stripe, admin, w.id);
+      if (r.status === "ordered") out.ordered++; else if (r.status === "capture_failed") out.captureFailed++; else { out.pending++; if (r.error) out.errors.push(`won ${w.id}: ${r.error}`); }
+    } catch (e) { out.pending++; out.errors.push(`won ${w.id}: ${e instanceof Error ? e.message : e}`); }
+  }
+  return out;
 }

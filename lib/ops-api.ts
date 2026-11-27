@@ -6,6 +6,9 @@ import { SITE_URL } from "@/lib/site";
 import { CENTER_COUNTRY, OPS_API_VERSION, OPS_CAPABILITIES, OPS_EVENT_TYPES, OPS_SITE, UUID_RE, type OpResult, type OpsScope } from "@/lib/ops-bridge";
 import { listParam, opsFail, opsOk, paging, runOp, withActorSession, type OpsCtx } from "@/lib/ops-server";
 import { auctionAging, isAuctionTab } from "@/lib/auction-admin";
+import { isMbTab, mbAging, MB_OPS, MB_OP_SCOPE } from "@/lib/market-bid-admin";
+import { runMbOp, saveMbSettings } from "@/lib/market-bid-ops";
+import { getStripe } from "@/lib/stripe";
 
 // 운영 API v1 경로 표. 경로·요청·응답 형태는 docs/aaa/12 9장. 조작은 모두 기존 RPC·lib/admin-actions.ts 를 운영자 세션으로 부른다.
 
@@ -57,7 +60,7 @@ const centerOf = (s: string) => ({ KR: "SEOUL", JP: "NARITA", SEOUL: "SEOUL", NA
 // ── 조회 ──
 const meta: Handler = async () => opsOk({
   api_version: OPS_API_VERSION, site: { ...OPS_SITE, url: SITE_URL }, capabilities: OPS_CAPABILITIES, events: OPS_EVENT_TYPES,
-  money_actions: ["proxy.cancel", "trades.cancel", "trades.complete", "disputes.resolve", "refunds.run", "payouts.paid", "payouts.reject", "users.delete", "ledger.adjust"],
+  money_actions: ["proxy.cancel", "trades.cancel", "trades.complete", "disputes.resolve", "refunds.run", "payouts.paid", "payouts.reject", "users.delete", "ledger.adjust", "market_bids.won", "market_bids.missed", "market_bids.cancel", "market_bids.settings"],
 });
 
 const health: Handler = async ({ admin }) => {
@@ -109,6 +112,7 @@ const counts: Handler = async ({ admin }) => {
       q: admin.from("reports").select("created_at", { count: "exact" }).eq("status", "open").order("created_at").limit(1000) },
   ];
   const auc = admin.rpc("auction_ops_counts");   // 0048. 실패하면 경매 세 줄이 count=null
+  const mbc = admin.rpc("market_bid_ops_counts");   // 0052. 실패하면 입찰 대행 네 줄이 count=null
   const out = await Promise.all(specs.map(async (s) => {
     const r = await s.q;
     const base = { key: s.key, label: s.label, capability: s.capability, url: SITE_URL + s.url };
@@ -122,10 +126,21 @@ const counts: Handler = async ({ admin }) => {
     key, label, capability: "auction", url: `${SITE_URL}/admin/auctions?tab=${tab}`,
     count: c ? Number(c[count] ?? 0) : null, overdue: c ? (overdue ? Number(c[overdue] ?? 0) : 0) : null,
   });
+  const m = await mbc;
+  const mc = (m.error ? null : m.data) as Record<string, number> | null;
+  const mline = (key: string, label: string, tab: string, count: string, overdue: string | null) => ({
+    key, label, capability: "market_auction", url: `${SITE_URL}/admin/market-bids?tab=${tab}`,
+    count: mc ? Number(mc[count] ?? 0) : null, overdue: mc ? (overdue ? Number(mc[overdue] ?? 0) : 0) : null,
+  });
   return opsOk([...out,
     line("auction.pay_due", "경매 결제 기한 임박(12시간)", "awaiting", "pay_due_soon", "pay_overdue"),
     line("auction.unpaid", "경매 미결제 뒤 판매자 선택 대기", "unpaid", "seller_choice", "seller_choice_old"),
-    line("auction.flagged", "경매 의심 표시", "flagged", "flagged", null)]);
+    line("auction.flagged", "경매 의심 표시", "flagged", "flagged", null),
+    // 입찰 대행(0052) 4줄: 입찰 필요(마감 2시간 안 = 지연), 보류(전부 지연), 낙찰 구매 필요(메루카리 24시간 기한, 18시간 지나면 지연), 매입 실패
+    mline("market_bid.to_place", "마켓 입찰 필요", "to_place", "to_place", "to_place_soon"),
+    mline("market_bid.hold", "마켓 입찰 보류", "hold", "hold", "hold"),
+    mline("market_bid.to_buy", "마켓 낙찰 구매 필요", "won", "to_buy", "to_buy_late"),
+    mline("market_bid.capture_failed", "마켓 낙찰 매입 실패", "won", "capture_failed", "capture_failed")]);
 };
 
 // ── U5 경매(0048). 읽기 = admin_auctions·admin_auction_detail(서버 권한, 상한은 마감 뒤에만). 조작 = 운영자 세션 RPC, 돈이 안 움직여 ops ──
@@ -178,6 +193,41 @@ const auctionClearStrike: Handler = async (ctx, [id]) => {
     },
     run: async (sb) => rpcRes(await sb!.rpc("admin_clear_strike", { p_strike: sid, p_note: note })) });
 };
+
+// ── M5 입찰 대행(0052). 읽기 = admin_market_bids·admin_market_bid_detail(서버 권한). 조작 = lib/market-bid-ops.ts(운영자 세션 + 서버 매입·해제) ──
+const mbList: Handler = async ({ admin, url }) => {
+  const { from, limit } = paging(url);
+  const tab = url.searchParams.get("status") || "to_place";
+  if (!isMbTab(tab)) return bad("status must be to_place|bidding|hold|won|ended|all");
+  const r = await admin.rpc("admin_market_bids", { p_tab: tab, p_q: str(url.searchParams.get("q"), 80) || null, p_limit: limit, p_offset: from });
+  if (r.error) return opsFail(502, `db: ${r.error.message}`);
+  const d = (r.data ?? { items: [], total: 0 }) as { items: Row[]; total: number };
+  const now = Date.now();
+  return opsOk({ items: d.items.map((x) => {
+    const ag = mbAging(x as Parameters<typeof mbAging>[0], now);
+    return { ...x, aging_level: ag?.level ?? null, aging_text: ag?.text ?? null };
+  }), total: d.total });
+};
+const mbDetail: Handler = async ({ admin }, [id]) => {
+  const nf = uuidOr404(id); if (nf) return nf;
+  const r = await admin.rpc("admin_market_bid_detail", { p_id: id });
+  if (r.error) return opsFail(502, `db: ${r.error.message}`);
+  return r.data ? opsOk(r.data) : opsFail(404, "not found");
+};
+const mbSettingsGet: Handler = async ({ admin }) => {
+  const r = await admin.from("market_bid_settings").select("*").maybeSingle();
+  return r.error ? opsFail(502, `db: ${r.error.message}`) : opsOk(r.data);
+};
+// expected_status = accepting|paused(지금 접수 스위치)
+const mbSettingsPost: Handler = async (ctx) => runOp(ctx, { action: "market_bids.settings", target: "settings",
+  current: async () => { const { data } = await ctx.admin.from("market_bid_settings").select("accepting").maybeSingle(); return data ? (data.accepting ? "accepting" : "paused") : null; },
+  run: async (sb) => saveMbSettings(sb!, ctx.body) });
+// 조작: 입찰됨·밀림·보류·유찰 = ops, 낙찰 매입·못 넣음·운영 취소(승인 해제 강제) = money(lib/market-bid-admin.ts MB_OP_SCOPE)
+const mbOpRoutes: Route[] = MB_OPS.map((op) => ({ method: "POST", path: `market-bids/:id/${op}`, need: MB_OP_SCOPE[op], h: async (ctx, [id]) => {
+  const nf = uuidOr404(id); if (nf) return nf;
+  return runOp(ctx, { action: `market_bids.${op}`, target: id, current: statusOf(ctx.admin, "market_bids", id),
+    run: async (sb) => runMbOp(sb!, ctx.admin, getStripe(), id, op, ctx.body, String(ctx.body.expected_status)) });
+} }));
 
 async function orderIdsByCode(admin: SupabaseClient, q: string): Promise<string[] | null> {
   if (!q) return null;
@@ -487,6 +537,12 @@ const ROUTES: Route[] = [
   { method: "POST", path: "auctions/:id/close", need: "ops", h: auctionOp("close") },
   { method: "POST", path: "auctions/:id/void_bid", need: "ops", h: auctionOp("void_bid") },
   { method: "POST", path: "auctions/:id/clear_strike", need: "ops", h: auctionClearStrike },
+  // M5 입찰 대행(0052). settings 를 :id 보다 먼저
+  { method: "GET", path: "market-bids", need: "ops", h: mbList },
+  { method: "GET", path: "market-bids/settings", need: "ops", h: mbSettingsGet },
+  { method: "POST", path: "market-bids/settings", need: "money", h: mbSettingsPost },
+  { method: "GET", path: "market-bids/:id", need: "ops", h: mbDetail },
+  ...mbOpRoutes,
 ];
 
 /** 경로 맞추기. ":x" 칸은 그 자리 값을 순서대로 넘긴다 */

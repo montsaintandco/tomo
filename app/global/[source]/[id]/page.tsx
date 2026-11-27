@@ -39,6 +39,10 @@ import ItemInsight from "@/components/detail/ItemInsight";
 import EndedRescue from "@/components/detail/EndedRescue";
 import ExternalWishButton from "@/components/search/ExternalWishButton";
 import { wishedKeys } from "@/components/search/wish-server";
+import MarketBidPanel from "@/components/market-bid/MarketBidPanel";
+import { loadMbPanel } from "@/lib/market-bid-panel.server";
+import { marketBidEnabled } from "@/lib/market-bid";
+import { nowMs } from "@/lib/admin-aging";
 
 // 파서가 원문 키로 주는 부가정보 라벨 → 화면 언어 키. 모르는 키는 원문 그대로 보인다
 const EXTRA_LABEL: Record<string, I18nKey> = {
@@ -143,6 +147,9 @@ export default async function ExternalItemPage(props: {
   // 예상 합계 — 주문서와 같은 함수(proxyOrderTotal). 이 상품만 주문할 때의 금액
   const totals = proxyDetailTotal(item, viewer.currency, viewer.rate);
   const buyable = foreign && !item.soldOut && !blocked;
+  // 입찰 대행(M4): 플래그가 켜진 빌드에서 진행 중인 메루카리 경매면 「구경만」 대신 신청 패널. 꺼지면 기존 그대로
+  const mbOn = marketBidEnabled() && source === "mercari" && !!item.auction && !!item.auctionInfo?.open && !!item.auctionInfo.endsAt && foreign && !item.soldOut;
+  const mb = mbOn ? await loadMbPanel(supabase, viewer, params.id) : null;
   const sourceLang: Lang = SOURCE_CURRENCY[source] === "JPY" ? "ja" : "ko";
   const sourceCountry = SOURCE_CURRENCY[source] === "JPY" ? "JP" : "KR";
   const needsTranslation = !!live && sourceLang !== lang; // 캐시 폴백은 title_translated를 이미 쓴다
@@ -305,7 +312,12 @@ export default async function ExternalItemPage(props: {
             <PreorderCheck lang={lang} />
           </>
         )}
-        {/* CTA — 모바일은 하단 고정 바(DOM 위치 무관). 데스크톱은 가격·배송·총액 바로 아래 흐름 배치 */}
+        {/* CTA — 모바일은 하단 고정 바(DOM 위치 무관). 데스크톱은 가격·배송·총액 바로 아래 흐름 배치. 입찰 대행 패널이 켜지면 그 자리 */}
+        {mb && item.auctionInfo ? (
+          <MarketBidPanel lang={lang} source={source} sourceId={params.id} loginHref={`/login?next=${path}`} now={nowMs()}
+            info={{ price: item.auctionInfo.price, bids: item.auctionInfo.bids, endsAt: item.auctionInfo.endsAt! }}
+            shipJpy={item.shippingIncluded === true ? 0 : null} guest={!!viewer.guest} country={viewer.guest ? null : viewer.country} {...mb} />
+        ) : (
         <div className="fixed bottom-0 standalone:bottom-[62px] left-0 right-0 z-20 mx-auto max-w-md border-t border-tomo-navy/5 bg-white/95 p-3 pb-[max(12px,env(safe-area-inset-bottom))] backdrop-blur md:static md:mx-0 md:max-w-none md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-0">
           {!foreign ? (
             <div className="flex items-center gap-3 rounded-card bg-tomo-navy/5 p-3 text-[12px] text-ink-soft md:bg-transparent md:p-0">
@@ -349,7 +361,7 @@ export default async function ExternalItemPage(props: {
               </div>
             </div>
           )}
-        </div>
+        </div>)}
           </div>} />
 
         {extra.some(([, v]) => v) && (

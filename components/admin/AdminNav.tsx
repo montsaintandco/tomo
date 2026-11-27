@@ -3,7 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Wordmark } from "@/components/Brand";
 
-export type NavCounts = { disputes: number; proxy: number; center: number; support: number; refunds: number; payouts: number; reports: number; errors: number; auctions: number };
+export type NavCounts = { disputes: number; proxy: number; center: number; support: number; refunds: number; payouts: number; reports: number; errors: number; auctions: number; marketBids: number };
 
 // 그룹 순서 = 하루 일 순서: 주문 진행 → 고객 응대 → 돈 → 상품 → 사람 → 설정·시스템
 const GROUPS: { label: string; items: { href: string; label: string; count?: keyof NavCounts }[] }[] = [

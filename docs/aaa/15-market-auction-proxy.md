@@ -474,3 +474,55 @@
 6. 1차는 한국 회원(KRW)만 받는다(`mb: country`). 일본 회원은 메루카리 탭을 보지 않으므로 막았다.
 7. 고객 화면(M4)은 오류 키 `mb.err.*` 와 409 응답 `facts`(지금 가격·입찰 수·마감)를 쓰면 된다. 최소 상한가는 `minCapJpy`.
 8. 운영 키(sk_live)로는 아무것도 안 했다. 실카드 사전 승인 1회는 8.3절 1번(Ren 승인 필요).
+## 부록. M3~M5 구현 기록 (2026-11-27)
+
+- 범위: M3(정산·크론, `0052_market_bid_settle.sql`) + M4(고객 화면) + M5(tomo 어드민·운영 API) + 에어쉽 연결 사이트 「마켓 입찰」 화면(설계 A3 몫 중 화면 1개). 다음은 M6(리허설·1차 켜기).
+- 번호: 설계의 0050(정산) = **0052**(0051 은 거래 임베드 수정이 썼다). 다음 마이그레이션은 **0053**.
+- 플래그 `NEXT_PUBLIC_MARKET_AUCTION` 은 운영 Actions Variables 에 넣지 않았다(server-image.yml 에 전달 줄만 추가 — 변수가 없으면 꺼짐). 운영 `market_bid_settings.accepting=false`.
+
+### 0052(M3) 함수·크론
+| 객체 | 하는 일 |
+|---|---|
+| `market_bid_set_placed(신청, 금액, 증빙 메모, expected, 마감?)` | 운영자·서버. authorized·outbid·hold·placed → placed. 금액 ≤ 상한가, 앞 입찰보다 높게, 마감 전, 승인 행이 살아 있을 때만. 첫 입찰 `placed`, 그 뒤 `rebid` 사건. 알림 mb_placed |
+| `market_bid_set_outbid(신청, 남의 현재가)` | placed → outbid(승인 유지). 알림 mb_outbid |
+| `market_bid_hold(신청, 사유)` | authorized·placed·outbid → hold(승인 유지). 알림 mb_hold, 이벤트 bid.hold |
+| `market_bid_set_won(신청, 낙찰가, 송료?, 메모, expected)` | placed·outbid·hold → won + 매입액(`market_bid_amount`, 고정 환율) 저장. **낙찰가 > 상한가 · 매입액 > 승인액 · 메루카리 낙찰가 ≠ 우리 마지막 입찰액 · 승인 행이 authorized 아님** → 거절하고 hold(예외 아님, 반환 status=hold). 같은 낙찰가로 다시 부르면 `again`(이중 처리 멱등) |
+| `market_bid_capture_failed(신청, 사유)` | 서버만. won → capture_failed, 승인 행 failed, 알림 mb_pay_needed, 이벤트 bid.capture_failed |
+| `market_bid_to_order(신청)` | 서버만. 승인 행 captured·금액 일치 뒤에만. proxy_orders(pending_payment → paid, PI·세션 = 그 승인, paid_krw = 매입액, rate = 고정 환율, ship_pccc) + proxy_requests(requested → paid, quote_item_price = 낙찰가 + 송료, NARITA) → ordered. 기존 트리거가 order.paid·proxy_paid. 알림 mb_won. order_id 가 있으면 그대로 돌려준다 |
+| `market_bid_release(신청, lost\|missed\|cancelled, 사유, 본 낙찰가?, expected)` | lost = placed·outbid·hold 이고 입찰 기록 있음 + 본 낙찰가 필수 + 본 낙찰가 ≠ 우리 마지막 입찰액. missed·cancelled = authorized·hold 이고 입찰 기록 없음. 승인 행 releasing(서버가 Stripe 해제) |
+| `cron_market_bids()` | pg_cron `tomo_market_bids` 1분(DB 만): 결제창 45분 만료, **마감 30분 전 authorized → missed + 해제 예약 + 알림**, placed·outbid 가 마감 + 15분 → hold(result overdue), 승인 만료 24·6시간 전 bid.auth_expiring. cron_runs job=market_bids |
+| `/api/cron/market-bids` | pg_cron `tomo_market_bids_stripe` 1분(x-cron-secret): releasing 승인 해제 재시도, won 2분 넘은 건 매입·주문 전환 재시도. 할 일이 있을 때만 cron_runs job=market_bids_stripe |
+| 조회 | `admin_market_bids(탭, q)`·`admin_market_bid_detail`·`market_bid_ops_counts`(운영자·서버), `my_market_bid_events`(본인, 고객용 종류만), `admin_market_bid_settings(jsonb)`(운영자, 범위 검사) |
+| 이벤트 | 트리거 `market_bids_ops_event`: authorized → bid.requested, hold → bid.hold, won → bid.won, missed → bid.missed, capture_failed → bid.capture_failed. ops_outbox 제약 19종 |
+| 권한 | 조작 함수는 `is_admin_user()` 또는 service_role(`market_bid_actor_ok`). 주문 전환·매입 실패·크론은 service_role 만(authenticated 실행 권한 없음) |
+| 추가 | `can_read_client_item` 에 market_bids 한 줄(신청 고객이 고객 입력 상품 행을 읽는다 — 신청 상세 제목·사진) |
+
+### 서버·화면
+- `lib/market-bid.server.ts`: `settleWon`(DB 매입액으로 `captureAuth` → `market_bid_to_order`. PI 가 canceled 면 capture_failed, 그 밖 오류는 won 유지 = 크론 재시도), `runMarketBidStripeCron`. 결제 복귀 = `/bids/<신청 id>?mb=ok|fail`.
+- `lib/market-bid-ops.ts`: 조작 본체(`runMbOp`·`saveMbSettings`) — tomo 어드민 `/api/admin/market-bids`(쿠키 운영자 세션)와 운영 API 가 같이 쓴다. `lib/market-bid-admin.ts`: 라벨·탭·조작 권한(`MB_OP_SCOPE`)·상태별 조작(`mbOpsFor`)·지연(`mbAging`)·오류 문구.
+- 고객(M4, 플래그 켜진 빌드만): 상세 `components/market-bid/MarketBidPanel.tsx`(현재가·입찰 수·남은 시간, 상한가 입력, 최대 결제액 내역 — 환율 구성 숫자 없음, 카드만·승인 안내·환불/해제 규칙 문구, 배송지·통관부호, 동의 3개). 막히는 경우 문구: 접수 중단·비로그인·한국 회원 아님·송료 모름·마감 3시간 이내·96시간 초과·내 진행 신청 있음(그 신청으로 링크). `/bids/[id]`(상태·최대 결제액·우리 입찰·낙찰가·결제된 금액·주문 링크·진행 기록·입찰 전 취소, 30초 새로 읽기), `/mypage/bids`(진행 중·끝난 신청, 메뉴는 플래그 있을 때만). 알림 ko/ja 7종 추가(mb_placed·outbid·won·lost·missed·hold·pay_needed), 알림을 누르면 `/bids/<id>`. 플래그가 꺼지면 상세는 기존 「경매 · 구경만」, `/bids`·`/mypage/bids` 404.
+- tomo 어드민 `/admin/market-bids`: 탭(입찰 필요·입찰 중·보류·낙찰·구매 필요·끝남·전체), 줄마다 메루카리 링크·신청 때 현재가·송료·상한가·우리 입찰·마감(남은 시간)·승인액·지연 배지. 상세 시트: 상태별 조작 버튼, 낙찰 처리는 매입 금액 미리보기(상품+송료·국제배송·통관·합계 vs 승인액, 넘거나 우리 입찰액과 다르면 빨간 경고) → 「낙찰 처리 실행」 → 확인창(두 번 확인). 접수 스위치·한도 폼과 수동 입찰 절차는 접힌 칸. 메뉴 「마켓 입찰」 배지 = 입찰 필요 + 보류 + 구매 필요 + 매입 실패, 대시보드 처리 대기 줄 3개.
+- 운영 API: capability `market_auction`, 경로는 docs/aaa/12 9.4, counts 4줄, 이벤트 9.5.
+
+### 운영자 수동 입찰 절차서(1차)
+1. `/admin/market-bids` 「입찰 필요」(또는 에어쉽 연결 사이트 「마켓 입찰」)를 연다. 마감이 가까운 줄부터 처리한다. 마감 30분 전까지 입찰됨이 기록되지 않으면 자동 취소(승인 해제·고객 알림)된다.
+2. 줄의 ↗ 로 메루카리 상품을 연다. 확인할 것: 경매가 진행 중인가, 송료가 출품자 부담(送料込み)인가, 専用·取り置き 표기가 없는가. 하나라도 어긋나면 입찰하지 않고 「보류」에 사유를 적는다.
+3. 우리 메루카리 계정으로 **필요한 최소 금액만** 넣는다: 입찰 0건이면 시작가, 있으면 현재가 + 100엔. 상한가를 그대로 넣지 않는다. 그 금액이 상한가를 넘으면 넣지 않는다(밀린 채 둔다).
+4. 입찰 직후 메루카리 화면에서 우리 입찰액과 마감 시각을 확인한다. 「입찰됨 기록」에 금액, 마감(바뀌었으면), 증빙 메모(확인 시각·화면에 보인 내용)를 적는다.
+5. 제출 중 시간 초과·재로그인 요구 등으로 들어갔는지 모르면 「보류」(사유: 제출 여부 불명)로 두고 메루카리 화면에서 확인한다. 안 들어간 것이 확실하면 「못 넣음」(돈 권한, 승인 해제), 들어갔으면 「입찰됨 기록」.
+6. 다른 사람이 더 높게 넣으면 「밀림」(남의 현재가)을 적는다. 상한가 안이면 3~4 를 다시 한다.
+7. 마감 뒤 우리가 최고가면 「낙찰 처리」: 낙찰가 = 우리 마지막 입찰액, 송료(출품자 부담이면 0) → 매입 금액 확인 → 실행(확인 두 번). 카드 매입과 대행 주문(T 번호)이 생긴다. **24시간 안에** 메루카리에서 구매하고, 그 뒤는 기존 대행 주문 흐름(구매 → 센터 → 발송)이다.
+8. 다른 사람이 낙찰했으면 「유찰 처리」에 본 낙찰가를 적는다(우리 마지막 입찰액과 같으면 거절된다 — 그럴 땐 낙찰인지 다시 본다). 출품자가 경매를 지웠으면 0.
+9. 마감 + 15분이 지나도 결과를 안 넣으면 자동으로 「보류(결과 지연)」가 된다. 보류는 승인 만료 전에 반드시 푼다(상세의 「승인 만료」 시각).
+
+### 검증
+- SQL 되돌림 리허설(운영 DB, begin + 0052 + 시험 블록 + 예외): **15묶음 통과** — 신청·승인·bid.requested 이벤트, 비운영자 조작·조회·주문 전환 거절과 실행 권한, 입찰됨(상한 초과·상태 불일치·메모 없음 거절, 알림·활동 기록), 밀림 → 다시 입찰(낮은 금액 거절), 낙찰가 > 상한 거절·보류·bid.hold, 낙찰가 ≠ 우리 입찰 보류, 정상 낙찰 매입액 = market_bid_amount, 이중 낙찰 처리 멱등(won 사건 1개), 매입 기록 전 주문 전환 거절 → 주문 T 번호·paid·PI·paid_krw·통관부호·`proxy_order_amount` = 매입액·요청 paid·order.paid·mb_won, 두 번째 전환 같은 주문, 기존 `admin_cancel_proxy` 부분 환불 10,000원 → refunds(PI = 그 승인, 부분), 유찰(입찰 없는 건·본 낙찰가 = 우리 입찰·낙찰가 없음 거절), 매입액 > 승인액 거절·보류(매입액 저장 안 함), 제출 불명 보류 → 입찰 없는 보류는 못 넣음·입찰 있는 보류는 해제 거절, 크론 마감 30분 전 자동 취소·결제창 만료·두 번째 실행 변화 0, 결과 지연 보류(승인 유지), 운영 조회·고객 기록 본인만, 매입 실패는 서버만·설정 범위 검사·비운영자 설정 거절. 결함 주입 5종(매입액 > 승인 검사·looks won·주문 한 번만·30분 자동 취소·조작자 검사 제거)이 각 단언에서 실패. 적용 뒤 함수 18·트리거 1·크론 2·제약 확인, accepting=false.
+- Stripe 테스트 모드 로컬 한 바퀴(next build+start, 플래그 켬, NEXT_PUBLIC_SITE_URL=http://localhost:3100, 운영 DB, 테스트 키, 카드 4242, 실제 메루카리 경매 주소지만 실제 입찰 없음, 접수 스위치는 시험 동안만 켬): alice(localhost) 신청 패널 최대 결제액 ₩37,243(상한 3,000엔) → Stripe 승인 → `/bids/<id>?mb=ok`(입찰 준비 중) → center(center.localhost) 어드민 입찰됨 1,600엔 → 낙찰 처리 미리보기 ₩23,595 → 실행 → PI succeeded·amount_received 23,595·amount_capturable 0, 주문 T000027 paid(paid_krw 23,595) → 어드민 대행 취소 부분 환불 ₩10,000 → Stripe 환불 done(charge amount_refunded 10,000). 두 번째 신청(상한 4,500엔) → 승인 → 입찰됨 3,800엔 → 유찰(본 낙찰가 3,800 → looks won 거절, 5,000 → lost) → PI canceled(환불 아님). 운영 API(로컬, 서명): meta 에 market_auction, 목록 200, counts 4줄, ops scope 로 won·settings → 403 money scope required, expected_status 불일치 409.
+- 정리: 시험 신청 2·승인 2·사건 11·알림 9·주문 1·대행 요청 1·환불 1·활동 기록 5·outbox 5·ops_requests 1·external_items 2 삭제, `market_bid_code_seq` 1부터, accepting=false. 시퀀스 소모: 대행 주문 번호 T000027(시험) 등은 되돌리지 않았다(빈 번호). Stripe 테스트 PI 2건(1건 매입·부분 환불, 1건 취소)은 테스트 모드에 남음. 에어쉽 connected_site_events 에 시험 이벤트 5건(bid.requested 2·bid.won·order.paid T000027·refund.pending)이 전송됐다(정리는 에어쉽 기록 참고).
+
+### 다음 작업자(M6)가 알아야 할 것
+1. 켜기 순서: 리허설 10항목(8.2절) → Ren 승인 → Actions Variables `NEXT_PUBLIC_MARKET_AUCTION=1` + 재빌드 → 어드민에서 접수 켜기. 끄기는 반대(접수 멈춤이 즉시, 플래그는 재빌드).
+2. 매입 실패(capture_failed) 뒤 재결제 링크는 없다(알림은 「고객센터에서 결제 방법 안내」). 1차는 운영자가 일반 결제로 처리한다.
+3. 상한 올리기(M7)·워커 연결(W1·W2)·야후(Y1)는 없다. `executor` 는 manual 고정.
+4. 입찰 대행 수수료(`fee_jpy`)는 0. 0 이 아니면 주문의 service_fee 에 통관 + 수수료가 들어가 `proxy_order_amount`(수수료 모름)와 주문 total 이 달라진다 — 수수료를 켜기 전에 환불 미리보기 규칙을 같이 고친다.
+5. 화면 캡처 중 「신청 패널」 1장은 시간 초과로 남기지 못했다(패널 높이 1,100px).

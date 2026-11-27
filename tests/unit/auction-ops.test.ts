@@ -26,7 +26,7 @@ describe("운영 API 경매 경로", () => {
     }
     const check = sql.match(/ops_outbox_type_check check \(type in \(([\s\S]*?)\)\);/)![1];
     const inDb = [...check.matchAll(/'([a-z_.]+)'/g)].map((x) => x[1]).sort();
-    expect(inDb).toEqual([...OPS_EVENT_TYPES].sort());
+    expect([...OPS_EVENT_TYPES]).toEqual(expect.arrayContaining(inDb));   // 최신 전체 목록 대조는 마지막 제약 파일(0052, market-bid.test)
   });
   it("의심 신호 이름이 DB 와 같다", () => {
     const sigs = [...sql.matchAll(/v_s := v_s \|\| '([a-z_]+)'::text/g)].map((x) => x[1]).sort();

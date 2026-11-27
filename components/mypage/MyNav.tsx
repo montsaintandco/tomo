@@ -7,6 +7,7 @@ import { t, type I18nKey, type Lang } from "@/lib/i18n";
 import { TomoSymbol } from "@/components/Brand";
 import type { BadgeKey, MyBadges } from "@/components/mypage/counts";
 import { auctionEnabled } from "@/lib/auction";
+import { marketBidEnabled } from "@/lib/market-bid";
 
 // 아이콘은 24px 선 아이콘 path(새 의존성 없이 직접 그린다). badge = 미확인 숫자 키(counts.ts myBadges)
 const ALL_ITEMS: { href: string; key: I18nKey; icon: string; badge?: BadgeKey }[] = [
@@ -14,6 +15,7 @@ const ALL_ITEMS: { href: string; key: I18nKey; icon: string; badge?: BadgeKey }[
   { href: "/mypage/orders", key: "my.nav.orders", icon: "M5 8h14l-1 13H6zM9 8V6a3 3 0 0 1 6 0v2", badge: "orders" },
   { href: "/mypage/sales", key: "my.nav.sales", icon: "M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8zM7.5 7.5h.01", badge: "sales" },
   { href: "/mypage/auctions", key: "auction.my.title", icon: "m14 3 7 7M11 6l7 7M9.5 7.5l6-6M3 21l8-8M12.5 16.5l6-6", badge: "auctions" },
+  { href: "/mypage/bids", key: "mb.my.title", icon: "M4 20h16M6 16l6-12 6 12M9 11h6" },
   { href: "/mypage/offers", key: "my.nav.offers", icon: "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2zM8 10h8", badge: "offers" },
   { href: "/mypage/payouts", key: "my.nav.payouts", icon: "M3 7h18v13H3zM3 7l3-4h12l3 4M16 14h.01" },
   { href: "/mypage/wishlist", key: "my.nav.wishlist", icon: "M12 20s-8-4.9-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 9c0 6.1-8 11-8 11z" },
@@ -22,8 +24,8 @@ const ALL_ITEMS: { href: string; key: I18nKey; icon: string; badge?: BadgeKey }[
   { href: "/mypage/addresses", key: "my.nav.addresses", icon: "M19 10c0 6-7 11-7 11s-7-5-7-11a7 7 0 0 1 14 0zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z" },
   { href: "/mypage/settings", key: "my.nav.settings", icon: "M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6" },
 ];
-// 경매 메뉴는 플래그가 켜져 있을 때만(빌드 때 정해진다)
-const ITEMS = ALL_ITEMS.filter((it) => it.href !== "/mypage/auctions" || auctionEnabled());
+// 경매·입찰 신청 메뉴는 각 플래그가 켜져 있을 때만(빌드 때 정해진다)
+const ITEMS = ALL_ITEMS.filter((it) => (it.href !== "/mypage/auctions" || auctionEnabled()) && (it.href !== "/mypage/bids" || marketBidEnabled()));
 const ADMIN_ICON = "M12 21s7-3.5 7-9V5l-7-2.5L5 5v7c0 5.5 7 9 7 9z";
 
 const Icon = ({ d }: { d: string }) => (

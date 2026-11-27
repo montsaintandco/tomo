@@ -11,7 +11,7 @@ export default async function AdminHome() {
   const today = todayIso();
   const cnt = (q: PromiseLike<{ count: number | null }>) => q.then((r) => r.count ?? 0);
 
-  const [activeListings, users, openTx, disputes, proxyWait, centerWait, newListings, newUsers, paidOrders, disputeRows, proxyRows, centerRows, refundWait, payoutWait, cancelReq, reportWait, aucRes] = await Promise.all([
+  const [activeListings, users, openTx, disputes, proxyWait, centerWait, newListings, newUsers, paidOrders, disputeRows, proxyRows, centerRows, refundWait, payoutWait, cancelReq, reportWait, aucRes, mbRes] = await Promise.all([
     cnt(supabase.from("listings").select("id", { count: "exact", head: true }).eq("status", "active").eq("hidden", false)),
     cnt(supabase.from("profiles").select("id", { count: "exact", head: true }).eq("suspended", false)),
     cnt(supabase.from("transactions").select("id", { count: "exact", head: true }).not("status", "in", "(completed,cancelled,pending_payment)")),
@@ -33,10 +33,13 @@ export default async function AdminHome() {
     cnt(supabase.from("proxy_requests").select("id", { count: "exact", head: true }).eq("status", "paid").not("cancel_requested_at", "is", null)),
     cnt(supabase.from("reports").select("id", { count: "exact", head: true }).eq("status", "open")),   // 0033 미적용이면 0
     supabase.rpc("auction_ops_counts"),   // 0048 경매 할 일. 실패하면 0
+    supabase.rpc("market_bid_ops_counts"),   // 0052 입찰 대행 할 일. 실패하면 0
   ]);
   const ac = (aucRes.data ?? {}) as Record<string, number>;
   const aucDue = ac.pay_due_soon ?? 0; const aucChoice = ac.seller_choice ?? 0; const aucFlag = ac.flagged ?? 0;
   const aucLate = (ac.live_overdue ?? 0) + (ac.pay_overdue ?? 0);
+  const mc = (mbRes.data ?? {}) as Record<string, number>;
+  const mbPlace = mc.to_place ?? 0; const mbHold = (mc.hold ?? 0) + (mc.capture_failed ?? 0); const mbBuy = mc.to_buy ?? 0;
 
   type Row = { id: string; status: string; updated_at?: string; created_at?: string; item_price?: number; currency?: string; center?: string | null; dispute_reason?: string | null;
     listings?: { title: string } | null; external_items?: { title: string } | null; buyer?: { nickname: string } | null; profiles?: { nickname: string } | null };
@@ -58,7 +61,7 @@ export default async function AdminHome() {
       </div>
 
       <MyTurnQueue />
-      {refundWait + payoutWait + cancelReq + reportWait + aucDue + aucChoice + aucFlag + aucLate > 0 && (
+      {refundWait + payoutWait + cancelReq + reportWait + aucDue + aucChoice + aucFlag + aucLate + mbPlace + mbHold + mbBuy > 0 && (
         <div className="a-panel mb-4 flex flex-wrap items-center gap-x-5 gap-y-2 px-4 py-3 text-[13px]">
           <span className="font-semibold">처리 대기</span>
           {refundWait > 0 && <Link href="/admin/refunds" className="a-link">환불 대기·실패 {refundWait}건 →</Link>}
@@ -69,6 +72,9 @@ export default async function AdminHome() {
           {aucFlag > 0 && <Link href="/admin/auctions?tab=flagged" className="a-link">경매 의심 표시 {aucFlag}건 →</Link>}
           {aucDue > 0 && <Link href="/admin/auctions?tab=awaiting" className="a-link">경매 결제 기한 임박 {aucDue}건 →</Link>}
           {aucChoice > 0 && <Link href="/admin/auctions?tab=unpaid" className="a-link">경매 미결제 뒤 판매자 선택 대기 {aucChoice}건 →</Link>}
+          {mbHold > 0 && <Link href="/admin/market-bids?tab=hold" className="a-link text-tomo-coral-deep">마켓 입찰 보류·매입 실패 {mbHold}건 →</Link>}
+          {mbPlace > 0 && <Link href="/admin/market-bids?tab=to_place" className="a-link">마켓 입찰 필요 {mbPlace}건 →</Link>}
+          {mbBuy > 0 && <Link href="/admin/market-bids?tab=won" className="a-link">마켓 낙찰 구매 필요 {mbBuy}건 →</Link>}
         </div>
       )}
       <SystemHealth />

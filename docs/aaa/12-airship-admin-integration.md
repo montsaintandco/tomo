@@ -327,9 +327,9 @@
 
 | 경로 | 메서드 | scope | 요청(쿼리·본문) | 응답 `data` | expected_status 대상 |
 |---|---|---|---|---|---|
-| `/api/ops/meta` | GET | 서명만 | — | `{ api_version, site{key,name,currency,url}, capabilities[11](U5 `auction` 추가), events[13](U5 `auction.*` 4종), money_actions[] }` | — |
+| `/api/ops/meta` | GET | 서명만 | — | `{ api_version, site{key,name,currency,url}, capabilities[12](U5 `auction`, M5 `market_auction` 추가), events[19](U5 `auction.*` 4종, M5 `bid.*` 6종), money_actions[] }` | — |
 | `/api/ops/health` | GET | 서명만 | — | `{ version, db, db_ms, cron{job:{ok,at}}, outbox{hook_configured,pending,failing,dead_24h,last_sent_at}, errors_24h }` | — |
-| `/api/ops/counts` | GET | ops | — | `[{ key, label, count, overdue, capability, url }]` 13줄(U5: `auction.pay_due` 결제 기한 12시간 이내·overdue = 기한 + 50분 지남, `auction.unpaid` 미결제 뒤 판매자 미선택·overdue = 3일 넘음, `auction.flagged` 진행·결제 대기 중 의심 표시. capability `auction`). 조회 실패한 줄은 `count: null, overdue: null`(「확인 못 함」) | — |
+| `/api/ops/counts` | GET | ops | — | `[{ key, label, count, overdue, capability, url }]` 13줄(U5: `auction.pay_due` 결제 기한 12시간 이내·overdue = 기한 + 50분 지남, `auction.unpaid` 미결제 뒤 판매자 미선택·overdue = 3일 넘음, `auction.flagged` 진행·결제 대기 중 의심 표시. capability `auction`). M5 4줄(capability `market_auction`): `market_bid.to_place` 입찰 필요·overdue = 마감 2시간 이내, `market_bid.hold` 보류(전부 overdue), `market_bid.to_buy` 낙찰 뒤 구매 필요·overdue = 매입 10분 지연 또는 주문 18시간 지남(메루카리 24시간 구매 기한), `market_bid.capture_failed` 매입 실패. 조회 실패한 줄은 `count: null, overdue: null`(「확인 못 함」) | — |
 | `/api/ops/proxy` | GET | ops | `status`(쉼표), `q`(T 번호·주문 uuid), `cancel_requested=1` | `{ items[대행 요청 행 + external_items + customer + proxy_orders{code,…}], total }` | — |
 | `/api/ops/proxy/:id` | GET | ops | `:id` = proxy_requests.id | `{ item, order(배송지·통관번호 포함), items[같은 주문 형제], refunds[], cancel_preview{amount,cap,currency,full} \| null }` | — |
 | `/api/ops/proxy/:id/status` | POST | ops | `to`, `note`, `tracking` → `admin_set_order_status` | `{ result: proxy_requests 행 }` | proxy_requests.status |
@@ -369,7 +369,16 @@
 | `/api/ops/auctions/:id/close` | POST | ops | `note`(필수) → `admin_close_auction`(진행 중만, 돈 안 움직임) (U5) | `{ result: auctions 행 }` | auctions.status(`live`) |
 | `/api/ops/auctions/:id/void_bid` | POST | ops | `bidder_id`(uuid), `note`(필수) → `admin_void_bid`(1등·현재가·입찰 수·상품 가격 다시 계산) (U5) | `{ result: { auction_id, status, current_price, bid_count, bidder_count, leader_changed } }` | auctions.status(`live`) |
 | `/api/ops/auctions/:id/clear_strike` | POST | ops | `strike_id`(uuid, 이 경매의 경고이거나 이 경매 낙찰자의 경고, 아니면 404), `note`(필수) → `admin_clear_strike` (U5) | `{ result: { strike_id, user_id, bid_banned_until, active_strikes } }` | **`active`·`lifted`**(경고 해제 여부) |
-
+| `/api/ops/market-bids` | GET | ops | `status` = 탭 `to_place`(기본, 입찰 필요=authorized)·`bidding`(placed·outbid)·`hold`·`won`(won·capture_failed·주문 뒤 구매 필요)·`ended`·`all`, `q`(MB·T 번호·메루카리 id·제목), `limit`·`offset` → `admin_market_bids` (M5, 0052) | `{ items[{ id, code, status, source_id, url, title, nickname, cap_jpy, seen_price_jpy, seen_bids, domestic_ship_jpy, last_bid_jpy, is_top, ends_at, auth_krw, auth_expires_at, placed_at, final_price_jpy, capture_krw, captured_krw, order_code, request_status, hold_reason, fail_reason, aging_level, aging_text }], total }` 입찰 필요는 마감 임박순 | — |
+| `/api/ops/market-bids/:id` | GET | ops | → `admin_market_bid_detail` (M5) | `{ bid(전체 칸), item, user, auths[], events[], order, request, settings }` | — |
+| `/api/ops/market-bids/settings` | GET | ops | — | `market_bid_settings` 한 행 | — |
+| `/api/ops/market-bids/settings` | POST | **money** | `accepting`(boolean)·`cap_max_jpy`·`max_open`·`max_open_per_user`·`daily_cap_jpy`·`min_lead_minutes`·`max_lead_hours` 중 바꿀 것 → `admin_market_bid_settings` | `{ ok, settings }` | **`accepting`·`paused`** |
+| `/api/ops/market-bids/:id/placed` | POST | ops | `amount`(엔, 상한가 이하·앞 입찰보다 높게), `note`(증빙, 필수), `ends_at`(선택, 입찰 뒤 마감) → `market_bid_set_placed` | `{ ok, status }` | market_bids.status(`authorized`·`placed`·`outbid`·`hold`) |
+| `/api/ops/market-bids/:id/outbid` | POST | ops | `price`(엔, 남의 현재가), `note` → `market_bid_set_outbid` | `{ ok, status }` | `placed` |
+| `/api/ops/market-bids/:id/hold` | POST | ops | `reason`(필수, 예: 제출 여부 불명) → `market_bid_hold`(승인 유지) | `{ ok, status }` | `authorized`·`placed`·`outbid` |
+| `/api/ops/market-bids/:id/lost` | POST | ops | `final_seen`(엔, 마감 뒤 본 낙찰가, 경매 취소면 0), `reason` → `market_bid_release(lost)` → 서버가 승인 해제(`mb_cancel_<승인 id>`). 입찰이 안 들어간 건·본 낙찰가 = 우리 마지막 입찰액이면 거절 | `{ ok, status, released, error }`(해제 실패 = 크론 재시도) | `placed`·`outbid`·`hold` |
+| `/api/ops/market-bids/:id/won` | POST | **money** | `final_price`(엔), `ship`(엔, 선택 — 없으면 신청 때 송료), `note` → `market_bid_set_won`(낙찰가 > 상한·매입액 > 승인액·메루카리 낙찰가 ≠ 우리 입찰이면 **409 + 보류로 바뀜**) → 서버 매입(`mb_capture_<신청 id>`, DB 매입액) → `market_bid_to_order`(T 번호 대행 주문 paid) | `{ ok, status: ordered\|pending\|capture_failed, order_code, capture_krw, again }` 200(주문)·202(매입 대기 = 크론 재시도) | `placed`·`outbid`·`hold` |
+| `/api/ops/market-bids/:id/missed` · `/cancel` | POST | **money** | `reason` → `market_bid_release(missed\|cancelled)` → 승인 해제. 입찰이 한 번도 안 들어간 건(`placed_at` 없음)만 | `{ ok, status, released, error }` | `authorized`·`hold` |
 ### 9.5 이벤트(tomo → 센터)
 
 | 항목 | 값 |
@@ -396,6 +405,12 @@
 | `auction.unpaid` | 미결제 확정(awaiting_payment → unpaid) | AU 번호 / 낙찰가 | `auction` |
 | `auction.cancelled` | 운영 강제 종료(`admin_close_auction`) | AU 번호 / 그때 현재가 | `auction` |
 | `auction.flagged` | 자전 입찰 의심 표시가 그 경매·입찰자에 처음 생김 | AU 번호 / 그때 현재가 | `auction` |
+| `bid.requested` | 입찰 대행 신청의 카드 승인 완료(= 입찰 필요) (0052) | MB 번호 / 상한가(엔, currency JPY) | `market_bid` |
+| `bid.hold` | 보류(제출 불명·결과 지연·낙찰 검사 실패). 여러 번 생길 수 있다 | MB 번호 / 상한가(엔) | `market_bid` |
+| `bid.won` | 낙찰 처리(매입 직전). 메루카리 24시간 안 구매 | MB 번호 / 매입액(원) | `market_bid` |
+| `bid.missed` | 마감 30분 전까지 미입찰 자동 취소 또는 운영자 「못 넣음」 | MB 번호 / 상한가(엔) | `market_bid` |
+| `bid.capture_failed` | 매입 실패 확정(PI canceled) | MB 번호 / 상한가(엔) | `market_bid` |
+| `bid.auth_expiring` | 끝나지 않은 신청의 카드 승인 만료 24시간·6시간 전(각 1번) | MB 번호 / 승인액(원) | `market_bid` |
 
 ### 9.6 검증(2026-11-27)
 

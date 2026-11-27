@@ -329,3 +329,8 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=<Supabase 대시보드 → Project Settings → AP
 - D: 화면 시각은 `lib/datetime.ts` `fmtAt`(Asia/Seoul). 어드민 `fmtDate`·상품 표, 고객 채팅 목록·알림·출금·문의·상품 등록일.
 - E: 직거래 결제 완료 때 구매자 알림 `tx_buyer_paid`(ko/ja). notify_transaction 은 paid 줄 하나만 바꿈(0049 방식, 되돌리기 SQL 파일 끝).
 - F: 에어쉽 connected_site_events 의 auction.ended 시험 1건(11/27 16:48)은 남아 있음 — 에어쉽 docs/connected-sites.md 에 DB 접근 방법이 없어 지우지 않았다.
+### 2026-11-27 해외 마켓 경매 입찰 대행 M3~M5 (docs/aaa/15 부록 「M3~M5 구현 기록」 — 운영자 수동 입찰 절차서 포함)
+- 0052_market_bid_settle(운영 적용, 되돌림 리허설 15묶음·결함 주입 5종 뒤): 입찰됨·밀림·보류·낙찰(검사 실패 = 보류)·매입 실패·주문 전환(T 번호 대행 주문 paid, PI = 그 승인)·유찰/못 넣음/운영 취소(확실할 때만 승인 해제 예약), 크론 `tomo_market_bids`(DB 판정 1분: 결제창 만료·마감 30분 전 미입찰 자동 취소·결과 지연 보류·승인 만료 이벤트)와 `tomo_market_bids_stripe`(→ `/api/cron/market-bids`, 해제·매입 재시도), 이벤트 bid.* 6종, 운영 조회·설정 함수, `can_read_client_item` 에 market_bids.
+- 화면: 상세 신청 패널(`components/market-bid/MarketBidPanel.tsx`), `/bids/[id]`(결제 복귀), `/mypage/bids`, 알림 7종 ko/ja — 플래그 `NEXT_PUBLIC_MARKET_AUCTION=1` 빌드에서만. tomo 어드민 `/admin/market-bids`(입찰 필요 줄·입찰됨 기록·낙찰 처리 미리보기 + 두 번 확인·유찰·보류·못 넣음·접수 스위치·한도). 운영 API capability `market_auction`(입찰됨·밀림·보류·유찰 ops, 낙찰·못 넣음·운영 취소·설정 money), counts 4줄. 에어쉽 연결 사이트 「마켓 입찰」 화면.
+- 플래그는 운영 Variables 에 없음(server-image.yml 에 전달 줄만), accepting=false. 켜기 = M6 리허설 + Ren 승인 뒤.
+- Stripe 테스트 모드 로컬 한 바퀴(승인 → 입찰됨 → 낙찰 부분 매입 ₩23,595 → T000027 → 대행 취소 부분 환불 ₩10,000 done, 유찰 → PI canceled) 통과, 시험 데이터 정리.

@@ -32,6 +32,7 @@ jobs:
       NEXT_PUBLIC_BUILD_SHA: ${{ github.sha }} # /api/health version·어드민 시스템 상태. 스모크가 새 배포 도착을 이걸로 안다
       NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${{ vars.NEXT_PUBLIC_VAPID_PUBLIC_KEY }}
       NEXT_PUBLIC_AUCTION: ${{ vars.NEXT_PUBLIC_AUCTION }} # 자체 상품 경매(docs/aaa/14). 끄려면 변수를 지우고 재빌드
+      NEXT_PUBLIC_MARKET_AUCTION: ${{ vars.NEXT_PUBLIC_MARKET_AUCTION }} # 해외 마켓 경매 입찰 대행(docs/aaa/15). M6 리허설 전에는 변수를 넣지 않는다(꺼짐)
       NEXT_PUBLIC_COMPANY_NAME: ${{ vars.NEXT_PUBLIC_COMPANY_NAME }}
       NEXT_PUBLIC_COMPANY_CEO: ${{ vars.NEXT_PUBLIC_COMPANY_CEO }}
       NEXT_PUBLIC_COMPANY_BIZ_NO: ${{ vars.NEXT_PUBLIC_COMPANY_BIZ_NO }}

@@ -134,7 +134,7 @@ describe("M2 승인 확정·해제·매입", () => {
   it("requires_capture → capture_before 를 넘겨 승인 확정", async () => {
     const calls: Call[] = [];
     const r = await settleMarketBidSession(fakeStripe(intent, calls), fakeAdmin({ market_bids: bidRow }, { market_bid_authorized: { ok: true } }, calls), session({ app: APP_TAG, kind: "mb", id: "b1" }));
-    expect(r).toMatchObject({ status: "authorized", back: "/global/mercari/m1" });
+    expect(r).toMatchObject({ status: "authorized", back: "/bids/b1" });   // M4: 결제 복귀 = 신청 상세
     expect(calls.find((c) => c.name === "rpc.market_bid_authorized")!.args[0]).toEqual({
       p_session: "cs_test_mb", p_payment_intent: "pi_mb", p_amount_krw: 52300, p_capture_before: new Date(1796000000 * 1000).toISOString(),
     });
@@ -181,5 +181,104 @@ describe("M2 승인 확정·해제·매입", () => {
     await createSession(fakeStripe(intent, calls), { kind: "po", id: "o1", amount: 1000, base: 1000, cur: "KRW", name: "PO", method: "card", lang: "ko", origin: "https://x", back: "/" });
     const q = calls.filter((c) => c.name === "cs.create")[1].args[0] as Stripe.Checkout.SessionCreateParams;
     expect(q.payment_intent_data).not.toHaveProperty("capture_method");   // 기존 일반 결제는 그대로(즉시 청구)
+  });
+});
+
+// ── M3~M5(0052) ──
+import { settleWon } from "@/lib/market-bid.server";
+import { MB_OP_SCOPE, mbOpsFor, adminMbError, mbAging } from "@/lib/market-bid-admin";
+import { OPS_EVENT_TYPES, OPS_CAPABILITIES } from "@/lib/ops-bridge";
+import { OPS_ROUTE_LIST } from "@/lib/ops-api";
+import { notifHref } from "@/lib/notifications";
+
+const sql52 = readFileSync("supabase/migrations/0052_market_bid_settle.sql", "utf8");
+
+describe("M3 0052 정산·크론", () => {
+  it("0052 가 만드는 알림 kind(market_bid_note·mb_<유찰/못 넣음/취소>)가 앱 목록·ko/ja 문구에 있다", () => {
+    const kinds = [...sql52.matchAll(/market_bid_note\([^,]+, '([a-z_]+)'/g)].map((m) => m[1]).filter((k) => k !== "mb_").concat(["mb_lost", "mb_missed", "mb_cancelled"]);
+    expect(kinds).toEqual(expect.arrayContaining(["mb_placed", "mb_outbid", "mb_hold", "mb_won", "mb_pay_needed", "mb_missed"]));
+    for (const k of new Set(kinds)) {
+      expect(NOTIF_KINDS as readonly string[], k).toContain(k);
+      for (const l of ["ko", "ja"] as const) expect(t(l, `notif.${k}` as never)).not.toBe(`notif.${k}`);
+    }
+    expect(notifHref({ kind: "mb_won", ref_id: "b1", data: {} })).toBe("/bids/b1");
+  });
+  it("ops_outbox 종류 = OPS_EVENT_TYPES(SQL 과 코드가 같다), capability market_auction", () => {
+    const m = sql52.match(/ops_outbox_type_check check \(type in \(([^)]+)\)\)/)!;
+    const sqlTypes = [...m[1].matchAll(/'([a-z_.]+)'/g)].map((x) => x[1]).sort();
+    expect(sqlTypes).toEqual([...OPS_EVENT_TYPES].sort());
+    expect(OPS_CAPABILITIES).toContain("market_auction");
+  });
+  it("매입은 승인액 이하만(넘으면 보류), 메루카리 낙찰가 = 우리 마지막 입찰액, 해제는 확실할 때만", () => {
+    expect(sql52).toContain("when (v_amt->>'total')::int > v_b.auth_krw then 'capture over auth'");
+    expect(sql52).toContain("when p_final > v_b.cap_jpy then 'final over cap'");
+    expect(sql52).toContain("p_final <> v_b.last_bid_jpy then 'final differs from our bid'");
+    expect(sql52).toContain("if p_final_seen = v_b.last_bid_jpy then raise exception 'mb: looks won'");
+    expect(sql52).toMatch(/elsif v_b\.placed_at is not null then\r?\n\s+raise exception 'mb: was placed'/);
+    expect(sql52).toContain("ends_at <= now() + interval '30 minutes'");          // 마감 30분 전 미입찰 자동 취소
+    expect(sql52).toContain("ends_at + interval '15 minutes' < now()");           // 결과 지연 → 보류
+    expect(sql52).toMatch(/if v_b\.order_id is not null then\s+return/);          // 주문 전환 한 번만
+  });
+  it("주문 전환은 서버만, 조작은 운영자·서버만", () => {
+    expect(sql52).toMatch(/revoke all on function market_bid_to_order\(uuid\) from public, anon, authenticated;/);
+    expect(sql52).toMatch(/revoke all on function market_bid_capture_failed\(uuid, text\) from public, anon, authenticated;/);
+    expect(sql52).toContain("select is_admin_user() or coalesce(auth.role(), '') = 'service_role'");
+  });
+  it("0052 운영자 오류마다 문구가 있다", () => {
+    const raised = new Set([...sql52.matchAll(/raise exception 'mb: ([a-z ]+)/g)].map((m) => `mb: ${m[1].trim()}`));
+    for (const r of raised) if (!["mb: not captured"].includes(r)) expect(adminMbError(r), r).not.toBe(r);
+  });
+});
+
+describe("M5 운영 권한·조작", () => {
+  it("입찰됨·밀림·보류·유찰 = ops, 낙찰 매입·승인 해제 강제(못 넣음·운영 취소) = money", () => {
+    expect(MB_OP_SCOPE).toEqual({ placed: "ops", outbid: "ops", hold: "ops", lost: "ops", won: "money", missed: "money", cancel: "money" });
+    for (const [op, s] of Object.entries(MB_OP_SCOPE)) expect(OPS_ROUTE_LIST).toContain(`POST /api/ops/market-bids/:id/${op} (${s})`);
+    expect(OPS_ROUTE_LIST).toContain("GET /api/ops/market-bids (ops)");
+    expect(OPS_ROUTE_LIST).toContain("POST /api/ops/market-bids/settings (money)");
+  });
+  it("상태별 조작 = DB 허용 전이", () => {
+    expect(mbOpsFor("authorized", false)).toEqual(["placed", "hold", "missed", "cancel"]);
+    expect(mbOpsFor("hold", true)).toEqual(["placed", "won", "lost"]);
+    expect(mbOpsFor("hold", false)).toEqual(["placed", "missed", "cancel"]);
+    expect(mbOpsFor("ordered", true)).toEqual([]);
+  });
+  it("지연 표시: 입찰 필요는 마감 2시간 전 warn·45분 전 late, 보류는 즉시 late", () => {
+    const now = Date.parse("2026-11-28T00:00:00Z");
+    expect(mbAging({ status: "authorized", ends_at: "2026-11-28T03:00:00Z" }, now)).toBeNull();
+    expect(mbAging({ status: "authorized", ends_at: "2026-11-28T01:30:00Z" }, now)?.level).toBe("warn");
+    expect(mbAging({ status: "authorized", ends_at: "2026-11-28T00:40:00Z" }, now)?.level).toBe("late");
+    expect(mbAging({ status: "hold", ends_at: "2026-11-28T03:00:00Z" }, now)?.level).toBe("late");
+  });
+});
+
+describe("M3 낙찰 → 매입 → 주문(settleWon)", () => {
+  const auth = { id: "a1", bid_id: "b1", payment_intent_id: "pi_mb", amount_krw: 52300, status: "authorized", captured_krw: null };
+  it("DB 매입액으로 매입한 뒤 주문 전환", async () => {
+    const calls: Call[] = [];
+    const admin = fakeAdmin({ market_bids: { id: "b1", status: "won", auth_id: "a1", capture_krw: 40000, order_id: null }, market_bid_auths: auth },
+      { market_bid_auth_captured: { ...auth, status: "captured", captured_krw: 40000 }, market_bid_to_order: { order_id: "o1", code: "T000099" } }, calls);
+    const r = await settleWon(fakeStripe({ id: "pi_mb", status: "requires_capture" }, calls), admin, "b1");
+    expect(r).toEqual({ status: "ordered", orderId: "o1", orderCode: "T000099" });
+    expect(calls.find((c) => c.name === "pi.capture")!.args).toEqual(["pi_mb", { amount_to_capture: 40000 }, { idempotencyKey: "mb_capture_b1" }]);
+    expect(calls.map((c) => c.name).indexOf("rpc.market_bid_to_order")).toBeGreaterThan(calls.map((c) => c.name).indexOf("pi.capture"));
+  });
+  it("승인이 이미 취소된 PI 면 capture_failed, 주문을 만들지 않는다", async () => {
+    const calls: Call[] = [];
+    const stripe = fakeStripe({ id: "pi_mb", status: "canceled" }, calls);
+    (stripe.paymentIntents as unknown as { capture: () => Promise<never> }).capture = () => Promise.reject(new Error("This PaymentIntent could not be captured"));
+    const admin = fakeAdmin({ market_bids: { id: "b1", status: "won", auth_id: "a1", capture_krw: 40000, order_id: null }, market_bid_auths: auth }, { market_bid_capture_failed: {} }, calls);
+    const r = await settleWon(stripe, admin, "b1");
+    expect(r.status).toBe("capture_failed");
+    expect(calls.some((c) => c.name === "rpc.market_bid_capture_failed")).toBe(true);
+    expect(calls.some((c) => c.name === "rpc.market_bid_to_order")).toBe(false);
+  });
+  it("일시 오류(PI 가 아직 requires_capture)는 won 으로 두고 크론이 다시 한다", async () => {
+    const calls: Call[] = [];
+    const stripe = fakeStripe({ id: "pi_mb", status: "requires_capture" }, calls);
+    (stripe.paymentIntents as unknown as { capture: () => Promise<never> }).capture = () => Promise.reject(new Error("timeout"));
+    const admin = fakeAdmin({ market_bids: { id: "b1", status: "won", auth_id: "a1", capture_krw: 40000, order_id: null }, market_bid_auths: auth }, {}, calls);
+    expect((await settleWon(stripe, admin, "b1")).status).toBe("pending");
+    expect(calls.some((c) => c.name.startsWith("rpc."))).toBe(false);
   });
 });
