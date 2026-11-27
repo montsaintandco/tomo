@@ -356,3 +356,6 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=<Supabase 대시보드 → Project Settings → AP
 - 0055_market_bid_worker(운영 적용, 되돌림 리허설 1묶음 30여 단언 통과·결함 주입 4종 검출 뒤): 접수 확인(armed), 워커 낙찰 = 보류 `worker_won`(낙찰 확인 대기, 매입 없음), 건강 신호 표 `market_bid_worker_health` + 5분 끊기면 접수 자동 중단(실행자 airship 일 때만, 자동 재개 없음, `bid.worker_down` 1회), 크론 워커 규칙(미접수 워커 건 마감 30분 전 자동 취소, 접수된 건은 워커 비정상·결과 지연 때 보류), 재알림 `bid.to_place_due`(2·1시간 전·접수 10분 지연), 고객 취소 마감(마감 30분 전·접수된 워커 건), 시스템 주체 `site-bids@system.airship.click`(ops_actors.is_system, money 불가).
 - 운영 API 워커 경로 4개(시스템 주체 전용): GET `market-bids/worker-queue`, POST `market-bids/worker-health`, POST `market-bids/:id/armed`, POST `market-bids/:id/worker-result`. 어드민 /admin/market-bids 에 실행자·워커 상태 띠·자동 중단 사유·「낙찰 확인 대기(워커)」 줄.
 - 설정은 그대로: executor=manual, accepting=false. MB000001 안 건드림. 수동 전환 버튼·워커 건 고객 취소(에어쉽 동기 취소)는 T2.
+### 2026-11-27 입찰 워커 연결 A2·A3(에어쉽) 운영 배포 — 스위치 꺼짐 (docs/aaa/16 12.6·12.7)
+- 에어쉽 `3fbd8040`: 다리 작업(가져오기·접수 확인·결과 전달·대조 취소·못 넣은 건 닫기·건강 신호), `/api/cron/site-bids` + pg_cron `site_bids_bridge` 1분 운영 등록, 훅 `bid.requested` → 가져오기, 어드민 표시 분리(A3). 스위치 `site_bid_bridge.enabled=false` 그대로라 지금은 건강 신호만 간다(tomo 에는 「bidding switched off」로 보임 — 의도).
+- tomo 설정 그대로(executor=manual, accepting=false). 다음: T2(수동 전환·워커 건 고객 취소 동기·고객 문구) → R(리허설) → S(Ren 승인 실입찰). 켜기는 Ren 승인 뒤.

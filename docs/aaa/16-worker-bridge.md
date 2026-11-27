@@ -419,3 +419,33 @@ money 경로 거절(시스템 주체가 `won`·`missed`·`cancel`·`settings` �
 - `bid.requested` 훅 본문은 바꾸지 않았다(`target.id` = 신청 id, `code` = MB 번호). 수동 건도 같은 이벤트를 보내므로 `worker-queue` 로 실행자를 거른다. 새 이벤트 `bid.to_place_due`(재알림)·`bid.worker_down`(접수 자동 중단)은 운영 알림용이다.
 - 건강 신호가 5분 끊기면 tomo 가 접수를 멈춘다(실행자 airship 일 때). 다리 스위치를 끌 때도 건강 신호는 계속 보내야 한다(아니면 접수가 멈춘다 — 의도된 동작).
 - 리허설 중 운영 DB 에서 `cron_market_bids()` 를 한 번 직접 불렀다(할 일 0건, cron_runs 1행). T 번호 시퀀스는 롤백된 리허설의 주문 생성으로 1개 건너뛰었다(시퀀스는 롤백되지 않음).
+
+### 12.6 A2·A3 에어쉽 구현 기록 (2026-11-27) — 운영 배포, 스위치 꺼짐 유지
+
+에어쉽 커밋 `3fbd8040`(migrate-vercel), Actions server-image 배포. 상세 표: 에어쉽 `docs/connected-sites.md` 「연결 사이트 입찰 A2·A3」. 스위치 `site_bid_bridge.enabled=false`, tomo 설정(executor=manual, accepting=false) 그대로. 워커 코드·env·재시작 없음.
+
+| 항목 | 내용 |
+|---|---|
+| 다리 작업 | `src/lib/connected/site-bids.ts`(판정·흐름, 순수) + `site-bids.server.ts`(DB·호출). 시스템 주체 `site-bids` / `site-bids@system.airship.click`, scope ops |
+| 1분 크론 | `POST /api/cron/site-bids`(CRON_SECRET). pg_cron `site_bids_bridge` `* * * * *` 운영 등록(22:41 KST, Vault `airship_cron_secret`, 다른 크론과 같은 방식). 등록 전 DO 블록 되돌림 리허설 |
+| 순서 | ① 건강 신호(스위치 꺼져도) ② `site_bid_close_missed()` ③ 연결 행 있으면 `worker-queue?ids=` → 대조 취소·결과 전달 ④ 스위치 켜짐이면 `worker-queue` → `site_bid_upsert` → `armed` |
+| 건강 신호 | `bid_enabled = auction_worker_settings.bid_enabled AND site_bid_bridge.enabled`. **다리 스위치가 꺼져 있으면 tomo 는 「bidding switched off」(비정상)로 받는다** — 실행자를 airship 으로 먼저 바꿔도 접수하지 않게. meta 에 `bridge_enabled`·`worker_bid_enabled`. 켜는 순서(8절) ①→② 가 그대로 맞는다 |
+| request_id | uuid v5(고정 이름공간): armed = `armed:<에어쉽 행 id>`, 결과 = `<행 id>:<키>`(키 예 `placed:1100`·`won:1300`·`failed`·`unknown:1100`), upsert 거절 = `<tomo id>:reject:<코드>` |
+| 결과 매핑 | 12.4 표 그대로. 보강: tomo 가 아직 authorized 인데 워커 결과가 won·lost(제출 있음)면 먼저 `unknown`(보류) — tomo 는 authorized 에서 won·lost 를 안 받는다. failed + 제출된 발사 있음 + tomo `placed_at` 없음 → `unknown`(tomo 의 failed 는 이때 「못 넣음·승인 해제」로 읽어 넣었을 수 있는 입찰의 승인을 풀어 버린다). `placed` 는 마감 30초 전까지만(tomo `mb: ended`). cancelled 행은 보내지 않는다(수동 전환 몫) |
+| 중복 방지 | 보낸 키를 `auction_bids.origin_pushed.done` 에. 409·무응답은 다음 분에 새 상태로, 그 밖 4xx 는 `origin_pushed.err` 에 적고 다시 안 보냄 + 에어쉽 관리자 알림 1번 |
+| 대조 취소 | requested 행: tomo 에 없음·executor≠airship·상태가 authorized/placed/outbid/hold 아님 → `site_bid_cancel`. armed 409·400 도 즉시 닫음. placed·outbid 행은 닫을 수 없어 관리자 알림 1번(에어쉽 경매 화면에서 「유찰」로 닫아 워커 재입찰을 멈추라는 안내) |
+| tomo 무응답 | 「확인 못 함」 → 행·알림 그대로. 예외 2개: 접수 확인 전 행 마감 30분 안 → 닫음(tomo 도 그 시각 「못 넣음」), 접수 확인된 행도 마감 10분 안 + tomo 5분 넘게 못 읽음(`connected_sites.last_ok_at`) → 닫음. 승인이 살아 있음을 증명 못 한 채 넣으면 낙찰 때 에어쉽 돈이 나간다. 닫으면 tomo 는 결과 지연 보류(승인 유지, 돈 안 나감) |
+| 훅 | `bid.requested` 새 이벤트면 가져오기 1회(스위치 꺼짐 = 호출 0). `bid.to_place_due`·`bid.worker_down` 알림 이름 추가 |
+| A3 | `/admin/auction`: 기본 목록·칩·상태 건수에서 연결 행 제외, 마켓 줄 「연결 사이트(TOMO)」(`?m=site`), 고객 칸 「TOMO MB…」, 취소·주문 만들기·바우처 풀기 숨김. 회원 목록·내보내기·신규 회원 수(`admin_ops_counts` 마이그레이션 `20261128110000` 운영 적용, md5 821f708f→1ed82108)에서 시스템 회원 제외. 마켓 입찰 화면에 연결 스위치·입찰기 신호 줄, 칸 「실행자」(워커·접수 시각/미접수, 수동), 「낙찰 확인 대기 ¥…」 배지·구매 기한, 「에어쉽 입찰 행 보기」 |
+| 그대로 둔 것 | 워커 `notifyAdmins`(연결 행 낙찰·미실행 등 관리자 알림, 제목에 TOMO 없음) — worker/ 금지 |
+| 검증 | `site-bids.check.ts`(uuid v5 RFC 기준값, 매핑 22, 취소 조건 12, 흐름 7묶음, 결함 주입 6종 검출). DB 롤백 리허설 `docs/sql/20261128100000_site_bids.a2-rollback-test.sql` PASS(꺼짐 거절·upsert 멱등·armed 기록·409→cancel·거절 코드 5종·close_missed·전달 기록·알림/주문/원장/고객 입찰 수 불변), 결함 주입 FAIL 확인. vite build·tsc(새 파일 오류 0)·eslint(새 파일) |
+| 운영 확인 | 22:39 수동 1회·22:41부터 크론: 응답 `health: not ok: bidding switched off`, rows 0, 호출은 건강 신호뿐. tomo `market_bid_worker_health` 갱신(enabled·logged_in true, bid_enabled false, meta.bridge_enabled false). tomo 설정 accepting=false·executor=manual 그대로. 에어쉽 auction_bids 323행·상태별 수·진행 0건 작업 전과 같음, 워커 생존 신호 계속 갱신, 연결 사이트 ops_log 에 시스템 기록 0(건강 신호는 남기지 않음). 회원 목록 맨 위에서 시스템 회원 빠짐 확인 |
+
+### 12.7 T2·R·S 가 알아야 할 것(A2·A3 뒤)
+
+- T2 수동 전환: 에어쉽 행을 먼저 닫고(`site_bid_cancel`, requested 만) 그다음 tomo `executor` 를 바꾼다. 다리 작업은 cancelled 행의 결과를 보내지 않으므로 순서가 바뀌어도 tomo 승인을 풀지 않는다. 그러나 tomo 가 먼저 manual 이 되면 다리 작업이 requested 행을 「tomo: executor manual」로 바로 닫는다(의도). 에어쉽 쪽 「수동 전환」 버튼·`ops-routes.ts` 의 `POST /market-bids/:id/executor` 허용은 아직 없다.
+- T2 고객 취소(워커 건): 설계 3.4 의 에어쉽 동기 `bid.cancel` 은 아직 없다. tomo 가 먼저 취소하면 다음 분 대조가 requested 행을 닫는다(최대 1분 지연). 마감 30분 안 고객 취소는 tomo 가 막는다.
+- T2 고객 문구: 워커 건은 「마감 직전(2분 전)에 입찰」, 입찰 0건 상품은 신청 직후 바로 입찰(취소 불가) — 15번 5.1절과 대조.
+- R: 켜는 순서 ① 에어쉽 `site_bid_bridge.enabled=true`(그 순간부터 다음 분에 가져오기 시작, 지금 tomo 에 authorized·airship 건 0) ② tomo 건강 신호 ok 확인 ③ tomo `executor='airship'` ④ `accepting=true`. 끄는 순서는 8절. 크론을 지우면 5분 뒤 tomo 가 워커 실행자 접수를 자동 중단한다.
+- R4(끝난 경매)·S1 전에: upsert 는 마감 10분 이내를 `bad_ends_at` 으로 거절하고 tomo 에 failed(못 넣음)를 보낸다 — 「끝난 경매로 R4」 는 에어쉽 행이 만들어지지 않는다. R4 는 마감이 10분 넘게 남은 상품(입찰 0건이면 워커가 바로 넣으므로 입찰 있는 상품)으로 하거나, 롤백 블록에서만 한다.
+- 연결 행이 있는 동안 워커 일일 한도는 에어쉽 고객 건과 합산된다(A1 그대로).
