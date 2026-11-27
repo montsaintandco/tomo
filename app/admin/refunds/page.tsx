@@ -6,6 +6,7 @@ import RefundRetry from "@/components/admin/RefundRetry";
 
 const STATUS: Record<string, { label: string; tone: Tone }> = {
   pending: { label: "대기", tone: "amber" }, failed: { label: "실패", tone: "red" }, done: { label: "완료", tone: "green" },
+  void: { label: "무효", tone: "gray" },   // 실결제 없음 등 환불 불필요 (0040)
 };
 
 type Refund = {
@@ -21,7 +22,7 @@ export default async function AdminRefundsPage() {
   const supabase = await createServerSupabase();
   const [openRes, doneRes] = await Promise.all([
     supabase.from("refunds").select(SELECT).in("status", ["pending", "failed"]).order("created_at", { ascending: true }).limit(200),
-    supabase.from("refunds").select(SELECT).eq("status", "done").order("done_at", { ascending: false }).limit(100),
+    supabase.from("refunds").select(SELECT).in("status", ["done", "void"]).order("done_at", { ascending: false, nullsFirst: false }).limit(100),
   ]);
   const missing = tableMissing(openRes.error);
   const open = rows(openRes) as unknown as Refund[];
@@ -60,7 +61,7 @@ export default async function AdminRefundsPage() {
           {open.map((r) => <Row key={r.id} r={r} retry />)}
         </Table>
       </Panel>
-      <Panel title="완료" count={done.length}>
+      <Panel title="완료·무효" count={done.length}>
         <Table head={["대상", "받는 사람", "금액", "사유", "상태", "완료", ""]} empty="아직 없음">
           {done.map((r) => <Row key={r.id} r={r} retry={false} />)}
         </Table>

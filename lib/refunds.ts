@@ -74,6 +74,7 @@ export async function processRefund(admin: SupabaseClient, id: string): Promise<
     .select("id, kind, transaction_id, proxy_order_id, payment_key, amount, is_full, reason, status").eq("id", id).maybeSingle();
   if (error || !f) return { status: "pending", error: error?.message ?? "환불 행 없음" };
   if (f.status === "done") return { status: "done" };
+  if (f.status === "void") return { status: "failed", error: "VOID: 무효 처리된 환불 — 보내지 않음" };
 
   const fail = async (msg: string): Promise<RefundResult> => {
     await admin.rpc("refund_mark", { p_id: id, p_ok: false, p_error: msg, p_amount_krw: null });

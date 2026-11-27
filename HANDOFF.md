@@ -238,3 +238,6 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=<Supabase 대시보드 → Project Settings → AP
 - 해외 상품 찜(0038 external_wishlists), 판매자 가격 잠금(0039 트리거), 브랜드 색 통일(DESIGN.md 색 규칙, ink-soft 7.6:1·ink-faint 4.8:1), 빠른 필터 칩·결과 스켈레톤.
 - 구글 서치콘솔 tomo.airship.click 확인·사이트맵 제출, 네이버 서치어드바이저 소유확인·사이트맵·robots 수집요청 완료.
 - 남은 것: 운영 실결제 1회(Ren 확인), 텔레그램 운영 알림 봇 토큰, 홈 캐러셀·카테고리 미리보기 카드 찜 하트(찜 여부 조회 연결 필요), 검색엔진 수집 결과 며칠 뒤 확인.
+### 2026-11-27 환불 「무효」·미결제 대행 정리 (Ren 134 1ㄱ 2ㄱ)
+- 0040_refund_void(적용 완료, begin…rollback 리허설 후): refund_status에 void 추가, refund_mark는 done·void 행 안 바꿈. notify_refund는 done만 알림이라 void 전환 알림 없음. /admin/refunds 「완료·무효」 패널에 「무효」 표시(대기열은 pending·failed만), 고객 주문·대행 상세와 어드민 주문 환불 합계에서 void 제외, processRefund는 void면 안 보냄.
+- 데이터: refunds ec2d78aa(건이아빠 ₩12,950 토스 테스트 결제) failed→void. 미결제 대행 요청 9건(건빵 1·Donguk 8) requested→cancelled, 주문 8건(d28a4bb1 포함) pending_payment→cancelled. 같은 트랜잭션에서 proxy_requests_notify를 끄고 다시 켜서 알림 0건(notifications 47건·max id 51 그대로).

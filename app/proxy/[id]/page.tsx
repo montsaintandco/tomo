@@ -54,7 +54,7 @@ export default async function ProxyDetailPage(props: { params: Promise<{ id: str
   // 취소 요청·환불(0025) — 별도 조회라 마이그레이션 전에도 화면은 그대로
   const [extraRes, refundRes, previews] = await Promise.all([
     supabase.from("proxy_requests").select("cancel_requested_at, cancel_reason, refund_amount").eq("id", r.id),
-    supabase.from("refunds").select("amount, currency, status").eq("proxy_request_id", r.id),
+    supabase.from("refunds").select("amount, currency, status").eq("proxy_request_id", r.id).neq("status", "void"),
     viewer.isAdmin && r.order_id ? loadCancelPreviews(supabase, [r.order_id]) : Promise.resolve({} as Awaited<ReturnType<typeof loadCancelPreviews>>),
   ]);
   const extra = (safeRows(extraRes) as { cancel_requested_at: string | null; cancel_reason: string | null; refund_amount: number | null }[])[0];

@@ -25,7 +25,7 @@ export default async function OrderReceiptPage(props: { params: Promise<{ id: st
   const [{ data: o }, { data: reqs }, refundRes] = await Promise.all([
     supabase.from("proxy_orders").select("*").eq("id", id).maybeSingle(),
     supabase.from("proxy_requests").select("id, status, external_items(source, title, title_translated, images)").eq("order_id", id),
-    supabase.from("refunds").select("id, amount, currency, status, created_at").eq("proxy_order_id", id).order("created_at"),   // 0025 전이면 빈 목록
+    supabase.from("refunds").select("id, amount, currency, status, created_at").eq("proxy_order_id", id).neq("status", "void").order("created_at"),   // 0025 전이면 빈 목록
   ]);
   const refunds = safeRows(refundRes) as { id: string; amount: number; currency: Currency; status: string; created_at: string }[];
   if (!o) notFound();

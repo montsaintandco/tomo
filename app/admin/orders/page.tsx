@@ -44,6 +44,7 @@ export default async function AdminOrdersPage(props: { searchParams: Promise<{ s
     : [{ data: [], error: null }, { data: [], error: null }];
   const refunded: Record<string, { sum: number; open: number }> = {};
   for (const f of safeRows(refundRes) as { proxy_order_id: string; amount: number; status: string }[]) {
+    if (f.status === "void") continue;   // 무효 = 환불 없음
     const x = (refunded[f.proxy_order_id] ??= { sum: 0, open: 0 });
     x.sum += f.amount; if (f.status !== "done") x.open += 1;
   }
