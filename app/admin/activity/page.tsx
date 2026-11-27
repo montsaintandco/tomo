@@ -21,14 +21,27 @@ const ACTION: Record<string, { label: string; tone: Tone; group: string }> = {
   report_resolved: { label: "신고 처리", tone: "green", group: "people" },   // 0033
   report_dismissed: { label: "신고 기각", tone: "gray", group: "people" },
   report_open: { label: "신고 다시 열기", tone: "amber", group: "people" },
+  listing_release: { label: "상품 보류 해제", tone: "green", group: "listing" },   // 0041
+  user_delete: { label: "회원 완전 삭제", tone: "red", group: "people" },
+  user_delete_blocked: { label: "회원 삭제 거부(진행 건)", tone: "amber", group: "people" },
+  ...opsWrites(),
 };
+// 0041 운영 표 직접 쓰기 기록: <표>_<insert|update|delete>
+function opsWrites() {
+  const T: Record<string, string> = { banners: "배너", notices: "공지", trending_themes: "인기 테마", exchange_rates: "환율", external_items: "외부 상품", support_tickets: "문의 답변", reviews: "후기" };
+  const OP: Record<string, [string, Tone]> = { insert: ["추가", "green"], update: ["수정", "blue"], delete: ["삭제", "red"] };
+  const out: Record<string, { label: string; tone: Tone; group: string }> = {};
+  for (const [t, tl] of Object.entries(T)) for (const [o, [ol, tone]] of Object.entries(OP)) out[`${t}_${o}`] = { label: `${tl} ${ol}`, tone, group: "content" };
+  return out;
+}
 const GROUPS: Record<string, string[]> = {
   money: Object.keys(ACTION).filter((k) => ACTION[k].group === "money"),
   order: ["order_status"],
-  people: ["user_set", "report_resolved", "report_dismissed", "report_open"],
-  listing: ["listing_hidden", "listing_update"],
+  people: ["user_set", "user_delete", "user_delete_blocked", "report_resolved", "report_dismissed", "report_open"],
+  listing: ["listing_hidden", "listing_update", "listing_release"],
+  content: Object.keys(ACTION).filter((k) => ACTION[k].group === "content"),
 };
-const FILTERS = [{ value: "", label: "전체" }, { value: "money", label: "돈·취소" }, { value: "order", label: "주문 상태" }, { value: "people", label: "회원·신고" }, { value: "listing", label: "상품" }];
+const FILTERS = [{ value: "", label: "전체" }, { value: "money", label: "돈·취소" }, { value: "order", label: "주문 상태" }, { value: "people", label: "회원·신고" }, { value: "listing", label: "상품" }, { value: "content", label: "콘텐츠·직접 수정" }];
 
 const LINK: Record<string, (id: string) => string> = {
   transaction: (id) => `/transactions/${id}`, proxy_request: (id) => `/proxy/${id}`,
@@ -38,7 +51,8 @@ const TARGET: Record<string, string> = { transaction: "거래", proxy_request: "
 const KEY: Record<string, string> = {
   reason: "사유", note: "메모", amount: "환불", default: "계산값", cap: "상한", currency: "통화", from: "이전 상태",
   suspended: "정지", admin: "운영자", hidden: "숨김", refund_id: "환불", order_id: "주문",
-  to: "바꾼 상태", kind: "종류", tracking: "운송장", title_from: "이전 제목", title: "제목", price_from: "이전 가격", price: "가격", status: "상태",
+  to: "바꾼 상태", kind: "종류", listing: "상품 상태", fields: "바꾼 칸", rate_from: "이전 환율", rate: "환율", rating: "별점", comment: "내용", reviewer: "작성자", tx: "거래",
+  transactions: "진행 거래", proxy_requests: "진행 대행", refunds: "환불 대기", payouts: "출금 신청", balance: "정산 잔액", tracking: "운송장", title_from: "이전 제목", title: "제목", price_from: "이전 가격", price: "가격", status: "상태",
 };
 
 function detailText(d: Record<string, unknown>): string {

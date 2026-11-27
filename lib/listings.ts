@@ -40,7 +40,7 @@ export async function getViewer(supabase: SupabaseClient): Promise<Viewer | null
   if (!auth.user) return null;
   // 프로필·환율(2행뿐)·요청 언어를 병렬로 — 직렬 3 RTT → 1 RTT
   const [{ data: p }, rates, reqLang] = await Promise.all([
-    supabase.from("profiles").select("country, region, language, is_admin").eq("id", auth.user.id).single(),
+    supabase.from("profiles").select("country, region, language, is_admin, suspended").eq("id", auth.user.id).single(),
     exchangeRates(supabase),
     getRequestLang(),
   ]);
@@ -50,7 +50,7 @@ export async function getViewer(supabase: SupabaseClient): Promise<Viewer | null
   const r = rates?.find((x) => x.pair === pair);
   // 로그인 사용자도 토글로 UI 언어만 바꿀 수 있다 (나라·통화는 프로필)
   const language = reqLang === "ja" && p.language !== "ja" ? "ja" : p.language;
-  return { id: auth.user.id, country: p.country, region: p.region, language, currency, rate: Number(r?.rate ?? 0), isAdmin: !!p.is_admin };
+  return { id: auth.user.id, country: p.country, region: p.region, language, currency, rate: Number(r?.rate ?? 0), isAdmin: !!p.is_admin && !p.suspended };   // 정지된 운영자는 운영자 화면·API 를 못 쓴다(DB is_admin_user 와 같은 규칙)
 }
 
 export function displayTitle(

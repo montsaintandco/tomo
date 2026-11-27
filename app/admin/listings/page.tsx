@@ -6,7 +6,7 @@ import DetailSheet from "@/components/admin/DetailSheet";
 import ListingEditForm from "@/components/admin/ListingEditForm";
 import Link from "next/link";
 
-const FILTERS = [{ value: "", label: "전체" }, { value: "active", label: "판매중" }, { value: "hidden", label: "숨김" }, { value: "sold", label: "거래완료" }];
+const FILTERS = [{ value: "", label: "전체" }, { value: "active", label: "판매중" }, { value: "hidden", label: "숨김" }, { value: "sold", label: "거래완료" }, { value: "held", label: "보류" }];
 const UUID = /^[0-9a-f-]{36}$/;
 
 // 상품 모더레이션 — 검색·필터·페이지 넘김(전부 URL), 숨김/복구(한 건·여러 건), 제목·가격 수정(?open= 시트, 0037)
@@ -22,6 +22,7 @@ export default async function AdminListingsPage(props: { searchParams: Promise<{
     .order("created_at", { ascending: false }).range(from, to);
   if (q) query = query.ilike("title", `%${likeEscape(q)}%`);
   if (f === "hidden") query = query.eq("hidden", true);
+  else if (f === "held") query = query.eq("status", "held");
   else if (f) query = query.eq("status", f).eq("hidden", false);
   const { data, count } = await query;
   const raw = (data ?? []) as unknown as {
@@ -37,7 +38,7 @@ export default async function AdminListingsPage(props: { searchParams: Promise<{
 
   return (
     <>
-      <PageHeader title="상품" sub="숨김은 모든 피드·검색·상세에서 제외돼요. 운영 숨김은 판매자가 되살릴 수 없습니다"
+      <PageHeader title="상품" sub="숨김은 모든 피드·검색·상세에서 제외돼요. 운영 숨김은 판매자가 되살릴 수 없습니다. 보류는 발송 뒤 취소·분쟁 환불된 상품이에요. 반송을 확인한 뒤 「보류 해제」를 누르세요"
         actions={
           <form className="flex gap-2" role="search">
             {f && <input type="hidden" name="f" value={f} />}

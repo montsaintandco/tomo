@@ -23,7 +23,7 @@ export default async function MySales(props: { searchParams: Promise<{ tab?: str
   const { n, limit } = pageLimit(sp.page);
   const more = (has: boolean) => (has ? `/mypage/sales?tab=${tab}&page=${n + 1}` : null);
   const priceOf = (l: { price: number; currency: string }) => l.price === 0 ? t(lang, "price.free") : formatPrice(l.price, l.currency as Currency, lang);
-  const statusOf = (s: string) => t(lang, s === "active" ? "status.selling" : s === "reserved" ? "badge.reserved" : "status.soldDone");
+  const statusOf = (s: string) => t(lang, s === "active" ? "status.selling" : s === "reserved" ? "badge.reserved" : s === "held" ? "status.held" : "status.soldDone");
 
   let body: React.ReactNode;
   if (tab === "listings") {

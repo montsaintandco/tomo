@@ -6,6 +6,7 @@ import { createBrowserSupabase } from "@/lib/supabase/client";
 import { useGridSelection } from "@/components/admin/use-grid-selection";
 import AdminToggle from "@/components/AdminToggle";
 import { CountryChip } from "@/components/Brand";
+import ReleaseHoldButton from "@/components/admin/ReleaseHoldButton";
 
 export type AdminListingRow = {
   id: string; title: string; price: number; currency: string; status: string; country: "KR" | "JP"; region: string;
@@ -14,6 +15,7 @@ export type AdminListingRow = {
 
 const STATUS: Record<string, { label: string; tone: string }> = {
   active: { label: "판매중", tone: "green" }, reserved: { label: "예약중", tone: "amber" }, sold: { label: "거래완료", tone: "gray" },
+  held: { label: "보류(반송 확인 필요)", tone: "red" },   // 0041: 발송 뒤 취소·분쟁 환불
 };
 const money = (n: number, cur: string) => (cur === "JPY" ? `¥${n.toLocaleString("en-US")}` : `${n.toLocaleString("en-US")}원`);
 const date = (iso: string) => new Date(iso).toLocaleString("ko-KR", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
@@ -97,6 +99,7 @@ export default function ListingsTable({ rows }: { rows: AdminListingRow[] }) {
                 <td className="a-faint tnum whitespace-nowrap">{date(l.created_at)}</td>
                 <td className="text-right">
                   <span className="inline-flex items-center gap-1.5">
+                    {l.status === "held" && <ReleaseHoldButton listingId={l.id} title={l.title} />}
                     <Link href={l.editHref} scroll={false} className="a-link text-[12px]">수정</Link>
                     <AdminToggle label={l.hidden_by_admin ? "복구" : "숨김"} danger={!l.hidden_by_admin}
                       action={{ rpc: "admin_set_listing_hidden", args: { p_id: l.id, p_hidden: !l.hidden_by_admin } }} />

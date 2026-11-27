@@ -241,3 +241,12 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=<Supabase 대시보드 → Project Settings → AP
 ### 2026-11-27 환불 「무효」·미결제 대행 정리 (Ren 134 1ㄱ 2ㄱ)
 - 0040_refund_void(적용 완료, begin…rollback 리허설 후): refund_status에 void 추가, refund_mark는 done·void 행 안 바꿈. notify_refund는 done만 알림이라 void 전환 알림 없음. /admin/refunds 「완료·무효」 패널에 「무효」 표시(대기열은 pending·failed만), 고객 주문·대행 상세와 어드민 주문 환불 합계에서 void 제외, processRefund는 void면 안 보냄.
 - 데이터: refunds ec2d78aa(건이아빠 ₩12,950 토스 테스트 결제) failed→void. 미결제 대행 요청 9건(건빵 1·Donguk 8) requested→cancelled, 주문 8건(d28a4bb1 포함) pending_payment→cancelled. 같은 트랜잭션에서 proxy_requests_notify를 끄고 다시 켜서 알림 0건(notifications 47건·max id 51 그대로).
+
+### 2026-11-27 T1 운영 안전 (0041, 설계 docs/aaa/12 4장 P0 · Ren 결정 13개 기본값 승인)
+- 0041_ops_safety(운영 적용 완료): enum 값 `held`(보류)는 단독으로 먼저 커밋했다(같은 트랜잭션에선 새 값을 못 씀). 나머지는 begin…rollback 리허설(센터 분쟁 환불·운영자 센터 취소 → held, paid 단계 → active, 판매자 보류 직접 해제·설정 거부, 정지 운영자 resolve/cancel/advance/삭제/해제 거부·거래 조회 0, 진행 거래 회원 삭제 거부, 운영자 계정·본인 삭제 거부, 직접 쓰기 기록·무세션 쓰기 미기록) 통과 후 적용, 카탈로그로 확인.
+- 보류 규칙(한 함수 listing_after_tx_cancel): 결제 전·paid 취소 → 판매중, 그 뒤(발송·센터·배송) 또는 분쟁 직전 상태 모름 → held. 분쟁 직전 상태는 transactions.disputed_from 트리거가 남긴다. 해제는 admin_release_listing_hold(메모 필수) → 판매중+판매자 숨김, 판매자가 「다시 보이기」로 재판매. 어드민 분쟁·상품 화면에 보류 표시·「보류 해제」, 판매자 화면은 상태 버튼 숨김+안내.
+- is_admin_user()에 정지 검사, advance_transaction·advance_proxy·quote_proxy의 직접 is_admin 검사와 정책 4개(0010·0011·0012)를 is_admin_user()로 바꿈. 앱 getViewer.isAdmin도 정지면 false.
+- 회원 완전 삭제: admin_prepare_user_delete(검사 user_delete_blockers: 진행 거래·대행, 환불 pending/failed, 출금 requested, 정산 잔액≠0, 운영자 계정) → 통과 시 익명화·기록 후 라우트가 auth 삭제. 소유자 구분은 T3.
+- 직접 쓰기 기록: banners·notices·trending_themes·exchange_rates·external_items(입력·수정·삭제), support_tickets(수정), reviews(삭제) — 운영자 세션만(service_role·크론은 기록 안 함). 활동 기록 「콘텐츠·직접 수정」 필터.
+- Stripe 웹훅: settleSession이 metadata.app≠APP_TAG면 DB·Stripe 호출 없이 null → 200. 가드 추가 불필요, 단위 테스트(tests/unit/stripe-cross-app) 추가.
+- 주의: worktree 안 turbopack 빌드는 node_modules junction을 거부한다 → `next build --webpack`으로 확인했다.

@@ -33,11 +33,13 @@ export default function ListingOwnerActions({ listingId, status, hidden, hiddenB
   }
 
   const chip = "press rounded-full bg-tomo-navy/5 px-3 py-1.5 text-[12px] font-bold text-tomo-navy disabled:opacity-45";
-  const statusButtons = (["active", "reserved", "sold"] as const).filter((s) => s !== status);
+  // 보류(0041)는 운영자만 푼다 — 상태 버튼을 숨긴다(눌러도 DB가 막는다)
+  const statusButtons = status === "held" ? [] : (["active", "reserved", "sold"] as const).filter((s) => s !== status);
 
   return (
     <div className={compact ? "" : "mt-3"}>
       {hiddenByAdmin && <p className="mb-2 text-[12px] font-bold text-tomo-rose">{t(lang, "own.hiddenByAdmin")}</p>}
+      {status === "held" && <p className="mb-2 text-[12px] font-bold text-tomo-rose">{t(lang, "own.held")}</p>}
       <div className="flex flex-wrap gap-1.5">
         {statusButtons.map((s) => (
           <button key={s} type="button" disabled={working} onClick={() => update({ status: s, reserved_at: s === "reserved" ? new Date().toISOString() : null })} className={chip}>
