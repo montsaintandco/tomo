@@ -313,3 +313,11 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=<Supabase 대시보드 → Project Settings → AP
 - 시험 데이터 전부 정리(표별 건수는 14 부록), 에어쉽 connected_site_events 3건 삭제.
 - 남은 것: 낙찰 결제창 45분 만료 때 tx_cancelled 알림이 양쪽에 감(오해 소지, SQL 0049 필요), 실결제 1회(Ren 승인), 「추가 설명 덧붙이기」 없음, 공지 등록(Ren).
 - 끄기: Actions 변수 삭제 → 재빌드.
+
+### 2026-11-27 해외 마켓 경매 입찰 대행 M0~M2 + 0049 (docs/aaa/15 부록 「M0~M2 구현 기록」)
+- 0049_auction_pay_expire_notify(운영 적용): 낙찰 결제창 45분 만료로 거래가 취소돼도 경매가 결제 대기면 낙찰자에게만 auction_pay_expired, 판매자에게는 알림 없음. notify_transaction 은 지금 정의를 읽어 cancelled 줄만 바꿨다(되돌리기 SQL 은 파일 끝, md5 로 원복 확인).
+- 0050_market_bids(운영 적용, 롤백 리허설 48단언·결함 주입 4종 뒤): 표 5개·MB 번호·신청/결제창 연결/승인/취소/만료/해제·매입 기록 함수·가드(기본값 Ren 확정). 접수 스위치 accepting=false.
+- 코드: lib/market-bid.ts(금액·사실·오류 키), lib/market-bid.server.ts(승인만 결제창·확정·해제·매입), app/api/market-bid(POST·DELETE, 플래그 없으면 404), 웹훅·복귀 kind=mb 분기, createSession manual 옵션(카드만), 메루카리 상세 auctionInfo.
+- 플래그 `NEXT_PUBLIC_MARKET_AUCTION` 은 운영에 없음(넣지 말 것 — M6 리허설 뒤).
+- Stripe 테스트 모드 실측: 승인만 결제창 완료 = session complete + payment_status unpaid + PI requires_capture, capture_before = 승인 + 7일(시험 Visa). 부분 매입·취소·만료 뒤 승인 자동 해제 확인. 시험 데이터 정리 완료.
+- 다음: M3(마이그레이션 0051 — 설계 번호에서 한 칸 밀림), M4 고객 화면, M5 운영.

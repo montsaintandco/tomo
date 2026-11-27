@@ -415,3 +415,62 @@
 | 에어쉽 메루카리 입찰기의 지금 운영 상태(켜짐 여부·최근 성공률) | 확인하지 않았다. 2차로 넘어가는 조건에 넣었다 |
 | 에어쉽 야후 판매자 게이트·사전 점검 결과의 칸 이름 | 마이그레이션 제목만 확인했다 |
 | 메루카리 경매 상품이 지금 tomo 에서 결제까지 가는지 | 14번과 같다. 코드에 막는 곳이 없다는 것만 확인했다(실결제 시험 안 함) |
+
+## 부록. M0~M2 구현 기록 (2026-11-27)
+
+- 범위: M0 잔여(메루카리 경매 정보 읽기) + M1(DB) + M2(승인만 결제창·확정·해제·매입). M3 이후(입찰됨·낙찰·주문 전환·크론·고객 화면·어드민)는 다음 작업자.
+- 마이그레이션 번호가 설계와 다르다: **0049 는 자체 경매 알림 수정**(아래), 입찰 대행 M1 은 **0050_market_bids.sql**. 설계의 0050(정산)·0051(상한 올리기)은 **0051·0052** 로 한 칸씩 민다.
+- 플래그 `NEXT_PUBLIC_MARKET_AUCTION` 은 운영 Variables 에 넣지 않았다. 운영 `market_bid_settings.accepting=false`.
+
+### 0049 선행 수정(자체 경매)
+- 낙찰자 결제창 거래가 pending_payment → cancelled 이고 같은 상품에 그 구매자가 낙찰자인 `awaiting_payment` 경매가 있으면, 양쪽 `tx_cancelled` 대신 낙찰자에게만 `auction_pay_expired`(「결제창이 만료됐어요. 낙찰은 그대로예요. 기한 안에 다시 결제해 주세요」). 판매자에게는 안 보낸다. 경매가 이미 unpaid 이거나 일반 거래면 예전대로 양쪽 tx_cancelled.
+- 방법: notify_transaction 을 다시 쓰지 않고 `pg_get_functiondef` 로 지금 정의를 읽어 cancelled 두 줄만 조건문으로 바꿔 EXECUTE. 바꿀 글이 정확히 1번이 아니면 예외(CR 은 빼고 비교 — 윈도 CRLF·CI LF 둘 다).
+- 리허설(운영 DB, begin + 0049 + 시험 + 예외): 4묶음 통과(결제 대기 경매 → 낙찰자 1건·판매자 0, unpaid 경매 → 양쪽, 일반 거래 → 양쪽, 다른 분기 글 유지). 0049 없이 돌리면 1번이 실패(결함 확인). 되돌리기 SQL 을 적용 뒤 돌리면 정의 md5 가 원본(8c981fcf…)과 같다. 적용 뒤 md5 ac5ab4fe…. 리허설에서 거래 번호 시퀀스 1개(TX000068)가 소모됐다(시퀀스는 롤백 안 됨).
+
+### 0050 표·함수(M1)
+| 객체 | 내용 |
+|---|---|
+| `market_bid_settings`(한 행) | accepting=false, sources {mercari}, cap_max_jpy 30000, max_open 5, max_open_per_user 1, daily_cap_jpy 100000(서울 날짜), min_lead_minutes 180, max_lead_hours 96, auth_margin_hours 12, pending_minutes 45, fee_jpy 0, executor manual. 누구나 읽기, 쓰기는 SQL 만(운영 화면은 M5) |
+| `market_bids` | 4.1절 칸 + `seen_bids`·`auth_breakdown`·`auth_krw`·`authorized_at`·`capture_breakdown`·`capture_krw`·`closed_at`. 번호 `MB`+6자리. 유일: (user, request_id), 고객·상품당 진행 1건(pending_auth 포함), 상품당 승인된 진행 1건 |
+| `market_bid_auths` | 승인 행(pending/authorized/captured/releasing/released/superseded/failed), `capture_before` |
+| `market_bid_events` | 사건 기록(requested/authorized/auth_void/cancelled/expired/released/captured …) |
+| `market_bid_blocks` | 입찰 정지 회원(M3 가 채운다) |
+| `market_bid_amount(가격, 송료, 환율, 수수료)` | 금액 정본. round((가격+송료)×환율) + 8,000 + proxy_customs + round(수수료×환율). lib/market-bid.ts `marketBidAmount`·`proxyOrderTotal` 과 같음(단위 테스트) |
+| `request_market_bid(...)` service_role 만 | 가드: 접수 스위치, 정지·탈퇴·미해결 capture_failed·차단 회원, 한국 회원만(KRW), 지원 마켓, 송료 모름(null) 거절, 마감 3시간 이내·96시간 초과 거절, 상한가 최소(입찰 0건 = 시작가, 있으면 현재가+100엔)·최대 30,000엔, 주소·통관부호, 다른 회원 승인 선점 거절, 본인 중복 거절(본인 결제창 대기는 expired 로 바꾸고 새 신청), 고객당 1건, 전체 5건, 하루 100,000엔. 환율 = exchange_rates JPY_KRW(lib/fx-refresh 가 적용한 값) 고정 저장. 같은 request_id 는 같은 행 |
+| `market_bid_attach_session(신청, 세션, 금액)` | 결제창 연결, 금액이 auth_krw 와 다르면 거절, 앞 창은 superseded 로 바꾸고 만료 대상 돌려줌 |
+| `market_bid_authorized(세션, PI, 금액, capture_before)` | 승인 확정. 거절 조건(옛 창·신청이 대기 아님·금액·`마감+12시간 > capture_before`·같은 상품 선점)이면 승인 행 releasing + 알림 mb_auth_void + `release_auth_id` 반환. 재진입은 ok·again. 같은 상품은 advisory lock 으로 줄 세움 |
+| `cancel_market_bid(id)` 고객·운영자·서버 | pending_auth·authorized 만. 승인됨이면 승인 행 releasing, 알림 mb_cancelled. 두 번째 호출은 again |
+| `market_bid_expire_pending()` | 결제창 대기 45분 넘은 신청 → expired(M3 크론이 부른다) |
+| `market_bid_auth_released(승인)`·`market_bid_auth_captured(승인, 원)` | Stripe 호출 뒤 기록(멱등). 매입은 승인액 이하만 |
+- 리허설(운영 DB, begin + 0050 + 시험 블록 + 예외, 시험 회원 4명·상품 4개는 트랜잭션 안에서 만들고 사라짐): **48단언 통과** — 접수 꺼짐, 신청·번호·금액·통관부호 대문자화, 멱등(다른 상한가로 재요청해도 같은 행), 금액 불일치 연결 거절, 승인·capture_before·재진입·알림 1건, 고객당 2건째 거절, 같은 상품 다른 회원 거절(item taken), 본인 중복, 96시간 초과·3시간 이내(2시간 59분) 거절, 상한 초과·미달(입찰 0건 시작가 포함), 송료 모름, 통관부호·주소, 야후 거절, 일본 회원 거절, 하루 상한·전체 건수, 같은 상품 두 회원 결제창 → 먼저 승인된 쪽만·뒤 승인 해제·알림, 유효 기간 부족 해제, 옛 창 승인 해제(신청 유지), 만료 뒤 승인 해제, 남의 신청 취소 거절·본인 취소·멱등·해제 기록 멱등·알림, 매입 초과 거절·부분 매입·멱등, 입찰 뒤 취소 거절, 차단·미해결 매입 실패 회원 거절, 권한(고객 직접 신청·수정·승인 함수 거절, 남의 신청·승인 행 0행). 결함 주입 4종(고객당 한도·유효 기간·취소 상태·96시간 검사 제거)이 각 단언에서 실패. 적용 전 객체 0 확인 → 적용 → 표 5·함수 10·정책 5 확인.
+
+### M2 서버·API
+- `lib/stripe.ts createSession({ manual: true })`: `payment_intent_data.capture_method = "manual"`, 결제수단 카드만. 일반 결제(tx·po)는 그대로(단위 테스트가 capture_method 없음을 확인).
+- `lib/market-bid.server.ts`: `openBidCheckout`(열린 창 재사용·완료 창은 확정 경로·앞 창 만료), `settleMarketBidSession`(metadata.app=APP_TAG·kind=mb 만, PI requires_capture 만 확정, capture_before 저장, DB 거절이면 즉시 해제), `releaseAuth`(releasing 행만 PaymentIntent cancel, 키 `mb_cancel_<승인 id>`, 이미 canceled 면 성공), `captureAuth`(승인액 이하, `amount_to_capture`, 키 `mb_capture_<신청 id>`, 이미 매입된 PI 는 Stripe 값으로 기록).
+- 웹훅·복귀(`/api/stripe/webhook`·`/api/stripe/return`): metadata.kind === "mb" 를 먼저 분기한다. 복귀는 `/global/<source>/<id>?mb=ok` 또는 `?mb=fail&code=<사유>`(예 BID_EXPIRED). M4 가 `/bids/[id]` 를 만들면 바꾼다.
+- `/api/market-bid`: 플래그 없으면 404. POST = 같은 request_id 면 마켓을 다시 읽지 않고 이어감 → 아니면 서버가 메루카리를 다시 읽어(`bidFacts`) 경매·진행·송료 확인, seenPrice 가 다르면 409 mb.err.changed + 지금 값 → external_items 행 없으면 fetched_at=epoch 로 만든다(장바구니 15분 신선도 통과 못 하게, B0 차단 유지) → request_market_bid(service_role) → 결제창 URL. DELETE = cancel_market_bid(본인 세션) → 결제창 만료·승인 해제(실패하면 releasing 으로 남아 M3 크론 몫).
+- M0: `MarketItemDetail.auctionInfo`(price·bids·startPrice·endsAt·state·open). `mercariAuctionInfo` 실측 응답 기준. 일본 내 송료는 `shippingIncluded`(送料込み) → 0, 그 밖(着払い·未定) → null → 거절.
+
+### Stripe 테스트 모드 실측(로컬 next dev, 운영 DB, 테스트 키, 카드 4242, 상품은 실제 메루카리 경매 주소지만 입찰은 안 함)
+| 확인 | 결과 |
+|---|---|
+| 승인만 결제창 완료 | Checkout Session `status=complete`, **`payment_status=unpaid`**, PI **`requires_capture`**, `capture_method=manual`, `amount_capturable`=승인액. 이벤트: payment_intent.created → charge.succeeded(captured=false) → payment_intent.amount_capturable_updated → checkout.session.completed(unpaid) |
+| capture_before | 시험 Visa(US) 승인 시각 + **7일**(2026-11-27 07:54 → 12-04 07:54). 한국 발급 실카드 값은 확인 못 함(실결제 금지). 정본은 저장한 값 |
+| 금액 | MB000001 상한 3,600엔 → 승인 ₩43,091 = 31,901 + 8,000 + 3,190(서버·DB 계산 일치) |
+| 부분 매입 | 낙찰가 3,000엔 가정 → ₩37,243 매입: PI succeeded, amount_received 37,243, amount_capturable 0, charge amount_refunded 0(남은 5,848원은 환불이 아니라 승인 해제로 처리됨) |
+| 매입 멱등 | DB 를 매입 전으로 되돌리고 다시 호출 → 같은 키라 Stripe 1회, 기록만 다시 captured 37,243 |
+| 고객 취소 | MB000002 승인 뒤 DELETE → 신청 cancelled, 승인 행 released, PI `canceled`(charge amount_refunded 0), 알림 mb_cancelled. 두 번째 DELETE 도 200(멱등) |
+| 만료 뒤 승인 | MB000003 결제창을 연 채 신청을 expired 로 만든 뒤 결제 → 복귀 `?mb=fail&code=BID_EXPIRED`, 승인 행 released(bid expired), PI canceled, 알림 mb_auth_void |
+| 웹훅 | 실제 checkout.session.completed 이벤트 본문을 로컬 비밀로 서명해 보냄 → 200(재진입, 상태 그대로), 틀린 서명 400 |
+| 거절 | 상한 미달 409 capLow(최소 2,500엔), 초과 409 capHigh, 화면 가격 다름 409 changed, 着払い 경매 409 shipping |
+- 정리: 시험 신청 3·승인 3·사건 12·알림 4·external_items 4행 삭제, `market_bid_code_seq` 1부터 다시, accepting=false. Stripe 테스트 PI 는 1건 매입(테스트 돈)·2건 취소로 남음.
+
+### M3~M5 작업자가 알아야 할 것
+1. 번호: 다음 마이그레이션은 **0051**(정산·크론). 0051 에서 ops_outbox 종류·크론(`market_bid_expire_pending` 호출, releasing 행 재해제는 서버 경로 `releaseAuth`), 입찰됨·밀림·낙찰·주문 전환 함수를 더한다.
+2. 낙찰 매입 금액은 `market_bid_amount(final_price, final_ship, rate, fee_jpy)` 로 계산해 `capture_krw` 에 저장하고 `captureAuth(authId, capture_krw)` 를 부른다. `capture_krw > auth_krw` 면 승인액까지만 매입하고 차액을 loss_recorded 로(1.2절). `market_bid_auth_captured` 는 승인 행만 바꾼다. 신청 상태 won → ordered 는 M3 함수.
+3. 승인 해제가 실패하면 승인 행이 `releasing` 으로 남는다(`market_bid_auths_releasing` 색인). 크론이 `releaseAuth` 를 다시 부르면 된다(멱등 키 같음).
+4. 매입 멱등 키는 신청 id 기준이다. 같은 신청을 다른 금액으로 다시 매입하면 Stripe 가 키 충돌로 거절한다(설계 의도). Stripe 멱등 키 보관은 24시간이라 그 뒤 재시도는 PI 상태로 판정한다(코드가 이미 그렇게 한다).
+5. 고객 취소 알림·승인 해제 알림은 0050 이 만든다(mb_authorized·mb_cancelled·mb_auth_void). 나머지 알림 kind(mb_placed·mb_outbid·mb_won·mb_lost·mb_missed·mb_hold·mb_pay_needed)는 M3·M4 가 NOTIF_KINDS·i18n 과 같이 더한다(tests/unit/market-bid.test.ts 가 SQL notify kind 를 검사).
+6. 1차는 한국 회원(KRW)만 받는다(`mb: country`). 일본 회원은 메루카리 탭을 보지 않으므로 막았다.
+7. 고객 화면(M4)은 오류 키 `mb.err.*` 와 409 응답 `facts`(지금 가격·입찰 수·마감)를 쓰면 된다. 최소 상한가는 `minCapJpy`.
+8. 운영 키(sk_live)로는 아무것도 안 했다. 실카드 사전 승인 1회는 8.3절 1번(Ren 승인 필요).

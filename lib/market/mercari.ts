@@ -5,7 +5,7 @@ import { unstable_cache } from "next/cache";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { fetchWithRetry } from "./http";
-import type { SearchFilters, MarketItem, MarketItemDetail } from "./types";
+import type { SearchFilters, MarketItem, MarketItemDetail, MarketAuctionInfo } from "./types";
 import { unbuyableReason, unbuyableDetail, UNBUYABLE_AUCTION } from "../unbuyable";
 
 const API_BASE = "https://api.mercari.jp";
@@ -78,6 +78,20 @@ export function isMercariSearchAuction(a: any): boolean {
 }
 export function isMercariItemAuction(ai: any): boolean {
   return !!ai && typeof ai === "object" && !!(ai.id || /^STATE_/.test(String(ai.state ?? "")));
+}
+
+// 상세 auction_info → 진행 정보(M0). 2026-11-27 실측: {id, start_time, expected_end_time(유닉스 초), total_bids, initial_price, highest_bid,
+// state(STATE_NO_BID·STATE_ONGOING), auction_type}. 입찰 0건도 expected_end_time 이 있고 highest_bid = 시작가다.
+export function mercariAuctionInfo(ai: any, onSale: boolean): MarketAuctionInfo | undefined {
+  if (!isMercariItemAuction(ai)) return undefined;
+  const end = Number(ai.expected_end_time);
+  const state = String(ai.state ?? "");
+  const startPrice = Number(ai.initial_price ?? 0);
+  return {
+    price: Number(ai.highest_bid ?? startPrice), bids: Number(ai.total_bids ?? 0), startPrice,
+    endsAt: end > 0 ? new Date(end * 1000).toISOString() : null,
+    state, open: onSale && (state === "STATE_NO_BID" || state === "STATE_ONGOING"),
+  };
 }
 
 // v2 검색 응답 항목 → 카드. shippingPayerId 2 = 送料込み(出品者負担)
@@ -165,7 +179,7 @@ export async function mercariItem(id: string): Promise<MarketItemDetail> {
     sellerItems,
     tradeTags: [d.is_anonymous_shipping ? "匿名配送" : "", d.shipping_payer?.name ?? ""].filter(Boolean),
     ...(d.shipping_payer?.id != null ? { shippingIncluded: Number(d.shipping_payer.id) === 2 } : {}),
-    ...(auction ? { auction: true } : {}),
+    ...(auction ? { auction: true, auctionInfo: mercariAuctionInfo(d.auction_info, d.status === "on_sale") } : {}),
     unbuyable: auction ? UNBUYABLE_AUCTION : unbuyableDetail(String(d.name ?? ""), d.description),
   };
 }

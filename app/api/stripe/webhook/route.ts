@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { getStripe } from "@/lib/stripe";
 import { settleSession } from "@/lib/stripe-settle";
+import { settleMarketBidSession } from "@/lib/market-bid.server";
 import { createAdminSupabase } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs"; // raw body로 서명 검증
@@ -21,8 +22,15 @@ export async function POST(req: Request) {
 
   if (event.type === "checkout.session.completed" || event.type === "checkout.session.async_payment_succeeded") {
     try {
-      const r = await settleSession(stripe, createAdminSupabase(), event.data.object as Stripe.Checkout.Session);
-      if (r && r.status !== "paid" && r.status !== "unpaid") console.error("[stripe webhook]", r);
+      const s = event.data.object as Stripe.Checkout.Session;
+      if (s.metadata?.kind === "mb") {
+        // 입찰 신청(승인만, 0050). 완료 세션은 payment_status unpaid + PI requires_capture 라 아래 일반 확정과 따로 본다
+        const m = await settleMarketBidSession(stripe, createAdminSupabase(), s);
+        if (m && m.status !== "authorized" && m.status !== "unpaid") console.error("[stripe webhook] mb", m);
+      } else {
+        const r = await settleSession(stripe, createAdminSupabase(), s);
+        if (r && r.status !== "paid" && r.status !== "unpaid") console.error("[stripe webhook]", r);
+      }
     } catch (e) {
       console.error("[stripe webhook] settle error → retry", e instanceof Error ? e.message : e);
       return NextResponse.json({ error: "retry" }, { status: 500 });

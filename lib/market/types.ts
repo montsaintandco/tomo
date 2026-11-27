@@ -33,7 +33,15 @@ export type MarketItem = {
   unbuyable?: string;   // 살 수 없는 출품 사유(専用·取り置き 등). 있으면 구매 버튼을 막는다
 };
 
+// 경매 진행 정보(M0, docs/aaa/15). 상세에서만 채운다. price = 지금 표시 가격(입찰 0건이면 시작가), endsAt = 마켓이 준 마감(ISO)
+export type MarketAuctionInfo = {
+  price: number; bids: number; startPrice: number; endsAt: string | null;
+  state: string;   // 원본 상태값(메루카리 STATE_NO_BID·STATE_ONGOING 등)
+  open: boolean;   // 입찰을 받는 중(판매 중 + 진행 상태)
+};
+
 export type MarketItemDetail = MarketItem & {
+  auctionInfo?: MarketAuctionInfo;
   description: string;
   images: string[];
   sellerName: string;

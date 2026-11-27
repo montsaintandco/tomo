@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getStripe, type PayKind } from "@/lib/stripe";
 import { settleSession, backPath } from "@/lib/stripe-settle";
+import { settleMarketBidSession } from "@/lib/market-bid.server";
 import { createAdminSupabase } from "@/lib/supabase/admin";
 import { SITE_URL } from "@/lib/site";
 
@@ -18,6 +19,17 @@ export async function GET(req: Request) {
 
   let s;
   try { s = await stripe.checkout.sessions.retrieve(sid); } catch { return go("/?pay=fail&code=SESSION"); }
+  if (s.metadata?.kind === "mb") {
+    // 입찰 신청(승인만). 승인되면 상품 화면 ?mb=ok, 해제·대기면 ?mb=fail&code=
+    try {
+      const m = await settleMarketBidSession(stripe, createAdminSupabase(), s);
+      if (!m) return go("/?pay=fail&code=SESSION");
+      return go(m.status === "authorized" ? `${m.back}?mb=ok` : `${m.back}?mb=fail&code=${m.code ?? "FAIL"}`);
+    } catch (e) {
+      console.error("[stripe return] mb settle error", e instanceof Error ? e.message : e);
+      return go("/mypage/notifications?mb=fail&code=CHECKING");
+    }
+  }
   const kind = s.metadata?.kind as PayKind | undefined;
   const id = s.metadata?.id;
   const back = (kind === "tx" || kind === "po") && id ? backPath(kind, id) : "/";
