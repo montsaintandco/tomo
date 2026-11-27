@@ -7,6 +7,8 @@ export const NOTIF_KINDS = [
   "proxy_paid", "proxy_quoted", "proxy_purchasing", "proxy_center", "proxy_shipped", "proxy_delivered", "proxy_cancelled",
   "support_answered", "refund_done", "payout_sent", "payout_rejected",
   "offer_received", "offer_accepted", "offer_declined", "wish_price_drop", "listing_held", "listing_released",
+  "auction_first_bid", "auction_outbid", "auction_ending", "auction_won", "auction_lost", "auction_sold", "auction_unsold",
+  "auction_pay_reminder", "auction_unpaid", "auction_unpaid_seller",
 ] as const;
 export type NotifKind = (typeof NOTIF_KINDS)[number];
 
@@ -51,6 +53,7 @@ export function notifHref(n: Pick<Notif, "kind" | "ref_id" | "data">): string {
   if (k === "offer_declined") return "/mypage/offers?tab=out";
   if (k === "wish_price_drop") return id ? `/listings/${id}` : "/mypage/wishlist";
   if (k === "listing_held" || k === "listing_released") return id ? `/listings/${id}` : "/mypage/sales";
+  if (k.startsWith("auction_")) { const l = str(d.listing_id); return l ? `/listings/${l}` : "/mypage/notifications"; } // 경매(0046·0047): 상품 상세가 입찰·결제 화면
   return "/mypage/notifications";
 }
 

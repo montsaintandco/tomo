@@ -282,3 +282,11 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=<Supabase 대시보드 → Project Settings → AP
 - SQL 변경 없음(0045 없음). 기존 RPC 그대로.
 - 검사: tests/unit/ops-routes-a3.test.ts(돈 경로 scope money, 보류 해제 ops). (`@` 별칭은 B0 에서 이미 들어감.)
 - 에어쉽 쪽 화면·가드는 에어쉽 docs/connected-sites.md 「A3」.
+
+### 2026-11-27 U1·U2 자체 상품 경매 DB·서버 (docs/aaa/14-auction.md 부록 「U1·U2 구현 기록」)
+- 0046_auctions·0047_auction_settle 운영 적용 완료(롤백 리허설 49단언 통과·결함 주입 3종 확인 뒤). 크론 `tomo_auctions` 1분(cron_runs job=auctions). 0045 비워 둠.
+- 상한가 입찰 한 가지, 마감 5분 안 상승 시 5분 연장, 낙찰 뒤 48시간 결제(`/api/auctions/[id]/pay` → /api/checkout auctionId → start_auction_transaction, 기존 45분 거래·TX 번호), 미결제 경고·90일 2회 30일 제한·통산 3회 정지, 다시 경매/일반 전환. 입찰 단계에서 돈은 안 움직인다.
+- 서버: `lib/auction.ts`(규칙표·판정·오류 키), `lib/auction-server.ts`, `app/api/auctions/**`, 알림 문구 `lib/i18n-port/auction.ts`. 플래그 `NEXT_PUBLIC_AUCTION=1` 없으면 404 — 운영 env 에는 아직 넣지 않음(U6 에서 켠다).
+- 동시 입찰: 운영에서 연결 2개 실측(잠금 대기 확인) + `tests/auction.db.test.ts`.
+- 다음: U3(등록·상세·카드), U4(마이페이지·검색·알림 화면), U5(운영), U6(리허설·켜기).
+- 되돌리기: 0047 → 0046 파일 하단 주석 순서.

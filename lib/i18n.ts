@@ -15,6 +15,7 @@ import { HOME_I18N } from "./i18n-port/home";
 import { DETAIL_I18N } from "./i18n-port/detail";
 import { ADMIN_I18N } from "./i18n-port/admin";
 import { SEO_I18N } from "./i18n-port/seo";
+import { AUCTION_I18N } from "./i18n-port/auction";
 
 export type Lang = "ko" | "ja";
 
@@ -34,6 +35,7 @@ const D = {
   ...DETAIL_I18N,
   ...ADMIN_I18N,
   ...SEO_I18N,
+  ...AUCTION_I18N,
   "nav.home": ["홈", "ホーム"],
   "nav.global": ["해외직구", "海外購入"],
   "nav.sell": ["판매", "出品"],

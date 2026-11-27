@@ -356,3 +356,55 @@
 - 실측: 검색 v2 는 `withAuction: true` 를 넣어야 `auction` 칸이 온다(없으면 경매도 null). 상세 items/get 은 `include_auction=true` 를 붙여야 `auction_info` 가 온다. 입찰 0건 경매도 검색 `auction.id`·`bidDeadline`, 상세 `state: STATE_NO_BID` 로 잡힌다.
 - 표시: 경매 = `auction: true` + `unbuyable: "auction"`. 야후옥션과 같은 문구 「경매 상품은 지금 지원하지 않아요 (구경만)」, 카드 배지 「경매 · 구경만」.
 - 서버: 담기·대행 신청 409(`pay.err.auction`), 결제 직전 재확인 `auction` 으로 거부. DB 변경 없음(external_items 칸 추가 안 함).
+---
+
+## 부록. U1·U2 구현 기록 (2026-11-27)
+
+- 마이그레이션: `0046_auctions.sql`(U1)·`0047_auction_settle.sql`(U2). 운영 DB 에 적용했다(적용 전 두 번호 객체가 없음을 카탈로그로 확인, 0045 는 비워 둠). 크론 `tomo_auctions` 1분 → `cron_auctions()`, 결과는 `cron_runs(job='auctions')`.
+- 기능 플래그 `NEXT_PUBLIC_AUCTION=1` 일 때만 경매 API 가 열린다. 없으면 `/api/auctions/**` 와 `/api/checkout {auctionId}` 는 404 `auction.err.off`. **운영 env 에는 아직 넣지 않았다.** DB 함수는 플래그와 상관없이 있다(RPC 직접 호출은 RLS·함수 검사로 막힌다).
+- 설계에서 바꾸거나 정한 것:
+  - 「3회 입찰 정지」는 해제 안 된 경고 **통산** 3회로 판정한다(90일 2회 → 30일 제한은 설계대로). 정지는 `profiles.bid_banned_until = 'infinity'`, 운영자가 지운다(U5 `admin_lift_strike`).
+  - 첫 입찰도 마감 5분 안이면 연장한다(입찰 0건 → 1건도 「현재가가 생김」으로 본다).
+  - `auctions.listing_id` 는 유일이 아니라 「열린 경매(live·awaiting_payment) 하나」 부분 유일 색인이다. 다시 경매는 같은 상품에 새 행(`relist_of`)이다.
+  - 판매자 취소·유찰·미결제 뒤 상품은 `hidden = true`. 상품의 `sale_type` 은 `auction` 그대로이고, 다시 경매(`relist_auction`)·새 설정 경매(`create_auction` 을 같은 상품에 다시)·일반 전환(`convert_to_fixed`) 중 하나로 연다.
+  - 결제 뒤 운영 환불로 상품이 판매중으로 돌아온 경매(`paid` + 상품 `active`)도 다시 경매·전환 대상이다.
+  - 낙찰자·판매자가 결제 대기 거래를 취소해도(`advance_transaction → cancelled`) 상품은 낙찰자 앞으로 `reserved` 로 남는다(잠금 트리거가 되돌림).
+
+### 서버 경로(화면 작업자용)
+
+| 메서드·경로 | 요청 | 응답(성공) | 비고 |
+|---|---|---|---|
+| `POST /api/auctions` | `{ listingId, startPrice, days }` | 201 `{ auction }`(auctions 행) | 상품을 먼저 일반 insert(`hidden: true` 권장) → 이 API 가 경매로 바꾸고 공개한다. `trade_method=shipping`, `allow_offers=false`, `price=시작가` 로 바뀐다 |
+| `GET /api/auctions/[id]/state` | id = 경매 id 또는 상품 id | `{ state: AuctionState }` | 로그인 없이도 공개 정보. `cache-control: no-store`. 간격은 `pollMs(state)`(5초, 마감 5분 전 2초, 끝나면 null). 카운트다운은 `state.server_now` 기준 |
+| `POST /api/auctions/[id]/bid` | `{ amount, requestId }` | `{ result: BidResult, state }` | amount = 내 상한가(상품 통화). requestId 는 입찰 창마다 새로(같은 번호 재전송 = 처음 결과, `result.replayed`) |
+| `POST /api/auctions/[id]/cancel` | 없음 | `{ auction }` | 판매자, 입찰 0건만 |
+| `POST /api/auctions/[id]/pay` | 없음 | `{ url, transactionId }` | 낙찰자 「결제하기」. `/api/checkout` 에 `auctionId` 로 넘긴다(결제창 재사용·10분 규칙·금액 대조 그대로). 결과 거래는 일반 거래와 같다(`/transactions/[id]`, TX 번호) |
+| `POST /api/auctions/[id]/relist` | 없음 | 201 `{ auction }` | 판매자, 같은 시작가·기간 |
+| `POST /api/auctions/[id]/convert` | `{ price }` | `{ listing }` | 판매자, 일반 판매로 |
+| `GET /api/auctions/mine` | 없음 | `{ items: [...] }` | 마이페이지 「입찰 중·낙찰」(`my_auction_bids`: my_max·leading·won·title·image 포함) |
+
+오류는 모두 `{ error, code }`(code = i18n 키 `auction.err.*`, `lib/auction.ts auctionErrorKey`). 401 로그인, 404 없음·플래그 꺼짐, 409 마감·금액 미달·이미 열림·입찰 있음·기한 지남, 429 요청 과다(입찰 30회/분).
+
+`AuctionState`(`lib/auction.ts` 타입): `id, code, listing_id, status(live|awaiting_payment|paid|unsold|unpaid|cancelled), currency, start_price, current_price, bid_count, bidder_count, ends_at, original_ends_at, extended_count, closed_at, pay_due_at, final_price, duration_days, relist_of, min_bid, server_now, extend_minutes, viewer{ signed_in, is_seller, bidder_no, my_max, leading, won, can_pay, tx_id, bid_banned_until }, bids[{ no, amount, kind(direct|auto), at, me }](최근 20)`.
+
+### 화면 작업자(U3·U4)가 알아야 할 것
+
+1. 경매 상품 판정은 `listings.sale_type = 'auction'`. 목록·카드 조회에 이 칸을 넣는다. 현재가는 `listings.price` 에도 같이 들어간다(정본은 `auctions.current_price`).
+2. 공개 칸만 읽힌다: `auctions` 의 `leader_id·winner_id·tx_id` 는 열 권한이 없다. `select *` 를 쓰면 권한 오류가 난다. 1등·낙찰 여부는 `state.viewer` 로만 본다.
+3. 다른 사람의 상한가는 어떤 경로로도 안 보인다(`auction_max_bids` 는 본인 행만). 입찰자는 순번(`no`)으로만 표시한다.
+4. 경매 상품에서 막히는 것: 바로구매(`start_transaction` → `auction listing`, 체크아웃은 `auction.err.useAuction` 409), 가격 제안 insert(RLS), 끌어올리기, 판매자의 가격·통화·거래 방법·제안 허용 수정(`auction listing locked` → `auction.err.locked`), 진행 중 상태 변경·숨기기·삭제. 기존 상품 수정 폼(`PATCH /api/listings/[id]`)은 경매 상품이면 이 칸들을 보내지 않거나 잠가야 한다.
+5. 입찰 창: 최소 금액 `state.min_bid`(1등이면 `my_max` 보다 큰 값), 단위 `AUCTION_RULES.unit`, 예상 결제액 `estimatedTotal(cur, amount, 국경 간)`, 현재가의 10배 초과 재확인은 화면 몫. 미리보기 계산이 필요하면 `proxyBid()`(DB 와 같은 규칙).
+6. 결제 기한: 낙찰 = 마감 + 48시간(`pay_due_at`). `viewer.can_pay` 가 참일 때만 「결제하기」. 기한 직전에 연 결제창은 45분까지 유효하고, 미결제 확정은 `pay_due_at + 45분` 뒤 크론이 한다.
+7. 알림 kind 10종(`notif.auction_*`, `lib/i18n-port/auction.ts`): first_bid·outbid·ending·won·lost·sold·unsold·pay_reminder·unpaid·unpaid_seller. 링크는 `data.listing_id` 상품 상세. 밀림 알림은 경매당 읽지 않은 것 하나로 합친다. 운영 강제 종료·입찰 무효 알림(`auction_cancelled`·`auction_bid_voided`)은 U5 몫이라 아직 없다.
+8. 등록 제한: 시작가 KRW 1,000원 이상·100원 단위 / JPY 100엔 이상·10엔 단위, 기간 1·3·5·7일, 마감은 10분 단위 올림(`endsAt()`), 판매자당 진행 중 10건, 답하지 않은 가격 제안이 있으면 거절. 입찰 0건 경매의 시작가·기간 수정 함수는 없다(취소 → 다시 `create_auction`).
+9. 입찰 제한: 첫 거래 완료 전 회원은 진행 중 경매 3건까지, 미결제 경고 누적 시 `viewer.bid_banned_until`.
+10. 남은 트랙: U5(운영 함수·`/admin/auctions`·ops capability·outbox 이벤트·진행 중 경매 보류 차단), U6(운영 리허설 14항목·플래그 켜기).
+
+### 검증 기록
+
+| 항목 | 결과 |
+|---|---|
+| 롤백 리허설(운영 DB, `begin` + 0046 + 0047 + 시험 블록 + 끝에서 예외) | 49개 단언 전부 통과(등록·본인 입찰 거절·대리 입찰 상회·같은 금액 선착·상한 비공개·열 권한·경매 제안 거절·5분 연장·재역전·요청 번호 멱등·최소 단위·마감 뒤 입찰 거절·낙찰·마감 멱등·알림 6건·다른 사람 start_transaction 거절·결제 시작 거래(32,000원+국제배송비 8,000원·수수료 3,200원·TX 번호)·45분 만료 뒤 예약 유지·재결제·mark_tx_paid 로 경매 paid·기한 뒤 결제 거절·미결제 48시간 판정·경고·재경매·2회 → 30일 제한·일반 전환·취소 규칙·기존 경로 가드 5종·상태 조회·크론 기록) |
+| 결함 주입 3종(같은 금액 `>`→`>=`, start_transaction 경매 검사 제거, 예약 유지 가드 제거) | 각각 5·11a·13 번 단언이 실패함을 확인 |
+| 잔여 | 리허설 뒤 경매 표·함수·칸·크론 0, 시험 상품·알림 0 |
+| 동시 입찰(운영, 적용 뒤) | ① 관리 API 연결 2개: A 가 입찰 뒤 3초 잠금 유지, B 는 `Lock/transactionid` 대기(pg_stat_activity 실측) → A 끝난 직후 처리, 결과 일관(현재가 20,000·기록 3줄·먼저 온 bob 1등). ② `tests/auction.db.test.ts`(PostgREST 연결 2개, 같은 금액 동시 3회 + 10건 동시) 통과. 시험 데이터는 지웠다(잔여 0) |

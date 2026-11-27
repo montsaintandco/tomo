@@ -5,12 +5,14 @@ import { getStripe, krwAmount, createSession } from "@/lib/stripe";
 import { directShippingFee } from "@/lib/fees";
 import { t, type Lang } from "@/lib/i18n";
 import { apiError, reqLang } from "@/lib/api-error";
+import { auctionEnabled, auctionErrorKey, auctionErrorStatus } from "@/lib/auction";
 
 // start_transaction 오류 → 사용자 언어 문구. 모르는 오류는 일반 문구(내부 메시지는 보이지 않는다)
 function rpcError(lang: Lang, msg: string) {
   if (msg.includes("listing not available") || msg.includes("listing not found")) return apiError(lang, "pay.err.listingGone", 409);
   if (msg.includes("cannot buy own listing")) return apiError(lang, "pay.err.ownListing");
   if (msg.includes("shipping only")) return apiError(lang, "pay.err.shippingOnly");
+  if (msg.includes("auction listing")) return apiError(lang, "auction.err.useAuction", 409);
   return apiError(lang, "pay.err.order");
 }
 
@@ -23,8 +25,10 @@ export async function POST(req: Request) {
   if (!auth.user) return apiError(rl, "pay.err.unauthorized", 401);
 
   // intlShippingFee 는 받지 않는다(01#15) — 국제배송비는 서버 표(lib/fees.ts directShippingFee)와 DB(0035)가 정한다
-  const { listingId, meetup, transactionId } = await req.json().catch(() => ({}));
-  if (typeof listingId !== "string" && typeof transactionId !== "string") return apiError(rl, "pay.err.invalidListing");
+  // auctionId: 낙찰 결제(0047 start_auction_transaction) — /api/auctions/[id]/pay 가 이 경로로 넘긴다
+  const { listingId, meetup, transactionId, auctionId } = await req.json().catch(() => ({}));
+  if (typeof listingId !== "string" && typeof transactionId !== "string" && typeof auctionId !== "string") return apiError(rl, "pay.err.invalidListing");
+  if (typeof auctionId === "string" && !auctionEnabled()) return apiError(rl, "auction.err.off", 404);
 
   const stripe = getStripe();
   if (!stripe) return apiError(rl, "pay.err.notReady", 503);
@@ -37,6 +41,14 @@ export async function POST(req: Request) {
     // 결제 대기 거래 재결제 — RLS가 당사자만 읽게 하고, 구매자·대기 상태만 연다
     const { data } = await supabase.from("transactions").select("id, item_price, intl_shipping_fee, is_cross_border, currency, meetup, status, buyer_id, created_at, stripe_session_id").eq("id", transactionId).maybeSingle();
     if (!data || data.buyer_id !== auth.user.id || data.status !== "pending_payment") return apiError(lang, "pay.err.notPayable");
+    // 낙찰 거래면 경매가 아직 결제 대기여야 한다(미결제 확정 뒤 옛 거래로 창을 열지 않게). 새 창 10분 규칙은 아래 그대로
+    const { data: au } = await createAdminSupabase().from("auctions").select("status").eq("tx_id", data.id).maybeSingle();
+    if (au && au.status !== "awaiting_payment") return apiError(lang, "pay.err.notPayable");
+    tx = data;
+  } else if (typeof auctionId === "string") {
+    // 낙찰자 「결제하기」: DB 가 낙찰자·결제 기한(pay_due_at)·국제배송비·수수료를 정한다. 열린 결제 대기 거래가 있으면 그것을 돌려준다
+    const { data, error } = await supabase.rpc("start_auction_transaction", { p_auction: auctionId });
+    if (error) { const k = auctionErrorKey(error.message); return apiError(lang, k, auctionErrorStatus(k)); }
     tx = data;
   } else {
     // 거래 생성 + 예약 선점 + 수수료 계산 (DB가 소유권·경합 검증)
