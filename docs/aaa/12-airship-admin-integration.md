@@ -210,3 +210,63 @@
 - 모든 POST 본문: `request_id`(uuid), `actor`(에어쉽 관리자 id·이메일), `expected_status`(상태 변경일 때).
 - 모든 응답: `{ ok, data | error, request_id }`. 목록에는 `code`(T/TX 번호), `center`(tomo 값), `center_airship`(KR/JP)을 넣는다.
 - 권한 키는 에어쉽이 서명 본문에 담아 보내고, tomo 는 연결된 운영자의 권한과 한 번 더 대조한다.
+
+
+## 8. 13번 로드맵에 따른 수정
+
+- 근거: [13-commerce-platform-roadmap.md](13-commerce-platform-roadmap.md) 3장. TOMO 연결을 「연결 사이트」 공용으로 만든다. 두 번째 사이트(키라팝)를 붙일 때 표·권한 키·주소를 갈아엎지 않기 위해서다.
+- 범위: 이름·표·칸·주소만 바꾼다. 1~5장의 흐름·돈 경로·멱등 규칙과 각 트랙의 완료 기준·되돌리기는 그대로다.
+- 이 절이 6.2·7장의 같은 항목보다 우선한다. 위 내용은 지우지 않는다.
+- 확인한 사실(2026-11-27): 에어쉽 `migrate-vercel`(`ced9b1a3`)에 A1 코드가 없다. tomo 메인 폴더에 `app/api/ops` 가 없다. 그래서 지금 바꿔도 운영 데이터 이전이 없다. T3 작업 폴더에 이미 쓴 코드가 있으면 병합 전에 8.3 을 반영한다.
+
+### 8.1 이름 대응표(에어쉽 쪽, 6.2 전체에 적용)
+
+| 원안 | 수정 |
+|---|---|
+| 표 `tomo_events`(`event_id` 유일) | `connected_site_events`(`site_key` 칸, `(site_key, event_id)` 유일) |
+| 표 `tomo_ops_log` | `connected_site_ops_log`(`site_key` 칸) |
+| 「어드민 전용 외부 사이트 목록」(3.6) | 표 `connected_sites`: `site_key`, 이름, 소유 구분(`own`/`client`), 주소, 규격 버전, `capabilities`, 통화, 상태, 마지막 성공 시각. `public.sites` 와 합치지 않는다 |
+| `integration_secrets` 의 `tomo_ops` | `provider = 'site:tomo'`(규칙 `site:<site_key>`) |
+| 권한 키 `tomo.ops`·`tomo.money`(`admin_menu_access`) | 새 표 `connected_site_access(user_id, site_key, scopes text[])`. scope 는 `ops`·`money`. **행 없음 = 거부.** 소유자(`is_owner`)만 기본 전체 |
+| 라우트 `/admin/tomo`, `/admin/tomo/<화면>` | `/admin/sites/$site`, `/admin/sites/$site/<화면>`(`/admin/sites/tomo/proxy`) |
+| `src/lib/tomo-bridge.server.ts`, `src/lib/tomo-types.ts` | `src/lib/connected/bridge.server.ts`(인자 `siteKey`), `src/lib/connected/types.ts` |
+| `src/components/admin/tomo/**`, `nav-tomo.ts` | `src/components/admin/connected/**`, `nav-connected.ts` |
+| 훅 `src/routes/api/tomo-hook.ts`(`/api/tomo-hook`) | `src/routes/api/site-hook.$site.ts`(`/api/site-hook/tomo`). 토큰은 사이트마다 다르다 |
+| 배지 키 `tomo` | `site:<site_key>`(`site:tomo`) |
+| 마이그레이션 `…_tomo_bridge.sql`, `…_tomo_money_guard.sql` | `…_connected_sites.sql`, `…_connected_site_money_guard.sql` |
+
+- 권한 표를 따로 두는 이유: `admin_menu_access` 는 화면을 가리는 장치이고 「행 없음 = 전체 접근」이다. 그 표에 돈 권한을 두면 제한 행이 없는 직원이 TOMO 환불을 실행할 수 있다. 5장 결정 2(소유자만)와 어긋난다.
+- 메뉴 가림은 지금 방식 그대로 쓴다. `/admin/sites/tomo` 경로를 `admin_menu_access.menus` 에 넣으면 그 사이트 메뉴가 보인다. 실행 권한은 서버 함수가 `connected_site_access` 로 따로 확인한다.
+
+### 8.2 6.2 트랙별 수정
+
+| 트랙 | 수정 |
+|---|---|
+| A1 | 파일·표·비밀값 이름을 8.1 로 바꾼다. `nav-connected.ts` 는 `connected_sites` 행마다 메뉴 그룹 하나를 만들고, 그 사이트 `capabilities` 에 있는 항목만 그린다. `admin-site.ts` 는 TOMO 를 박아 넣지 않고 `connected_sites` 를 읽어 선택지에 더한다. 개요 화면은 `GET /api/ops/meta` 로 규격 버전·기능을 읽어 `connected_sites` 에 저장한다. 완료 기준 추가: `connected_site_access` 행이 없는 관리자에게 TOMO 메뉴가 보이지 않고 서버도 거부한다. tomo 의 `capabilities` 에서 한 기능을 빼면 그 메뉴가 사라진다 |
+| A2 | 라우트 파일을 `src/routes/admin/sites.$site.<화면>.tsx` 로 둔다. 화면은 `site_key` 를 인자로 받는다. 화면 위쪽에 사이트 이름 띠를 고정한다. 완료 기준 추가: 화면 코드에 `tomo` 문자열이 없다(라벨은 `connected_sites` 의 이름을 쓴다) |
+| A3 | 돈 화면 실행 버튼과 서버 관문을 scope `money` 로 확인한다. 확인 창에 사이트 이름·금액·대상을 적는다. `payments.tsx` 가드는 「연결 사이트 결제는 여기서 환불하지 않는다」로 일반화한다(Stripe 메타데이터의 사이트 값이 에어쉽·요루가 아니면 막는다). 홈 합치기는 `counts` 배열을 사이트별로 그린다 |
+
+### 8.3 7장(API 약속) 수정 — T3·A1 공통
+
+| 항목 | 원안 | 수정 |
+|---|---|---|
+| 자기소개 | 없음 | `GET /api/ops/meta`(서명만) → `{ api_version: 1, site: { key, name, currency }, capabilities: [...], money_actions: [...] }` |
+| 버전 | 없음 | 요청 헤더 `x-ops-version: 1`. 모든 응답에 `api_version`. 칸·기능·이벤트 추가는 같은 버전, 뜻 변경·삭제는 새 버전 |
+| 권한 값 | `tomo.ops`·`tomo.money` | `scope: "ops" \| "money"`. 7장 표의 「권한 키」 칸을 이 값으로 읽는다 |
+| 센터 코드 칸 | `center_airship`(KR/JP) | `center_country`(ISO 두 글자) |
+| 운영자 칸 | `actor`(에어쉽 관리자 id·이메일), `ops_actors` 의 에어쉽 관리자 칸 | `actor: { id, email }` 뜻은 「센터 운영자」. `ops_actors` 칸 이름은 `center_actor_id`·`center_actor_email` |
+| 환경 변수 | `AIRSHIP_HOOK_TOKEN` | `OPS_HOOK_URL`, `OPS_HOOK_TOKEN`. `OPS_BRIDGE_SECRET` 은 그대로 |
+| `counts` 응답 | 형태 미정 | `[{ key, label, count, overdue, capability, url }]` |
+| 이벤트 | 한글 설명 | 종류 이름 고정: `order.paid`, `order.cancel_requested`, `dispute.opened`, `ticket.opened`, `refund.pending`, `payout.requested`, `report.opened`, `errors.spike`, `cron.failed`. 본문 공통 칸: `event_id`, `site_key`, `type`, `code`, `amount`, `currency`, `url`, `occurred_at` |
+| 모르는 값 | — | 센터는 모르는 기능·이벤트를 무시하고 시스템 상태에 건수만 보여 준다. tomo 는 모르는 버전 요청에 400 과 지원 버전을 돌려준다 |
+
+- tomo v1 기능 선언: `proxy`, `c2c`, `center`, `disputes`, `refunds`, `payouts`, `support`, `reports`, `users`, `activity`.
+- `/api/ops/…` 경로 이름은 이미 사이트 이름이 없어 그대로 둔다.
+
+### 8.4 바꾸지 않는 것
+
+- 주문을 에어쉽 `orders` 로 넘기지 않는다(1장).
+- `public.sites` 와 에어쉽 9개 표의 brand 칸에 TOMO 를 넣지 않는다(3.6).
+- 서명·시각 검사·`request_id` 멱등·`expected_status`·outbox 재전송(3.2·3.3).
+- 매출 통계를 사이트끼리 합치지 않는다(3.4).
+- 에어쉽·요루에 운영 API 를 붙이는 일, 센터를 따로 배포하는 일은 13번 3단계로 미룬다.
