@@ -17,7 +17,7 @@ export default function ListingCard({ listing, viewer, wished = false }: {
   const lang = viewer.language;
   const title = displayTitle(listing, lang);
   const sold = listing.status === "sold";
-  const reserved = listing.status === "reserved";
+  const reserved = listing.status === "reserved" || listing.status === "held";
   return (
     <div className="relative">
       <Link href={`/listings/${listing.id}`} title={title !== listing.title ? listing.title : undefined} className="press flex flex-col">
@@ -32,7 +32,7 @@ export default function ListingCard({ listing, viewer, wished = false }: {
           )}
           {(sold || reserved) && (
             <span className="absolute inset-0 flex items-center justify-center bg-tomo-navy/75 text-xs font-bold text-white">
-              {sold ? t(lang, "badge.sold") : t(lang, "badge.reserved")}
+              {t(lang, sold ? "badge.sold" : listing.status === "held" ? "badge.paused" : "badge.reserved")}
             </span>
           )}
         </div>

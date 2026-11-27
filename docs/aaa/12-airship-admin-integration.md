@@ -293,6 +293,7 @@
 | 오류 코드 | 400 입력 오류·RPC 거부(`error` 에 DB 메시지), 401 서명, 403 운영자·권한, 404 없음, 409 상태 불일치·중복 id·실행 중, 500 결과 모름, 502 DB 조회 실패, 503 꺼짐 |
 | 목록 쪽수 | `limit`(1~200, 기본 50), `offset`(기본 0). 응답 `data = { items, total }` |
 | 센터 칸 | 목록·상세 행에 `center`(SEOUL/NARITA)와 `center_country`(KR/JP) |
+| 지연 칸(A2) | 대행·거래·센터·분쟁·문의·신고 목록 행에 `aging_level`(`warn`\|`late`\|null)·`aging_since`. 기준은 `lib/admin-aging.ts`. 운영자 차례가 아닌 단계는 null |
 
 ### 9.2 운영자·권한
 
@@ -331,6 +332,8 @@
 | `/api/ops/proxy` | GET | ops | `status`(쉼표), `q`(T 번호·주문 uuid), `cancel_requested=1` | `{ items[대행 요청 행 + external_items + customer + proxy_orders{code,…}], total }` | — |
 | `/api/ops/proxy/:id` | GET | ops | `:id` = proxy_requests.id | `{ item, order(배송지·통관번호 포함), items[같은 주문 형제], refunds[], cancel_preview{amount,cap,currency,full} \| null }` | — |
 | `/api/ops/proxy/:id/status` | POST | ops | `to`, `note`, `tracking` → `admin_set_order_status` | `{ result: proxy_requests 행 }` | proxy_requests.status |
+| `/api/ops/proxy/:id/quote` | POST | ops | `item_price`, `fee`, `shipping`(0 이상 정수, 엔) → `admin_quote_proxy`(0044, quote_proxy + 활동 기록 `proxy_quote`) | `{ result: proxy_requests 행 }` | proxy_requests.status(`requested`·`quoted`) |
+| `/api/ops/rates` | GET | ops | — | `{ JPY_KRW: {rate, updated_at} \| null, KRW_JPY: …, last_run: { ok, at, status, source_date, raw, jpy_krw, change, error } \| null }` — 지금 적용 값과 마지막 자동 갱신 결과(A2). 운영자 화면 전용 | — |
 | `/api/ops/proxy/:id/cancel` | POST | money | `reason`(필수), `refund_amount`(없으면 기본값) → `adminCancel(type proxy)` | `{ ok, refund: null \| { id, status, error? } }` | proxy_requests.status |
 | `/api/ops/trades` | GET | ops | `status`(쉼표), `q`(TX 번호·uuid) | `{ items[거래 + listing + buyer + seller], total }` | — |
 | `/api/ops/trades/:id` | GET | ops | — | `{ item, refunds[] }` | — |

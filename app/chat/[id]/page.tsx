@@ -87,7 +87,7 @@ export default async function ChatDetailPage(props: { params: Promise<{ id: stri
               {price}
               {l.status !== "active" && (
                 <span className="ml-1.5 rounded-full bg-tomo-navy/10 px-1.5 py-0.5 text-[11px] font-bold text-ink-soft">
-                  {t(lang, l.status === "sold" ? "badge.sold" : "badge.reserved")}
+                  {t(lang, l.status === "sold" ? "badge.sold" : l.status === "held" ? "badge.paused" : "badge.reserved")}
                 </span>
               )}
             </p>

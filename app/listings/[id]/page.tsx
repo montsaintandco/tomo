@@ -178,7 +178,7 @@ export default async function ListingDetail(props: { params: Promise<{ id: strin
         {/* 메루카리의 SOLD 리본 자리 — 끝난 거래는 이미지 위에서 먼저 말한다 */}
         {!canAct && (
           <span className="absolute right-3 top-3 z-10 rounded-full bg-tomo-navy/75 px-3 py-1.5 text-[11px] font-bold text-white backdrop-blur-sm">
-            {l.status === "sold" ? t(lang, "badge.sold") : t(lang, "badge.reserved")}
+            {t(lang, l.status === "sold" ? "badge.sold" : l.status === "held" ? "badge.paused" : "badge.reserved")}
           </span>
         )}
 

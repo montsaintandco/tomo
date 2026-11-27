@@ -97,7 +97,7 @@ export default async function ProfilePage(props: { params: Promise<{ id: string 
                       )}
                       {inactive && (
                         <span className="absolute inset-0 flex items-center justify-center bg-tomo-navy/75 text-[12px] font-bold text-white">
-                          {t(lang, l.status === "sold" ? "badge.sold" : "badge.reserved")}
+                          {t(lang, l.status === "sold" ? "badge.sold" : l.status === "held" ? "badge.paused" : "badge.reserved")}
                         </span>
                       )}
                     </div>

@@ -124,6 +124,7 @@ const D = {
   "card.safe": ["안전결제", "安心決済"],
   "badge.sold": ["거래완료", "取引完了"],
   "badge.reserved": ["예약중", "予約中"],
+  "badge.paused": ["판매 일시 중지", "販売一時停止中"],
   "badge.auction": ["입찰중", "入札中"],
   "badge.soldOut": ["품절", "売り切れ"],
 

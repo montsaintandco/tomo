@@ -34,6 +34,23 @@ const PROXY_COLS = `id, status, center, quote_item_price, quote_fee, quote_shipp
 const TX_COLS = `id, code, status, center, is_cross_border, meetup, item_price, intl_shipping_fee, platform_fee, currency, paid_krw, refund_pending,
   dispute_reason, dispute_resolution, disputed_from, cancel_reason, domestic_tracking, intl_tracking, created_at, updated_at, delivered_at,
   listing:listings!transactions_listing_id_fkey(id, title, status), buyer:profiles!transactions_buyer_id_fkey(id, nickname), seller:profiles!transactions_seller_id_fkey(id, nickname)`;
+// 지연 표시(lib/admin-aging.ts 기준 그대로). 행마다 aging_level(warn|late|null)·aging_since. 운영자 차례가 아닌 단계는 null
+type Row = Record<string, unknown>;
+const aged = (stageOf: (r: Row) => [AgingStage, string] | null) => (r: Row) => {
+  const s = stageOf(r);
+  const since = s ? (r[s[1]] as string | null) : null;
+  return { ...r, aging_level: s ? agingLevel(since, s[0]) : null, aging_since: since };
+};
+const proxyAging = aged((r) => r.status === "paid" && r.cancel_requested_at ? ["cancel_req", "cancel_requested_at"]
+  : PROXY_STAGE[String(r.status)] ? [PROXY_STAGE[String(r.status)]!, "updated_at"] : null);
+const txAging = aged((r) => r.status === "disputed" ? ["dispute", "updated_at"]
+  : r.status === "shipped_to_center" || r.status === "center_received" ? ["center", "updated_at"] : null);
+const openAging = (stage: AgingStage) => aged((r) => (r.status === "open" ? [stage, "created_at"] : null));
+const listAged = async (q: Q, f: (r: Row) => Row) => {
+  const r = await q;
+  return r.error ? opsFail(502, `db: ${r.error.message}`) : opsOk({ items: ((r.data ?? []) as Row[]).map(f), total: r.count ?? null });
+};
+
 const centerOf = (s: string) => ({ KR: "SEOUL", JP: "NARITA", SEOUL: "SEOUL", NARITA: "NARITA" } as Record<string, string>)[s.toUpperCase()] ?? null;
 
 // ── 조회 ──
@@ -117,7 +134,7 @@ const proxyList: Handler = async ({ admin, url }) => {
   if (ids) q = q.in("order_id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"]);
   const r = await q;
   if (r.error) return opsFail(502, `db: ${r.error.message}`);
-  return opsOk({ items: (r.data ?? []).map((x) => country(x as { center: string | null })), total: r.count });
+  return opsOk({ items: (r.data ?? []).map((x) => proxyAging(country(x as { center: string | null }))), total: r.count });
 };
 
 const proxyDetail: Handler = async ({ admin }, [id]) => {
@@ -150,7 +167,7 @@ const txList = (fixed?: { status?: string[]; center?: boolean }): Handler => asy
   if (code) q = UUID_RE.test(code) ? q.eq("id", code) : q.eq("code", code.toUpperCase());
   const r = await q;
   if (r.error) return opsFail(502, `db: ${r.error.message}`);
-  return opsOk({ items: (r.data ?? []).map((x) => country(x as { center: string | null })), total: r.count });
+  return opsOk({ items: (r.data ?? []).map((x) => txAging(country(x as { center: string | null }))), total: r.count });
 };
 
 const txDetail: Handler = async ({ admin }, [id]) => {
@@ -177,13 +194,13 @@ const payoutsList: Handler = async ({ admin, url }) => {
 };
 const supportList: Handler = async ({ admin, url }) => {
   const { from, to } = paging(url);
-  return list(admin.from("support_tickets").select("id, user_id, category, item_url, item_option, quantity, order_ref, body, status, reply, answered_at, created_at, customer:profiles(nickname, language)", { count: "exact" })
-    .in("status", listParam(url, "status", ["open"])).order("created_at", { ascending: true }).range(from, to));
+  return listAged(admin.from("support_tickets").select("id, user_id, category, item_url, item_option, quantity, order_ref, body, status, reply, answered_at, created_at, customer:profiles(nickname, language)", { count: "exact" })
+    .in("status", listParam(url, "status", ["open"])).order("created_at", { ascending: true }).range(from, to), openAging("support"));
 };
 const reportsList: Handler = async ({ admin, url }) => {
   const { from, to } = paging(url);
-  return list(admin.from("reports").select("id, reporter_id, target_type, target_id, target_user_id, reason, detail, snapshot, status, resolved_at, resolution_note, created_at", { count: "exact" })
-    .in("status", listParam(url, "status", ["open"])).order("created_at", { ascending: true }).range(from, to));
+  return listAged(admin.from("reports").select("id, reporter_id, target_type, target_id, target_user_id, reason, detail, snapshot, status, resolved_at, resolution_note, created_at", { count: "exact" })
+    .in("status", listParam(url, "status", ["open"])).order("created_at", { ascending: true }).range(from, to), openAging("report"));
 };
 const USER_COLS = "id, nickname, country, region, language, trust_temp, is_admin, suspended, deleted_at, created_at";
 const usersList: Handler = async ({ admin, url }) => {
@@ -212,6 +229,21 @@ const activityList: Handler = async ({ admin, url }) => {
   return list(q);
 };
 
+/** 지금 적용 중인 환율(exchange_rates)과 마지막 자동 갱신 결과(cron_runs job=rates). 운영자 화면 전용 */
+const rates: Handler = async ({ admin }) => {
+  const [r, run] = await Promise.all([
+    admin.from("exchange_rates").select("pair, rate, updated_at").in("pair", ["JPY_KRW", "KRW_JPY"]),
+    admin.from("cron_runs").select("ok, detail, created_at").eq("job", "rates").order("created_at", { ascending: false }).limit(1).maybeSingle(),
+  ]);
+  if (r.error) return opsFail(502, `db: ${r.error.message}`);
+  const by = new Map(((r.data ?? []) as { pair: string; rate: number; updated_at: string }[]).map((x) => [x.pair, x]));
+  const pick = (k: string) => { const x = by.get(k); return x ? { rate: Number(x.rate), updated_at: x.updated_at } : null; };
+  const lr = run.data as { ok: boolean; detail: Record<string, unknown> | null; created_at: string } | null;
+  return opsOk({ JPY_KRW: pick("JPY_KRW"), KRW_JPY: pick("KRW_JPY"),
+    last_run: lr ? { ok: lr.ok, at: lr.created_at, status: lr.detail?.status ?? null, source_date: lr.detail?.source_date ?? null,
+      raw: lr.detail?.raw ?? null, jpy_krw: lr.detail?.jpy_krw ?? null, change: lr.detail?.change ?? null, error: lr.detail?.error ?? null } : null });
+};
+
 // ── 조작(모두 request_id + expected_status) ──
 const txAdvance = (checkCenter: boolean): Handler => async (ctx, p) => {
   const id = checkCenter ? p[1] : p[0];
@@ -233,6 +265,15 @@ const ROUTES: Route[] = [
   { method: "GET", path: "counts", need: "ops", h: counts },
   { method: "GET", path: "proxy", need: "ops", h: proxyList },
   { method: "GET", path: "proxy/:id", need: "ops", h: proxyDetail },
+  { method: "GET", path: "rates", need: "ops", h: rates },
+  { method: "POST", path: "proxy/:id/quote", need: "ops", h: async (ctx, [id]) => {
+    const nf = uuidOr404(id); if (nf) return nf;
+    const n = (k: string) => { const v = Number(ctx.body[k]); return Number.isInteger(v) && v >= 0 && v <= 100_000_000 ? v : null; };
+    const [item, fee, ship] = [n("item_price"), n("fee"), n("shipping")];
+    if (item === null || fee === null || ship === null) return bad("item_price, fee, shipping (0~100000000 integer) required");
+    return runOp(ctx, { action: "proxy.quote", target: id, current: statusOf(ctx.admin, "proxy_requests", id),
+      run: async (sb) => rpcRes(await sb!.rpc("admin_quote_proxy", { p_id: id, p_item_price: item, p_fee: fee, p_shipping: ship })) });
+  } },
   { method: "POST", path: "proxy/:id/status", need: "ops", h: async (ctx, [id]) => {
     const nf = uuidOr404(id); if (nf) return nf;
     const to = str(ctx.body.to, 40);

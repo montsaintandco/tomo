@@ -6,7 +6,7 @@ export const NOTIF_KINDS = [
   "tx_paid", "tx_shipped", "tx_to_center", "tx_center_received", "tx_delivered", "tx_completed", "tx_auto_completed", "tx_cancelled", "tx_disputed",
   "proxy_paid", "proxy_quoted", "proxy_purchasing", "proxy_center", "proxy_shipped", "proxy_delivered", "proxy_cancelled",
   "support_answered", "refund_done", "payout_sent", "payout_rejected",
-  "offer_received", "offer_accepted", "offer_declined", "wish_price_drop",
+  "offer_received", "offer_accepted", "offer_declined", "wish_price_drop", "listing_held", "listing_released",
 ] as const;
 export type NotifKind = (typeof NOTIF_KINDS)[number];
 
@@ -50,6 +50,7 @@ export function notifHref(n: Pick<Notif, "kind" | "ref_id" | "data">): string {
   if (k === "offer_accepted") { const l = str(d.listing_id); return l ? `/listings/${l}` : "/mypage/offers?tab=out"; }
   if (k === "offer_declined") return "/mypage/offers?tab=out";
   if (k === "wish_price_drop") return id ? `/listings/${id}` : "/mypage/wishlist";
+  if (k === "listing_held" || k === "listing_released") return id ? `/listings/${id}` : "/mypage/sales";
   return "/mypage/notifications";
 }
 

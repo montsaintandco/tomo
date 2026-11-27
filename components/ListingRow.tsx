@@ -33,7 +33,7 @@ export default function ListingRow({ listing, viewer }: {
   const foreign = listing.country !== viewer.country;
   const title = displayTitle(listing, viewer.language);
   const sold = listing.status === "sold";
-  const reserved = listing.status === "reserved";
+  const reserved = listing.status === "reserved" || listing.status === "held";
   // 상대국 상품이면서 직접 만나 거래 가능 → 여행 갔을 때 직거래할 수 있음
   const travelDeal = foreign && (listing.trade_method === "direct" || listing.trade_method === "both");
 
@@ -54,7 +54,7 @@ export default function ListingRow({ listing, viewer }: {
           )}
           {(sold || reserved) && (
             <span className="absolute inset-0 flex items-center justify-center bg-tomo-navy/75 text-xs font-bold text-white">
-              {sold ? t(lang, "badge.sold") : t(lang, "badge.reserved")}
+              {t(lang, sold ? "badge.sold" : listing.status === "held" ? "badge.paused" : "badge.reserved")}
             </span>
           )}
         </div>

@@ -44,7 +44,7 @@ export default async function MyWishlist(props: { searchParams: Promise<{ page?:
   const qs = (page: number, gpage: number) => `/mypage/wishlist?${new URLSearchParams({ ...(page > 1 ? { page: String(page) } : {}), ...(gpage > 1 ? { gpage: String(gpage) } : {}) })}`;
   const all = (data ?? []) as unknown as { listing_id: string; price_at_wish: number | null; listings: MiniListing | null }[];
   const list = all.slice(0, limit).filter((w) => w.listings);
-  const statusOf = (s: string) => t(lang, s === "active" ? "status.selling" : s === "reserved" ? "badge.reserved" : "status.soldDone");
+  const statusOf = (s: string) => t(lang, s === "active" ? "status.selling" : s === "reserved" ? "badge.reserved" : s === "held" ? "badge.paused" : "status.soldDone");
 
   return (
     <main className="mx-auto max-w-md p-4 pb-8 standalone:pb-24 md:max-w-none md:p-0 md:pb-16">
