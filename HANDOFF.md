@@ -298,3 +298,12 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=<Supabase 대시보드 → Project Settings → AP
 - 상세: `components/auction/AuctionPanel.tsx` — 폴링(pollMs, 가린 탭 멈춤, 상품 id 로 조회해 다시 경매도 따라감), server_now 기준 카운트다운, 상한가 입력·예상 최대 결제액(directDetailTotal 재사용)·확인 단계(10배 초과 한 번 더)·입찰 기록(번호 마스킹)·낙찰 결제·판매자 취소/다시 경매/전환. 경매 상품은 하단 구매 바·제안·SellerPanel(끌올) 안 보임.
 - 마이페이지 `/mypage/auctions`(입찰 중·낙찰·내 경매), 메뉴 배지·할 일(낙찰 결제 필요·유찰/미결제 뒤 선택 필요). 홈 목록 「경매만」(`?auction=1`, 진행 중만). 찜은 「경매」 표시·값내림 끔. 내 상품 목록은 경매 상품에 숨기기·삭제 버튼을 안 둔다.
 - 다음: U5(운영 함수·/admin/auctions·ops capability), U6(운영 리허설 14항목 뒤 Actions Variables 에 `NEXT_PUBLIC_AUCTION=1` 넣고 재빌드).
+### 2026-11-27 U5 경매 운영 (0048, docs/aaa/14-auction.md 부록 「U5 구현 기록」)
+- 0048_auction_ops 운영 적용 완료(적용 전 0048 객체 없음 확인, 롤백 리허설 10묶음 통과·결함 주입 4종 확인 뒤). 0046·0047 함수는 그대로.
+- 운영 함수: admin_close_auction(진행 중만, 메모 필수, cancelled + 상품 숨김 + 입찰자·판매자 알림 auction_cancelled), admin_void_bid(진행 중만, 입찰자 하나의 입찰 전부 무효 → 1등·현재가·입찰 수·listings.price 재계산, 그 사람 재입찰 금지 `bid voided`, 알림 auction_bid_voided), admin_clear_strike(남은 경고로 제한 재계산). 전부 is_admin_user()·활동 기록.
+- 조회: admin_auctions·admin_auction_detail(상한은 마감 뒤에만)·auction_ops_counts — 운영자 세션 또는 service_role.
+- 의심 표시(표시만): auction_flags(same_contact·repeat_no_win·relist_rebid·new_account_pusher). 이벤트 auction.ended·unpaid·cancelled·flagged(ops_outbox 제약 13종).
+- 진행 중 경매 상품은 admin_set_listing_hidden(숨김) 거절, 진행 중 경매가 있는 판매자는 admin_set_user(정지) 거절 → 강제 종료 먼저.
+- 화면: /admin/auctions(탭·검색·지연·의심, 상세 시트 조작), 메뉴 「경매」, 대시보드 처리 대기 줄. 플래그와 무관.
+- 운영 API: capability auction, GET auctions·auctions/:id, POST auctions/:id/close·void_bid·clear_strike(ops), counts 3줄. 에어쉽 화면은 에어쉽 docs/connected-sites.md 「U5」.
+- 되돌리기: 0048 파일 하단 주석 → 코드 revert.

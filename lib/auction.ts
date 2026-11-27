@@ -212,6 +212,7 @@ const ERRORS: [string, I18nKey][] = [
   ["auction not relistable", "auction.err.notRelistable"],
   ["auction in progress", "auction.err.alreadyOpen"],
   ["auction listing locked", "auction.err.locked"],
+  ["bid voided", "auction.err.voided"],   // 0048 운영자가 무효 처리한 입찰자
   ["auction listing", "auction.err.useAuction"],
 ];
 export function auctionErrorKey(msg: string): I18nKey {

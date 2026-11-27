@@ -4,9 +4,10 @@ import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 
 export const OPS_API_VERSION = 1;
 export const OPS_SITE = { key: "tomo", name: "TOMO", currency: "KRW" } as const;
-export const OPS_CAPABILITIES = ["proxy", "c2c", "center", "disputes", "refunds", "payouts", "support", "reports", "users", "activity"] as const;
+export const OPS_CAPABILITIES = ["proxy", "c2c", "center", "disputes", "refunds", "payouts", "support", "reports", "users", "activity", "auction"] as const;
 export const OPS_EVENT_TYPES = ["order.paid", "order.cancel_requested", "dispute.opened", "ticket.opened",
-  "refund.pending", "payout.requested", "report.opened", "errors.spike", "cron.failed"] as const;
+  "refund.pending", "payout.requested", "report.opened", "errors.spike", "cron.failed",
+  "auction.ended", "auction.unpaid", "auction.cancelled", "auction.flagged"] as const;   // auction.* = 0048
 export const CENTER_COUNTRY: Record<string, "KR" | "JP"> = { SEOUL: "KR", NARITA: "JP" };
 export const MAX_SKEW_S = 300;
 

@@ -5,6 +5,7 @@ import { agingLevel, PROXY_STAGE, type AgingStage } from "@/lib/admin-aging";
 import { SITE_URL } from "@/lib/site";
 import { CENTER_COUNTRY, OPS_API_VERSION, OPS_CAPABILITIES, OPS_EVENT_TYPES, OPS_SITE, UUID_RE, type OpResult, type OpsScope } from "@/lib/ops-bridge";
 import { listParam, opsFail, opsOk, paging, runOp, withActorSession, type OpsCtx } from "@/lib/ops-server";
+import { auctionAging, isAuctionTab } from "@/lib/auction-admin";
 
 // 운영 API v1 경로 표. 경로·요청·응답 형태는 docs/aaa/12 9장. 조작은 모두 기존 RPC·lib/admin-actions.ts 를 운영자 세션으로 부른다.
 
@@ -107,6 +108,7 @@ const counts: Handler = async ({ admin }) => {
     { key: "reports.open", label: "신고", capability: "reports", url: "/admin/reports", stage: "report", since: "created_at",
       q: admin.from("reports").select("created_at", { count: "exact" }).eq("status", "open").order("created_at").limit(1000) },
   ];
+  const auc = admin.rpc("auction_ops_counts");   // 0048. 실패하면 경매 세 줄이 count=null
   const out = await Promise.all(specs.map(async (s) => {
     const r = await s.q;
     const base = { key: s.key, label: s.label, capability: s.capability, url: SITE_URL + s.url };
@@ -114,7 +116,67 @@ const counts: Handler = async ({ admin }) => {
     const rows = (r.data ?? []) as Record<string, string>[];
     return { ...base, count: r.count ?? rows.length, overdue: rows.filter((x) => agingLevel(x[s.since], s.stage, now) === "late").length };
   }));
-  return opsOk(out);
+  const a = await auc;
+  const c = (a.error ? null : a.data) as Record<string, number> | null;
+  const line = (key: string, label: string, tab: string, count: string, overdue: string | null) => ({
+    key, label, capability: "auction", url: `${SITE_URL}/admin/auctions?tab=${tab}`,
+    count: c ? Number(c[count] ?? 0) : null, overdue: c ? (overdue ? Number(c[overdue] ?? 0) : 0) : null,
+  });
+  return opsOk([...out,
+    line("auction.pay_due", "경매 결제 기한 임박(12시간)", "awaiting", "pay_due_soon", "pay_overdue"),
+    line("auction.unpaid", "경매 미결제 뒤 판매자 선택 대기", "unpaid", "seller_choice", "seller_choice_old"),
+    line("auction.flagged", "경매 의심 표시", "flagged", "flagged", null)]);
+};
+
+// ── U5 경매(0048). 읽기 = admin_auctions·admin_auction_detail(서버 권한, 상한은 마감 뒤에만). 조작 = 운영자 세션 RPC, 돈이 안 움직여 ops ──
+const auctionsList: Handler = async ({ admin, url }) => {
+  const { from, limit } = paging(url);
+  const tab = url.searchParams.get("status") || "live";
+  if (!isAuctionTab(tab)) return bad("status must be live|awaiting|unpaid|ended|flagged|all");
+  const r = await admin.rpc("admin_auctions", { p_tab: tab, p_q: str(url.searchParams.get("q"), 80) || null, p_limit: limit, p_offset: from });
+  if (r.error) return opsFail(502, `db: ${r.error.message}`);
+  const d = (r.data ?? { items: [], total: 0 }) as { items: Row[]; total: number };
+  const now = Date.now();
+  return opsOk({ items: d.items.map((x) => {
+    const ag = auctionAging(x as Parameters<typeof auctionAging>[0], now);
+    return { ...x, aging_level: ag?.level ?? null, aging_text: ag?.text ?? null };
+  }), total: d.total });
+};
+const auctionDetail: Handler = async ({ admin }, [id]) => {
+  const nf = uuidOr404(id); if (nf) return nf;
+  const r = await admin.rpc("admin_auction_detail", { p_id: id });
+  if (r.error) return opsFail(502, `db: ${r.error.message}`);
+  return r.data ? opsOk(r.data) : opsFail(404, "not found");
+};
+const auctionOp = (act: "close" | "void_bid"): Handler => async (ctx, [id]) => {
+  const nf = uuidOr404(id); if (nf) return nf;
+  const note = str(ctx.body.note, 500);
+  if (!note) return bad("note required");
+  const bidder = str(ctx.body.bidder_id, 40);
+  if (act === "void_bid" && !UUID_RE.test(bidder)) return bad("bidder_id (uuid) required");
+  return runOp(ctx, { action: `auctions.${act}`, target: id, current: statusOf(ctx.admin, "auctions", id),
+    run: async (sb) => rpcRes(act === "close"
+      ? await sb!.rpc("admin_close_auction", { p_auction: id, p_note: note })
+      : await sb!.rpc("admin_void_bid", { p_auction: id, p_bidder: bidder, p_note: note })) });
+};
+// 경고 해제: strike_id 는 이 경매의 경고이거나 이 경매 낙찰자의 경고. expected_status = active
+const auctionClearStrike: Handler = async (ctx, [id]) => {
+  const nf = uuidOr404(id); if (nf) return nf;
+  const sid = str(ctx.body.strike_id, 40);
+  const note = str(ctx.body.note, 500);
+  if (!UUID_RE.test(sid)) return bad("strike_id (uuid) required");
+  if (!note) return bad("note required");
+  const [{ data: st }, { data: au }] = await Promise.all([
+    ctx.admin.from("auction_strikes").select("user_id, auction_id").eq("id", sid).maybeSingle(),
+    ctx.admin.from("auctions").select("winner_id").eq("id", id).maybeSingle(),
+  ]);
+  if (!st || !au || (st.auction_id !== id && st.user_id !== au.winner_id)) return opsFail(404, "strike not in this auction");
+  return runOp(ctx, { action: "auctions.clear_strike", target: sid,
+    current: async () => {
+      const { data } = await ctx.admin.from("auction_strikes").select("lifted_at").eq("id", sid).maybeSingle();
+      return data ? (data.lifted_at ? "lifted" : "active") : null;
+    },
+    run: async (sb) => rpcRes(await sb!.rpc("admin_clear_strike", { p_strike: sid, p_note: note })) });
 };
 
 async function orderIdsByCode(admin: SupabaseClient, q: string): Promise<string[] | null> {
@@ -419,6 +481,12 @@ const ROUTES: Route[] = [
       run: async (sb) => rpcRes(await sb!.rpc("admin_release_listing_hold", { p_id: id, p_note: note })) });
   } },
   { method: "GET", path: "activity", need: "ops", h: activityList },
+  // U5 경매(0048)
+  { method: "GET", path: "auctions", need: "ops", h: auctionsList },
+  { method: "GET", path: "auctions/:id", need: "ops", h: auctionDetail },
+  { method: "POST", path: "auctions/:id/close", need: "ops", h: auctionOp("close") },
+  { method: "POST", path: "auctions/:id/void_bid", need: "ops", h: auctionOp("void_bid") },
+  { method: "POST", path: "auctions/:id/clear_strike", need: "ops", h: auctionClearStrike },
 ];
 
 /** 경로 맞추기. ":x" 칸은 그 자리 값을 순서대로 넘긴다 */

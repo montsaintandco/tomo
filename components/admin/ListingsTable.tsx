@@ -7,6 +7,7 @@ import { useGridSelection } from "@/components/admin/use-grid-selection";
 import AdminToggle from "@/components/AdminToggle";
 import { CountryChip } from "@/components/Brand";
 import ReleaseHoldButton from "@/components/admin/ReleaseHoldButton";
+import { adminAuctionError } from "@/lib/auction-admin";
 
 export type AdminListingRow = {
   id: string; title: string; price: number; currency: string; status: string; country: "KR" | "JP"; region: string;
@@ -35,14 +36,14 @@ export default function ListingsTable({ rows }: { rows: AdminListingRow[] }) {
     if (hidden && !window.confirm(`${targets.length}개 상품을 숨길까요? 판매자는 되살릴 수 없어요.`)) return;
     setBusy(true); setMsg("");
     const supabase = createBrowserSupabase();
-    const ok: string[] = []; let fail = 0;
+    const ok: string[] = []; let fail = 0; let live = 0;
     for (const r of targets) {
       const { error } = await supabase.rpc("admin_set_listing_hidden", { p_id: r.id, p_hidden: hidden });
-      if (error) fail++; else ok.push(r.id);
+      if (error) { fail++; if (error.message.includes("auction live")) live++; } else ok.push(r.id);
     }
     setBusy(false);
     sel.remove(ok);
-    setMsg(`${ok.length}개 ${hidden ? "숨김" : "복구"}${fail ? ` · 실패 ${fail}개(선택에 남겨 둠)` : ""}`);
+    setMsg(`${ok.length}개 ${hidden ? "숨김" : "복구"}${fail ? ` · 실패 ${fail}개(선택에 남겨 둠)` : ""}${live ? ` · ${adminAuctionError("auction live")}` : ""}`);
     startTransition(() => router.refresh());
   }
 

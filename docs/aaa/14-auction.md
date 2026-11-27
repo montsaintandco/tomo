@@ -420,3 +420,33 @@
 - 알림 10종 문구·링크는 U1·U2 에서 이미 있었다(`notif.auction_*`, 링크 = 상품 상세). U4 에서 바꾸지 않았다.
 - 검증: tsc·eslint(오류 0)·vitest unit 44파일 319건(표시 계산 11건 추가)·next build(플래그 켬/끔 둘 다). 로컬(build+start, 플래그 켬, 운영 DB): alice 등록 → bob API 입찰 → alice 화면 3초 안 갱신 → bob 화면 상한 올리기(확인 단계) → center 20,000원 입찰 → bob 화면 다음 폴링 차례(5초 안)에 21,000원·자동 줄 표시 → 경매만 목록 → bob 마이페이지. 시험 행은 service role 로 지움(잔여 0).
 - 못 본 것: 낙찰 뒤 결제하기·판매자 다시 경매/전환·수정 폼 잠금은 브라우저로 돌려 보지 않았다(U6 리허설 8~12번에서 본다).
+
+## 부록. U5 구현 기록 (2026-11-27)
+
+- 마이그레이션 `0048_auction_ops.sql` 운영 적용(적용 전 카탈로그로 0048 객체 없음 확인 → 롤백 리허설 10묶음 통과·결함 주입 4종이 해당 단언에서 실패 확인 → 적용 → 함수 13개·표 2개·트리거 3개·제약 확인). 0046·0047 함수(place_bid·마감·미결제)는 바꾸지 않았다.
+- 운영 함수(운영자 세션, `is_admin_user()` = 정지 운영자 거절, 메모 필수, `admin_actions` 기록):
+  - `admin_close_auction(경매, 메모)` — 진행 중(live)만. `cancelled` + 상품 숨김(판매자가 다시 경매·일반 전환 가능, `auction_relistable` 의 cancelled), 입찰자 전원·판매자 알림 `auction_cancelled`, 이벤트 `auction.cancelled`. 결제 대기(awaiting_payment) 경매는 이 함수로 못 끝낸다(열린 결제창과 엇갈림 방지). 그 경우는 기한 만료(미결제)로 끝난다.
+  - `admin_void_bid(경매, 입찰자, 메모)` — 진행 중만. 그 입찰자의 기록 줄 전부 `voided_at`, 상한 행 삭제(값은 `auction_bid_voids` 에 남김), 요청 번호 기록 삭제, `auction_recalc` 로 1등·현재가(min(1등 상한, 2등 상한 + 단위), 1명 이하면 시작가)·`bid_count`·`bidder_count`·`listings.price` 다시 계산. 새 현재가보다 높은 남은 기록(빠진 사람이 밀어 올린 자동 대응)도 무효로 돌리고 마지막 줄이 새 상태와 다르면 자동 줄 하나를 더한다. 같은 상한이면 그 금액을 먼저 넣은 사람(`updated_at`)이 1등. 무효된 사람은 그 경매에 다시 입찰할 수 없다(`bid voided` → `auction.err.voided`). 알림 `auction_bid_voided`. 마감 시각은 그대로.
+  - `admin_clear_strike(경고, 메모)` — 해제 뒤 남은 경고로 제한을 다시 정한다: 통산 3회 이상이면 그대로, 90일 안 2회면 min(지금 제한, 마지막 경고 + 30일), 그 밖은 풀림.
+- 조회 함수(운영자 또는 service_role): `admin_auctions(tab, q, limit, offset)`(tab = live·awaiting·unpaid·ended·flagged·all, q = AU 번호·제목), `admin_auction_detail(id)`(입찰 기록 원본·입찰자 닉네임은 보임, **상한은 live 가 아닐 때만** `max_visible`), `auction_ops_counts()`(live·awaiting·pay_due_soon(12시간)·pay_overdue(기한 + 50분)·live_overdue(마감 + 5분)·seller_choice(미결제 뒤 판매자 미선택)·seller_choice_old(기한 + 3일)·flagged).
+- 의심 표시(표시만): 상한을 넣거나 올릴 때 `auction_flags` 에 신호를 쌓는다. `same_contact`(배송지 전화 숫자 8자리 이상 같음·우편번호+주소 같음·출금 계좌 같음) / `repeat_no_win`(같은 판매자 경매 3건 이상 입찰, 낙찰 결제 0) / `relist_rebid`(미결제 뒤 다시 올린 경매에 앞 경매 입찰자) / `new_account_pusher`(가입 7일 미만이 1등 아닌 채 상한을 넣음). IP·기기는 DB 에 없어 안 쓴다. 처음 표시될 때만 이벤트 `auction.flagged`(dedupe 경매+입찰자). 계산 오류는 입찰을 막지 않는다(경고만).
+- 이벤트(ops_outbox 제약 13종): `auction.ended`(live → awaiting_payment, 낙찰가), `auction.unpaid`(awaiting_payment → unpaid), `auction.cancelled`, `auction.flagged`. 유찰은 이벤트 없음.
+- 진행 중 경매 보호: `admin_set_listing_hidden(숨김)` → `auction live: use force close`, `admin_set_user(정지)` → 진행 중 경매가 있는 판매자면 `seller has live auctions`(이미 정지된 사람의 운영자 토글은 통과). 어드민 화면은 한국어 안내(`lib/auction-admin.ts adminAuctionError`).
+- 화면: `/admin/auctions`(탭·검색·지연 표시·의심 수, `?open=` 상세 시트: 강제 종료·입찰자별 입찰 무효·경고 해제, 입찰 기록 원본, 운영 기록). 메뉴 「경매」 배지 = 의심 + 크론 지연. 대시보드 「처리 대기」 줄에 경매 4종. `NEXT_PUBLIC_AUCTION` 과 상관없이 열린다.
+- 운영 API: capability `auction`, 경로 5개(`GET auctions`·`auctions/:id`, `POST auctions/:id/close`·`void_bid`·`clear_strike`, 전부 ops), counts 3줄 추가(`auction.pay_due`·`auction.unpaid`·`auction.flagged`). 설계 A-6 의 경로 이름(`end`·`void-bid`·`strikes/:id/lift`)은 U5 지시대로 바꿨다. 규격은 docs/aaa/12 9.4.
+
+### 검증 기록
+
+| 항목 | 결과 |
+|---|---|
+| 롤백 리허설(운영 DB, `begin` + 0048 + 시험 블록 + 끝에서 예외) | 10묶음 전부 통과: 제약 13종 / 4명 입찰 준비(현재가 26,000) / 의심 신호 2종·이벤트 1건·오래된 계정 표시 없음 / 비운영자·메모 없음·정지 운영자 거절(무효·종료·조회) / 1등 무효 → 차순위 1등·현재가 21,000·상품 가격·높은 기록 정리·마지막 자동 줄·bid_count·알림·활동 기록·재입찰 거절(새 요청 번호·옛 요청 번호) / 진행 중 상품 숨김·판매자 정지 거절 / 진행 중 상한 숨김·목록·번호 검색·건수·service_role / 강제 종료(알림 3건·숨김·기록·이벤트·두 번째 거절·끝난 경매 무효 거절·마감 뒤 상한 공개) / 낙찰 마감·미결제 이벤트·판매자 선택 대기 / 경고 해제(거절 3종·제한 풀림·입찰 됨·두 번째 거절·3회→2회 30일) |
+| 결함 주입 4종 | 2등 단위 빼기 → 4번, 진행 중 상한 노출 → 6a, 재입찰 가드 제거 → 4k, 정지 운영자 통과 → 9d 실패 확인 |
+| 잔여 | 리허설 뒤 0048 객체 0, 시험 계정(u5.rehearsal) 0, 경매 0 |
+
+### U6(리허설·켜기)가 알아야 할 것
+
+1. 시험표 14번(강제 종료·입찰 무효)은 `/admin/auctions?open=<경매 id>` 상세 시트 버튼 또는 운영 API(`POST /api/ops/auctions/:id/close|void_bid`, 본문 `request_id`·`expected_status: "live"`·`note`, void 는 `bidder_id`)로 한다. 활동 기록 `auction_close`·`auction_void_bid`, 알림 `auction_cancelled`(입찰자 전원·판매자)·`auction_bid_voided`.
+2. 시험 계정이 `tomo.test.center`(운영자)뿐이라 「세 번째 입찰자」도 center 를 쓰면 의심 표시는 안 생긴다(가입 7일 넘음). 의심 표시를 운영에서 보려면 같은 전화번호 배송지를 시험 계정끼리 넣어야 한다(시험 뒤 지울 것).
+3. 시험 경매를 정리할 때 `auction_flags`·`auction_bid_voids`·`ops_outbox`(type `auction.%`, 에어쉽 훅으로 이미 나갔을 수 있음 → 에어쉽 `connected_site_events` 도)·`admin_actions`(target_type `auction`) 를 같이 지운다.
+4. 강제 종료된 상품은 숨김 상태다. 시험 뒤 판매자 화면에서 다시 경매/전환이 되는지(cancelled 도 대상)도 보면 좋다.
+5. 진행 중 경매 상품은 어드민 상품 숨김·판매자 정지가 거절된다. 시험 순서에서 alice 정지를 쓰면 먼저 강제 종료해야 한다.

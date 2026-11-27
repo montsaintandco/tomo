@@ -2,6 +2,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserSupabase } from "@/lib/supabase/client";
+import { adminAuctionError } from "@/lib/auction-admin";
 
 // 운영자 화면 공용 액션 버튼 — rpc 또는 테이블 update/delete 하나를 실행하고 새로고침 (한국어 고정)
 export default function AdminToggle({ label, danger, confirmText, action }: {
@@ -28,7 +29,7 @@ export default function AdminToggle({ label, danger, confirmText, action }: {
       ({ error: err } = await q);
     }
     setBusy(false);
-    if (err) { setError(err.message); return; }
+    if (err) { setError(adminAuctionError(err.message)); return; }   // 진행 중 경매 판매자 정지 거절(0048) 등은 한국어로
     startTransition(() => router.refresh());
   }
 

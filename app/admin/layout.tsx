@@ -16,7 +16,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   // 환불·출금 표(0025·0026)가 아직 없으면 오류 → count null → 0
   // 신고(0033)·오류(0032) 표가 없어도 같은 방식으로 0. 오류는 24시간 안에 다시 난 서버 오류 종류 수
   const dayAgo = new Date(nowMs() - 86_400_000).toISOString();
-  const [disputes, proxy, center, support, me, refunds, payouts, cancelReq, reports, errors] = await Promise.all([
+  // 경매(0048): 의심 표시 + 크론이 늦은 것(마감·미결제 확정 지연). 함수가 없으면 0
+  const [disputes, proxy, center, support, me, refunds, payouts, cancelReq, reports, errors, auc] = await Promise.all([
     supabase.from("transactions").select("id", { count: "exact", head: true }).eq("status", "disputed"),
     supabase.from("proxy_requests").select("id", { count: "exact", head: true }).in("status", ["requested", "approved", "paid", "purchasing", "center_received"]),
     supabase.from("transactions").select("id", { count: "exact", head: true }).in("status", ["shipped_to_center", "center_received"]),
@@ -27,13 +28,16 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     supabase.from("proxy_requests").select("id", { count: "exact", head: true }).eq("status", "paid").not("cancel_requested_at", "is", null),
     supabase.from("reports").select("id", { count: "exact", head: true }).eq("status", "open"),
     supabase.from("error_events").select("id", { count: "exact", head: true }).eq("source", "server").gte("last_at", dayAgo),
+    supabase.rpc("auction_ops_counts"),
   ]);
+  const ac = (auc.data ?? {}) as Record<string, number>;
 
   return (
     <div className="admin md:flex">
       <AdminNav nickname={me.data?.nickname ?? "운영자"}
         counts={{ disputes: disputes.count ?? 0, proxy: (proxy.count ?? 0) + (cancelReq.count ?? 0), center: center.count ?? 0, support: support.count ?? 0,
-          refunds: refunds.count ?? 0, payouts: payouts.count ?? 0, reports: reports.count ?? 0, errors: errors.count ?? 0 }} />
+          refunds: refunds.count ?? 0, payouts: payouts.count ?? 0, reports: reports.count ?? 0, errors: errors.count ?? 0,
+          auctions: (ac.flagged ?? 0) + (ac.live_overdue ?? 0) + (ac.pay_overdue ?? 0) }} />
       <main className="min-w-0 flex-1 px-4 py-5 md:px-8 md:py-7">
         <div className="mx-auto max-w-6xl">{children}</div>
       </main>

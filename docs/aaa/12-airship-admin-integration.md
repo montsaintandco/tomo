@@ -327,9 +327,9 @@
 
 | 경로 | 메서드 | scope | 요청(쿼리·본문) | 응답 `data` | expected_status 대상 |
 |---|---|---|---|---|---|
-| `/api/ops/meta` | GET | 서명만 | — | `{ api_version, site{key,name,currency,url}, capabilities[10], events[9], money_actions[] }` | — |
+| `/api/ops/meta` | GET | 서명만 | — | `{ api_version, site{key,name,currency,url}, capabilities[11](U5 `auction` 추가), events[13](U5 `auction.*` 4종), money_actions[] }` | — |
 | `/api/ops/health` | GET | 서명만 | — | `{ version, db, db_ms, cron{job:{ok,at}}, outbox{hook_configured,pending,failing,dead_24h,last_sent_at}, errors_24h }` | — |
-| `/api/ops/counts` | GET | ops | — | `[{ key, label, count, overdue, capability, url }]` 10줄. 조회 실패한 줄은 `count: null, overdue: null`(「확인 못 함」) | — |
+| `/api/ops/counts` | GET | ops | — | `[{ key, label, count, overdue, capability, url }]` 13줄(U5: `auction.pay_due` 결제 기한 12시간 이내·overdue = 기한 + 50분 지남, `auction.unpaid` 미결제 뒤 판매자 미선택·overdue = 3일 넘음, `auction.flagged` 진행·결제 대기 중 의심 표시. capability `auction`). 조회 실패한 줄은 `count: null, overdue: null`(「확인 못 함」) | — |
 | `/api/ops/proxy` | GET | ops | `status`(쉼표), `q`(T 번호·주문 uuid), `cancel_requested=1` | `{ items[대행 요청 행 + external_items + customer + proxy_orders{code,…}], total }` | — |
 | `/api/ops/proxy/:id` | GET | ops | `:id` = proxy_requests.id | `{ item, order(배송지·통관번호 포함), items[같은 주문 형제], refunds[], cancel_preview{amount,cap,currency,full} \| null }` | — |
 | `/api/ops/proxy/:id/status` | POST | ops | `to`, `note`, `tracking` → `admin_set_order_status` | `{ result: proxy_requests 행 }` | proxy_requests.status |
@@ -364,6 +364,11 @@
 | `/api/ops/users/:id/ledger` | GET | money | — (A3) | `{ balances{KRW,JPY}(원장 합, 1000행씩 끝까지), recent[20] }` | — |
 | `/api/ops/users/:id/ledger_adjust` | POST | money | `currency`(KRW\|JPY), `amount`(0 아닌 정수, 차감은 음수), `memo`(필수) → `admin_adjust_seller_ledger` (A3) | `{ result: seller_ledger 행 }` | **`<통화>:<지금 잔액>`**(예 `KRW:12000`) — 화면에서 본 잔액이 그사이 바뀌면 409 |
 | `/api/ops/listings/:id/release` | POST | ops | `note`(필수) → `admin_release_listing_hold`(0041, 반송 확인 → 판매중 + 판매자 숨김, 판매자 알림 0044) (A3) | `{ result: listings 행 }` | listings.status(`held`) |
+| `/api/ops/auctions` | GET | ops | `status` = 탭 이름 `live`(기본)·`awaiting`·`unpaid`·`ended`(paid·unsold·cancelled)·`flagged`·`all`, `q`(AU 번호·제목), `limit`·`offset` → `admin_auctions`(0048, U5) | `{ items[{ id, code, status, listing_id, title, image, seller{id,nickname}, leader_nickname, winner_nickname, currency, start_price, current_price, final_price, bid_count, bidder_count, ends_at, extended_count, closed_at, pay_due_at, flag_count, seller_choice_pending, aging_level(warn\|late\|null), aging_text }], total }` | — |
+| `/api/ops/auctions/:id` | GET | ops | → `admin_auction_detail` (U5) | `{ auction(전체 칸 + max_visible·seller_choice_pending), listing, seller, leader_nickname, winner_nickname, bids[원본 300, 닉네임·voided_at], bidders[{ bidder_id, nickname, joined_at, max_amount(**live 면 null**), leading, voided, void_note, signals[], active_strikes, bid_banned_until }], strikes[], chain[], actions[] }` | — |
+| `/api/ops/auctions/:id/close` | POST | ops | `note`(필수) → `admin_close_auction`(진행 중만, 돈 안 움직임) (U5) | `{ result: auctions 행 }` | auctions.status(`live`) |
+| `/api/ops/auctions/:id/void_bid` | POST | ops | `bidder_id`(uuid), `note`(필수) → `admin_void_bid`(1등·현재가·입찰 수·상품 가격 다시 계산) (U5) | `{ result: { auction_id, status, current_price, bid_count, bidder_count, leader_changed } }` | auctions.status(`live`) |
+| `/api/ops/auctions/:id/clear_strike` | POST | ops | `strike_id`(uuid, 이 경매의 경고이거나 이 경매 낙찰자의 경고, 아니면 404), `note`(필수) → `admin_clear_strike` (U5) | `{ result: { strike_id, user_id, bid_banned_until, active_strikes } }` | **`active`·`lifted`**(경고 해제 여부) |
 
 ### 9.5 이벤트(tomo → 센터)
 
@@ -387,6 +392,10 @@
 | `report.opened` | 신고 접수 | null | `report` |
 | `errors.spike` | 서버 오류가 15분 안 5회 이상(시간당 한 번) | null / 횟수 | `error_events` |
 | `cron.failed` | `cron_runs` 에 실패 기록 | 작업 이름 | `cron_run` |
+| `auction.ended` | 경매가 낙찰로 마감(live → awaiting_payment). 유찰은 없음 (0048) | AU 번호 / 낙찰가 | `auction` |
+| `auction.unpaid` | 미결제 확정(awaiting_payment → unpaid) | AU 번호 / 낙찰가 | `auction` |
+| `auction.cancelled` | 운영 강제 종료(`admin_close_auction`) | AU 번호 / 그때 현재가 | `auction` |
+| `auction.flagged` | 자전 입찰 의심 표시가 그 경매·입찰자에 처음 생김 | AU 번호 / 그때 현재가 | `auction` |
 
 ### 9.6 검증(2026-11-27)
 
