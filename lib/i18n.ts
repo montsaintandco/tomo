@@ -130,6 +130,7 @@ const D = {
   "badge.reserved": ["예약중", "予約中"],
   "badge.paused": ["판매 일시 중지", "販売一時停止中"],
   "badge.auction": ["경매 · 구경만", "オークション・閲覧のみ"],
+  "badge.auctionBid": ["경매", "オークション"],
   "badge.soldOut": ["품절", "売り切れ"],
 
   "time.now": ["방금", "たった今"],

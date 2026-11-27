@@ -18,7 +18,7 @@ export type MbPanelProps = {
   shipJpy: number | null;            // 출품자 부담 0, 모름 null(신청 불가)
   rate: number | null;               // exchange_rates JPY_KRW(DB 가 신청 때 고정하는 값과 같은 표)
   settings: { accepting: boolean; cap_max_jpy: number; min_lead_minutes: number; max_lead_hours: number; fee_jpy: number } | null;
-  guest: boolean; country: string | null; addresses: Addr[]; mine: { id: string } | null; now: number;
+  guest: boolean; country: string | null; addresses: Addr[]; mine: { id: string } | null; taken?: boolean; now: number;
 };
 
 export default function MarketBidPanel(p: MbPanelProps) {
@@ -43,7 +43,7 @@ export default function MarketBidPanel(p: MbPanelProps) {
   const head = (
     <div className="mb-3 grid grid-cols-3 gap-2 text-center">
       <div><p className="text-[11px] text-ink-soft">{t(lang, "mb.panel.current")}</p><p className="tnum text-[15px] font-extrabold">{formatPrice(p.info.price, "JPY", lang)}</p></div>
-      <div><p className="text-[11px] text-ink-soft">{t(lang, "mb.ev.placed")}</p><p className="tnum text-[13px] font-bold">{t(lang, "mb.panel.bids", { n: p.info.bids })}</p></div>
+      <div><p className="text-[11px] text-ink-soft">{t(lang, "mb.panel.bidCount")}</p><p className="tnum text-[13px] font-bold">{t(lang, "mb.panel.bids", { n: p.info.bids })}</p></div>
       <div><p className="text-[11px] text-ink-soft">{t(lang, "mb.panel.ends")}</p><p className={`tnum text-[13px] font-bold ${left < 6 * 36e5 ? "text-tomo-rose" : ""}`}>{t(lang, "mb.panel.left", { t: timeLeftShort(lang, left) })}</p></div>
     </div>
   );
@@ -57,6 +57,7 @@ export default function MarketBidPanel(p: MbPanelProps) {
 
   if (p.mine) return box(<Link href={`/bids/${p.mine.id}`} className="btn block bg-tomo-navy py-3 text-center text-sm text-white">{t(lang, "mb.panel.mine")}</Link>);
   if (!p.settings?.accepting) return note("mb.err.notAccepting");
+  if (p.taken) return note("mb.err.taken");
   if (p.guest) return box(<Link href={p.loginHref} className="btn block bg-tomo-coral-deep py-3 text-center text-sm text-white">{t(lang, "mb.panel.login")}</Link>);
   if (p.country !== "KR") return note("mb.err.country");
   if (p.shipJpy == null) return note("mb.err.shipping");
@@ -95,7 +96,8 @@ export default function MarketBidPanel(p: MbPanelProps) {
     </label>
   );
   return box(
-    <form onSubmit={submit} className="flex flex-col gap-3">
+    <form onSubmit={submit} className="flex flex-col gap-3"
+      onInvalidCapture={(e) => { const d = e.currentTarget.querySelector("details"); if (d) d.open = true; }}>
       <label className="block text-[12px] font-bold text-ink">{t(lang, "mb.panel.cap")}
         <input inputMode="numeric" value={cap} onChange={(e) => setCap(e.target.value.replace(/[^0-9]/g, ""))} required
           className="tnum mt-1 w-full rounded-full bg-white px-4 py-2.5 text-base font-bold shadow-soft" aria-describedby="mb-cap-hint" />
@@ -115,8 +117,12 @@ export default function MarketBidPanel(p: MbPanelProps) {
       <p className="text-[12px] text-ink-soft">{t(lang, "mb.panel.rule")}</p>
       <p className="text-[11px] text-ink-soft">{t(lang, "mb.panel.manualNote")}</p>
 
-      <fieldset className="flex flex-col gap-2">
-        <legend className="mb-1 text-[13px] font-extrabold text-ink">{t(lang, "mb.panel.ship")}</legend>
+      {/* 저장된 배송지가 있으면 한 줄 요약으로 접는다(390px 화면에서 패널이 너무 길어서). 빈 칸이 있으면 제출 때 펼친다(onInvalidCapture) */}
+      <details open={!first} className="rounded-card bg-tomo-navy/5 px-3 py-2.5">
+      <summary className="cursor-pointer text-[13px] font-extrabold text-ink">{t(lang, "mb.panel.ship")}
+        {ship.name && <span className="ml-1.5 text-[12px] font-normal text-ink-soft">{ship.name} · {ship.address.slice(0, 18)}{ship.address.length > 18 ? "…" : ""}</span>}
+      </summary>
+      <fieldset className="mt-2 flex flex-col gap-2">
         {p.addresses.length > 0 && (
           <div role="radiogroup" className="flex flex-wrap gap-1.5">
             {p.addresses.map((a) => (
@@ -132,12 +138,13 @@ export default function MarketBidPanel(p: MbPanelProps) {
         {field("postal", t(lang, "order.postal"))}
         {field("address", t(lang, "order.addressLine"))}
         {field("note", t(lang, "order.shipNote"), false)}
-        <label className="block text-[12px] font-bold text-ink">{t(lang, "addr.pccc")}
-          <input value={pccc} onChange={(e) => setPccc(e.target.value)} required maxLength={13} autoComplete="off"
-            className="mt-1 w-full rounded-full bg-white px-4 py-2.5 text-base font-normal uppercase shadow-soft" />
-          <span className="mt-1 block text-[11px] font-normal text-ink-soft">{t(lang, "addr.pcccHint")}</span>
-        </label>
       </fieldset>
+      </details>
+      <label className="block text-[12px] font-bold text-ink">{t(lang, "addr.pccc")}
+        <input value={pccc} onChange={(e) => setPccc(e.target.value)} required maxLength={13} autoComplete="off"
+          className="mt-1 w-full rounded-full bg-white px-4 py-2.5 text-base font-normal uppercase shadow-soft" />
+        <span className="mt-1 block text-[11px] font-normal text-ink-soft">{t(lang, "addr.pcccHint")}</span>
+      </label>
 
       <div className="flex flex-col gap-1.5">
         {(["mb.panel.agree1", "mb.panel.agree2", "mb.panel.agree3"] as const).map((k, i) => (

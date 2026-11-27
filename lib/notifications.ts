@@ -9,7 +9,7 @@ export const NOTIF_KINDS = [
   "offer_received", "offer_accepted", "offer_declined", "wish_price_drop", "listing_held", "listing_released",
   "auction_first_bid", "auction_outbid", "auction_ending", "auction_won", "auction_lost", "auction_sold", "auction_unsold",
   "auction_pay_reminder", "auction_unpaid", "auction_unpaid_seller", "auction_cancelled", "auction_bid_voided", "auction_pay_expired",
-  "mb_authorized", "mb_cancelled", "mb_auth_void", "mb_placed", "mb_outbid", "mb_won", "mb_lost", "mb_missed", "mb_hold", "mb_pay_needed",
+  "mb_authorized", "mb_cancelled", "mb_auth_void", "mb_placed", "mb_outbid", "mb_won", "mb_lost", "mb_missed", "mb_hold", "mb_pay_needed", "mb_pay_expired",
 ] as const;
 export type NotifKind = (typeof NOTIF_KINDS)[number];
 
@@ -28,7 +28,9 @@ export function notifText(lang: Lang, n: Pick<Notif, "kind">): string {
 /** 보조 줄 — 트리거가 data.title 에 상품명을 넣는다 */
 export function notifSub(n: Pick<Notif, "data">): string {
   const v = n.data?.title;
-  return typeof v === "string" ? v : "";
+  if (typeof v === "string") return v;
+  const code = n.data?.code; // 입찰 대행 알림(0052)은 제목 대신 신청 번호(MB…)를 싣는다 — 여러 건이면 어느 신청인지 보이게
+  return typeof code === "string" ? code : "";
 }
 
 const str = (v: unknown) => (typeof v === "string" && v ? v : null);

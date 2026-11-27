@@ -230,7 +230,7 @@ export default async function ExternalItemPage(props: {
             <SourceLogo source={source} lang={lang} size={16} />{t(lang, `source.${source}`)}
           </span>
           {item.auction && (
-            <span className="rounded-full bg-tomo-coral-deep px-2.5 py-1 text-[11px] font-bold text-white">{t(lang, "badge.auction")}</span>
+            <span className="rounded-full bg-tomo-coral-deep px-2.5 py-1 text-[11px] font-bold text-white">{t(lang, mbOn ? "badge.auctionBid" : "badge.auction")}</span>
           )}
           {item.soldOut && (
             <span className="rounded-full bg-tomo-navy/70 px-2.5 py-1 text-[11px] font-bold text-white">{t(lang, "badge.soldOut")}</span>

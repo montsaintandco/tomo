@@ -6,7 +6,7 @@ import { formatPrice } from "@/lib/currency";
 import { fmtAt } from "@/lib/datetime";
 import { t, type I18nKey, type Lang } from "@/lib/i18n";
 import { marketBidEnabled, type MarketBidStatus } from "@/lib/market-bid";
-import { BidCancel, BidRefresh } from "@/components/market-bid/BidLive";
+import { BidCancel, BidRefresh, BidRepay } from "@/components/market-bid/BidLive";
 
 export const metadata = { robots: { index: false }, ...(marketBidEnabled() ? { title: "입찰 신청 · 入札申込" } : {}) };
 
@@ -14,6 +14,7 @@ export const metadata = { robots: { index: false }, ...(marketBidEnabled() ? { t
 type Bid = {
   id: string; code: string; status: MarketBidStatus; source: string; source_id: string; cap_jpy: number; auth_krw: number; last_bid_jpy: number | null;
   is_top: boolean | null; ends_at: string; final_price_jpy: number | null; captured_krw: number | null; order_id: string | null; created_at: string;
+  capture_krw: number | null; pay_due_at: string | null; closed_at: string | null;
   item: { title: string; title_translated: string | null; images: string[] | null } | null;
 };
 const LIVE: MarketBidStatus[] = ["pending_auth", "authorized", "placed", "outbid", "hold", "won"];
@@ -28,7 +29,7 @@ export default async function BidPage(props: { params: Promise<{ id: string }>; 
   if (!viewer) redirect(`/login?next=/bids/${id}`);
   const lang: Lang = viewer.language;
   const { data } = await supabase.from("market_bids")
-    .select("id, code, status, source, source_id, cap_jpy, auth_krw, last_bid_jpy, is_top, ends_at, final_price_jpy, captured_krw, order_id, created_at, item:external_items!market_bids_external_item_id_fkey(title, title_translated, images)")
+    .select("id, code, status, source, source_id, cap_jpy, auth_krw, last_bid_jpy, is_top, ends_at, final_price_jpy, captured_krw, order_id, created_at, capture_krw, pay_due_at, closed_at, item:external_items!market_bids_external_item_id_fkey(title, title_translated, images)")
     .eq("id", id).maybeSingle();
   const b = data as unknown as Bid | null;
   if (!b) notFound();
@@ -41,6 +42,8 @@ export default async function BidPage(props: { params: Promise<{ id: string }>; 
   const title = (lang === "ko" ? b.item?.title_translated : null) || b.item?.title || b.code;
   const jpy = (n: number) => formatPrice(n, "JPY", lang);
   const krw = (n: number) => formatPrice(n, "KRW", lang);
+  // eslint-disable-next-line react-hooks/purity -- 서버 렌더 시각으로 기한 판정(서버가 PUT 에서 다시 본다)
+  const repayOpen = b.status === "capture_failed" && !b.closed_at && !!b.pay_due_at && new Date(b.pay_due_at).getTime() > Date.now() && !!b.capture_krw;
   const row = (k: string, v: React.ReactNode) => (
     <div className="flex items-baseline justify-between gap-3 border-b border-tomo-navy/5 py-2 last:border-b-0">
       <dt className="text-[12px] text-ink-soft">{k}</dt><dd className="tnum text-right text-[13px] font-bold">{v}</dd>
@@ -50,20 +53,27 @@ export default async function BidPage(props: { params: Promise<{ id: string }>; 
     <main className="mx-auto flex max-w-md flex-col gap-3 p-4 pb-10">
       {LIVE.includes(b.status) && <BidRefresh />}
       {sp.mb === "ok" && <p role="status" className="rounded-card bg-tomo-navy/5 p-3 text-[13px]">{t(lang, "mb.d.payOk")}</p>}
+      {sp.mb === "void" && <p role="alert" className="rounded-card bg-tomo-rose/10 p-3 text-[13px] text-tomo-rose">{t(lang, "mb.d.payVoid")}</p>}
+      {sp.mb === "refunded" && <p role="alert" className="rounded-card bg-tomo-rose/10 p-3 text-[13px] text-tomo-rose">{t(lang, "mb.d.repayRefunded")}</p>}
+      {sp.mb === "repaid" && <p role="status" className="rounded-card bg-tomo-navy/5 p-3 text-[13px]">{t(lang, "mb.d.repayOk")}</p>}
       {sp.mb === "fail" && <p role="alert" className="rounded-card bg-tomo-rose/10 p-3 text-[13px] text-tomo-rose">{t(lang, "mb.d.payFail", { code: (sp.code ?? "").slice(0, 40) })}</p>}
       <section className="card p-4">
         <p className="text-[12px] text-ink-soft">{t(lang, "mb.my.title")} {b.code}</p>
         <h1 className="mt-1 text-[16px] font-extrabold text-ink">{title}</h1>
-        <p className="mt-2 inline-block rounded-full bg-tomo-navy px-3 py-1 text-[12px] font-bold text-white">{t(lang, `mb.st.${b.status}` as I18nKey)}</p>
+        <p className="mt-2 inline-block rounded-full bg-tomo-navy px-3 py-1 text-[12px] font-bold text-white">{t(lang, b.status === "capture_failed" && b.closed_at ? "mb.st.pay_expired" : (`mb.st.${b.status}` as I18nKey))}</p>
         <dl className="mt-3">
           {row(t(lang, "mb.d.cap"), jpy(b.cap_jpy))}
           {row(t(lang, "mb.d.max"), krw(b.auth_krw))}
           {b.last_bid_jpy != null && row(t(lang, "mb.d.lastBid"), jpy(b.last_bid_jpy))}
           {row(t(lang, "mb.panel.ends"), fmtAt(b.ends_at, lang))}
-          {b.final_price_jpy != null && (b.status === "ordered" || b.status === "won") && row(t(lang, "mb.d.final"), jpy(b.final_price_jpy))}
+          {b.final_price_jpy != null && (b.status === "ordered" || b.status === "won" || b.status === "capture_failed") && row(t(lang, "mb.d.final"), jpy(b.final_price_jpy))}
           {b.captured_krw != null && row(t(lang, "mb.d.charged"), krw(b.captured_krw))}
         </dl>
+        {b.status === "capture_failed" && (repayOpen
+          ? <p className="mt-3 rounded-card bg-tomo-rose/10 p-3 text-[13px] text-tomo-rose">{t(lang, "mb.d.repayNeed", { krw: krw(b.capture_krw ?? 0), due: fmtAt(b.pay_due_at!, lang) })}</p>
+          : <p className="mt-3 rounded-card bg-tomo-navy/5 p-3 text-[13px] text-ink-soft">{t(lang, "mb.d.payExpired")}</p>)}
         <div className="mt-3 flex flex-col gap-2">
+          {repayOpen && <BidRepay lang={lang} bidId={b.id} label={t(lang, "mb.d.repay", { krw: krw(b.capture_krw ?? 0) })} />}
           {o && <Link href={`/order/${o.id}`} className="btn block bg-tomo-coral-deep py-3 text-center text-sm text-white">{t(lang, "mb.d.order", { code: o.code })}</Link>}
           <Link href={`/global/${b.source}/${b.source_id}`} className="btn block border border-tomo-navy/15 bg-white py-2.5 text-center text-[13px] text-ink">{t(lang, "mb.d.item")}</Link>
           {(b.status === "pending_auth" || b.status === "authorized") && <BidCancel lang={lang} bidId={b.id} />}

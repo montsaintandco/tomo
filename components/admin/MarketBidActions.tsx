@@ -2,7 +2,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { marketBidAmount } from "@/lib/market-bid";
-import { adminMbError, MB_OP_LABEL, type MbOp } from "@/lib/market-bid-admin";
+import { adminMbError, holdText, MB_OP_LABEL, type MbOp } from "@/lib/market-bid-admin";
 
 // 입찰 대행 운영 조작(M5). POST /api/admin/market-bids(운영자 세션) → DB 0052 전이 + 서버 매입·승인 해제.
 // 낙찰 처리는 매입 금액 미리보기 → 「확인」 → 브라우저 확인창(두 번 확인). 돈이 움직이는 조작(낙찰·못 넣음·운영 취소)은 되돌릴 수 없다
@@ -33,7 +33,11 @@ export default function MarketBidActions({ bid, op }: { bid: Bid; op: MbOp }) {
     if (op === "won") {
       if (!preview) { setMsg("낙찰가를 적어 주세요"); return; }
       if (step === 0) { setStep(1); return; }   // 첫 확인: 미리보기 보여 주기
-      if (!window.confirm(`${bid.code} 낙찰 처리: ${won(preview.total)}을 카드에서 매입하고 대행 주문(T 번호)을 만들어요. 되돌릴 수 없어요. 진행할까요?`)) return;
+      // 미리보기에서 거절될 것이 보이면(승인액 초과·우리 입찰액과 다름) 확인창도 그렇게 말한다(매입한다고 쓰면 혼동)
+      const willHold = preview.total > bid.auth_krw || n("final_price") > bid.cap_jpy || (bid.last_bid_jpy != null && n("final_price") !== bid.last_bid_jpy);
+      if (!window.confirm(willHold
+        ? `${bid.code} 낙찰 처리: 이 값은 거절되고 보류로 바뀌어요(카드 매입 없음). 그래도 기록할까요?`
+        : `${bid.code} 낙찰 처리: ${won(preview.total)}을 카드에서 매입하고 대행 주문(T 번호)을 만들어요. 되돌릴 수 없어요. 진행할까요?`)) return;
     } else if (money || op === "lost") {
       if (!window.confirm(`${bid.code} ${MB_OP_LABEL[op]}: 카드 승인을 해제해요. 되돌릴 수 없어요. 진행할까요?`)) return;
     }
@@ -47,7 +51,7 @@ export default function MarketBidActions({ bid, op }: { bid: Bid; op: MbOp }) {
     const j = await r?.json().catch(() => ({})) ?? {};
     setBusy(false);
     if (!r?.ok && r?.status !== 202) {
-      setMsg(j.status === "hold" ? `거절하고 보류로 바꿨어요: ${j.reason}(매입액 ${won(j.capture_krw ?? 0)} / 승인 ${won(j.auth_krw ?? 0)})` : adminMbError(String(j.error ?? "실패")));
+      setMsg(j.status === "hold" ? `거절하고 보류로 바꿨어요: ${holdText(j.reason)}(매입액 ${won(j.capture_krw ?? 0)} / 승인 ${won(j.auth_krw ?? 0)})` : adminMbError(String(j.error ?? "실패")));
       startTransition(() => router.refresh());
       return;
     }

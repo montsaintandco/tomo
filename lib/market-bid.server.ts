@@ -5,7 +5,7 @@ import type Stripe from "stripe";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { APP_TAG, createSession } from "./stripe";
 
-export type MbSettle = { kind: "mb"; id: string; status: "authorized" | "released" | "unpaid" | "ignored"; code?: string; back: string };
+export type MbSettle = { kind: "mb" | "mbp"; id: string; status: "authorized" | "paid" | "released" | "refunded" | "unpaid" | "ignored"; code?: string; back: string };
 
 type AuthRow = { id: string; bid_id: string; payment_intent_id: string | null; amount_krw: number; status: string; captured_krw: number | null };
 
@@ -54,6 +54,7 @@ export async function openBidCheckout(stripe: Stripe, admin: SupabaseClient, o: 
  */
 export async function settleMarketBidSession(stripe: Stripe, admin: SupabaseClient, s: Stripe.Checkout.Session): Promise<MbSettle | null> {
   const m = s.metadata ?? {};
+  if (m.app === APP_TAG && m.kind === "mbp" && m.id) return settleRepay(stripe, admin, s, m.id);
   if (m.app !== APP_TAG || m.kind !== "mb" || !m.id) return null;
   const id = m.id;
   const back = await backFor(admin, id);
@@ -116,6 +117,50 @@ export async function captureAuth(stripe: Stripe, admin: SupabaseClient, authId:
   }
   if (got.status !== "succeeded") throw new Error(`capture not succeeded ${got.status}`);
   return must(await admin.rpc("market_bid_auth_captured", { p_auth: a.id, p_captured_krw: got.amount_received }), "market_bid_auth_captured") as AuthRow;
+}
+
+/**
+ * 매입 실패(capture_failed) 뒤 고객 재결제(0053, 설계 결정 11). 즉시 결제 창, 금액 = DB 의 capture_krw. 기한(pay_due_at) 안에서만.
+ * 열린 창이 있으면 그대로, 이미 끝난 창이면 확정 경로로. 앞 창은 만료시킨다.
+ */
+export async function openRepayCheckout(stripe: Stripe, admin: SupabaseClient, o: {
+  bid: { id: string; code: string; capture_krw: number; repay_session_id: string | null };
+  name: string; lang: "ko" | "ja"; email?: string | null; origin: string;
+}): Promise<string> {
+  if (o.bid.repay_session_id) {
+    const prev = await stripe.checkout.sessions.retrieve(o.bid.repay_session_id).catch(() => null);
+    if (prev?.status === "open" && prev.url) return prev.url;
+    if (prev?.status === "complete") return `/api/stripe/return?session_id=${prev.id}`;
+  }
+  const s = await createSession(stripe, {
+    kind: "mbp", id: o.bid.id, amount: o.bid.capture_krw, base: o.bid.capture_krw, cur: "KRW", name: o.name, method: "card",
+    lang: o.lang, email: o.email, origin: o.origin, back: `/bids/${o.bid.id}`,
+  });
+  const { data, error } = await admin.rpc("market_bid_repay_open", { p_id: o.bid.id, p_session: s.id, p_amount_krw: o.bid.capture_krw });
+  if (error) {
+    await stripe.checkout.sessions.expire(s.id).catch(() => {});
+    throw new Error(`market_bid_repay_open: ${error.message}`);
+  }
+  for (const sid of ((data as { expire?: string[] })?.expire ?? [])) await stripe.checkout.sessions.expire(sid).catch(() => {});
+  if (!s.url) throw new Error("checkout url missing");
+  return s.url;
+}
+
+/** 재결제 창 완료 → 주문 전환(멱등). DB 가 받지 않은 결제(옛 창·기한 지남·금액 다름)는 전액 환불한다 */
+async function settleRepay(stripe: Stripe, admin: SupabaseClient, s: Stripe.Checkout.Session, id: string): Promise<MbSettle> {
+  const back = `/bids/${id}`;
+  if (s.status !== "complete" || s.payment_status !== "paid") return { kind: "mbp", id, status: "unpaid", code: "OPEN", back };
+  const pi = typeof s.payment_intent === "string" ? s.payment_intent : s.payment_intent?.id;
+  if (!pi) return { kind: "mbp", id, status: "unpaid", code: "NO_PAYMENT_INTENT", back };
+  const r = must(await admin.rpc("market_bid_repaid", { p_session: s.id, p_payment_intent: pi, p_amount_krw: s.amount_total }), "market_bid_repaid") as
+    { ok: boolean; refund?: boolean; reason?: string };
+  if (r.ok) return { kind: "mbp", id, status: "paid", back };
+  if (r.refund) {
+    const done = await stripe.refunds.list({ payment_intent: pi, limit: 1 });
+    if (!done.data.length) await stripe.refunds.create({ payment_intent: pi, metadata: { app: APP_TAG, kind: "mbp", id } }, { idempotencyKey: `mbp_refund_${pi}` });
+    console.error("[mb repay] 받지 않은 결제 환불", { pi, id, reason: r.reason });
+  }
+  return { kind: "mbp", id, status: "refunded", code: (r.reason ?? "VOID").toUpperCase().replace(/\s+/g, "_"), back };
 }
 
 export type WonResult = { status: "ordered" | "capture_failed" | "pending"; orderId?: string; orderCode?: string; error?: string };

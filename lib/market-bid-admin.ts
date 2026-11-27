@@ -85,3 +85,10 @@ export const HOLD_REASON_LABEL: Record<string, string> = {
   "final differs from our bid": "낙찰가가 우리 마지막 입찰액과 다름", "result overdue": "마감 15분 뒤에도 결과 없음",
 };
 export const holdText = (r: string | null | undefined) => (r ? HOLD_REASON_LABEL[r] ?? r : "");
+
+// 사건 기록(market_bid_events.kind) 운영 화면 이름. 모르는 종류는 그대로
+export const MB_EVENT_LABEL: Record<string, string> = {
+  requested: "신청", authorized: "카드 승인", auth_void: "승인 즉시 취소", placed: "입찰됨", rebid: "다시 입찰", outbid: "밀림", hold: "보류",
+  released: "승인 해제", won: "낙찰", captured: "매입", ordered: "주문 생성", lost: "유찰", missed: "못 넣음", cancelled: "취소", expired: "결제창 만료",
+  loss_recorded: "손실 기록", capture_failed: "매입 실패", repaid: "고객 재결제", pay_expired: "재결제 기한 지남",
+};

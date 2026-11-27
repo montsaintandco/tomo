@@ -19,12 +19,13 @@ export async function GET(req: Request) {
 
   let s;
   try { s = await stripe.checkout.sessions.retrieve(sid); } catch { return go("/?pay=fail&code=SESSION"); }
-  if (s.metadata?.kind === "mb") {
-    // 입찰 신청(승인만). 승인되면 상품 화면 ?mb=ok, 해제·대기면 ?mb=fail&code=
+  if (s.metadata?.kind === "mb" || s.metadata?.kind === "mbp") {
+    // 입찰 신청(승인만) · 매입 실패 뒤 재결제(mbp). 신청 상세로: 승인 ?mb=ok, 재결제 ?mb=repaid, 해제·환불·대기 ?mb=fail&code=
     try {
       const m = await settleMarketBidSession(stripe, createAdminSupabase(), s);
       if (!m) return go("/?pay=fail&code=SESSION");
-      return go(m.status === "authorized" ? `${m.back}?mb=ok` : `${m.back}?mb=fail&code=${m.code ?? "FAIL"}`);
+      const q = m.status === "authorized" ? "ok" : m.status === "paid" ? "repaid" : m.status === "released" ? "void" : m.status === "refunded" ? "refunded" : `fail&code=${m.code ?? "FAIL"}`;
+      return go(`${m.back}?mb=${q}`);
     } catch (e) {
       console.error("[stripe return] mb settle error", e instanceof Error ? e.message : e);
       return go("/mypage/notifications?mb=fail&code=CHECKING");

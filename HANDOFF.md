@@ -334,3 +334,8 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=<Supabase 대시보드 → Project Settings → AP
 - 화면: 상세 신청 패널(`components/market-bid/MarketBidPanel.tsx`), `/bids/[id]`(결제 복귀), `/mypage/bids`, 알림 7종 ko/ja — 플래그 `NEXT_PUBLIC_MARKET_AUCTION=1` 빌드에서만. tomo 어드민 `/admin/market-bids`(입찰 필요 줄·입찰됨 기록·낙찰 처리 미리보기 + 두 번 확인·유찰·보류·못 넣음·접수 스위치·한도). 운영 API capability `market_auction`(입찰됨·밀림·보류·유찰 ops, 낙찰·못 넣음·운영 취소·설정 money), counts 4줄. 에어쉽 연결 사이트 「마켓 입찰」 화면.
 - 플래그는 운영 Variables 에 없음(server-image.yml 에 전달 줄만), accepting=false. 켜기 = M6 리허설 + Ren 승인 뒤.
 - Stripe 테스트 모드 로컬 한 바퀴(승인 → 입찰됨 → 낙찰 부분 매입 ₩23,595 → T000027 → 대행 취소 부분 환불 ₩10,000 done, 유찰 → PI canceled) 통과, 시험 데이터 정리.
+### 2026-11-27 해외 마켓 경매 입찰 대행 M6 리허설 (docs/aaa/15 부록 「M6」 — 절차서·켜기/끄기·실제 시험 준비물 포함)
+- 로컬(운영 DB·Stripe 테스트 키) 브라우저 리허설 10항목 전부 통과. 실제 입찰·실결제 없음. 플래그는 운영에 넣지 않았다(accepting=false).
+- 0053_market_bid_repay(운영 적용, 되돌림 리허설 10묶음·결함 주입 4종 뒤): 매입 실패 → 48시간 재결제(kind mbp, 즉시 결제, 금액 = 매입액) → 주문 전환, 받지 않은 결제는 전액 환불, 기한 + 35분 지나면 닫고 입찰 정지. fee_jpy = 0 표 제약.
+- 고침: 플래그 꺼진 화면 실제 404(proxy isFlagOffPath), 패널 배송지 접기, 「경매 · 구경만」 배지, 입찰 수 중복 문구, 제목 번역 저장, 알림 MB 번호, 선점 상품 미리 표시, 결제 복귀 문구(void/refunded), 어드민 확인창·사유·사건 이름.
+- 정리: 시험 신청 8·승인 9·사건 41·정지 1·주문 2·요청 2·알림 25·활동 10·상품 4·outbox 17(전송 전 삭제), MB 번호 1부터.

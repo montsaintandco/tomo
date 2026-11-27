@@ -24,6 +24,10 @@ export async function isMissingDetail(
   return (await opts.exists(DETAIL_TABLE[kind], id)) === false;
 }
 
+// 기능 플래그가 꺼진 화면(빌드 때 박힘) — 페이지 notFound()는 스트리밍 뒤라 200 이 되므로 여기서 404 로 바꾼다
+export const isFlagOffPath = (path: string, env: Record<string, string | undefined> = { mb: process.env.NEXT_PUBLIC_MARKET_AUCTION, au: process.env.NEXT_PUBLIC_AUCTION }) =>
+  (env.mb !== "1" && /^\/(bids|mypage\/bids)(\/|$)/.test(path)) || (env.au !== "1" && /^\/mypage\/auctions(\/|$)/.test(path));
+
 // 공개 브라우징: 홈·상세·검색·프로필은 누구나. 행동(판매·채팅·거래·대행·어드민)만 로그인.
 // /mypage·/cart·/order 는 페이지가 스스로 로그인으로 보낸다(getViewer → redirect).
 export const PROTECTED = ["/sell", "/chat", "/transactions", "/admin", "/proxy", "/onboarding"] as const;
@@ -51,7 +55,7 @@ export async function proxy(req: NextRequest) {
   // (서버 컴포넌트는 쿠키를 못 쓰므로 갱신은 여기 전 경로에 남긴다). 세션 쿠키가 없으면 네트워크 호출 0회.
   if (!isProtectedPath(path)) {
     const { data: { session } } = await supabase.auth.getSession();
-    const missing = await isMissingDetail(path, {
+    const missing = isFlagOffPath(path) || await isMissingDetail(path, {
       rsc: req.headers.get("rsc") === "1", hasSession: !!session,
       exists: async (table, id) => {
         const { data, error } = await supabase.from(table).select("id").eq("id", id).maybeSingle();

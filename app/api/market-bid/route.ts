@@ -6,9 +6,10 @@ import { t } from "@/lib/i18n";
 import { apiError, reqLang } from "@/lib/api-error";
 import { allow } from "@/lib/ratelimit";
 import { loadItem } from "@/lib/market/item";
+import { translateTexts } from "@/lib/translate";
 import { SOURCE_CURRENCY, type MarketSource } from "@/lib/market/types";
 import { bidFacts, marketBidEnabled, mbErrorKey, minCapJpy } from "@/lib/market-bid";
-import { openBidCheckout, releaseAuth } from "@/lib/market-bid.server";
+import { openBidCheckout, openRepayCheckout, releaseAuth } from "@/lib/market-bid.server";
 
 export const runtime = "nodejs";
 
@@ -16,6 +17,7 @@ export const runtime = "nodejs";
 // POST: 마켓을 서버가 다시 읽고(현재가·입찰 수·마감·송료) → request_market_bid(가드·금액은 DB) → 승인만 하는 결제창 URL.
 // body = { source, sourceId, capJpy, requestId(uuid), seenPrice?, ship: { name, phone, postal, address, note, pccc }, addressId? }
 // DELETE: { bidId } 입찰 전(결제창 대기·승인됨)만 취소 → 승인 해제.
+// PUT: { bidId } 매입 실패(capture_failed) 뒤 기한 안 재결제 → 즉시 결제 창 URL(0053). 금액은 DB 의 낙찰 금액(capture_krw).
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const SOURCES: MarketSource[] = ["mercari"];
 const s = (v: unknown, max = 300) => String(v ?? "").trim().slice(0, max);
@@ -56,7 +58,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: t(ui, "mb.err.changed"), code: "mb.err.changed", facts }, { status: 409 });
     }
     // 경매 상품 행: 없으면 만든다. fetched_at=epoch 로 두어 장바구니 주문(15분 신선도)이 이 행을 믿지 못하게 한다(B0 차단 유지)
-    let item = (await admin.from("external_items").select("id").eq("source", source).eq("source_id", sourceId).maybeSingle()).data;
+    let item: { id: string; title_translated?: string | null } | null = (await admin.from("external_items").select("id, title_translated").eq("source", source).eq("source_id", sourceId).maybeSingle()).data;
     if (!item) {
       const ins = await admin.from("external_items").upsert({
         source, source_id: sourceId, url: live.url, title: live.title, price: Math.round(facts.price), currency: SOURCE_CURRENCY[source],
@@ -64,6 +66,11 @@ export async function POST(req: Request) {
       }, { onConflict: "source,source_id", ignoreDuplicates: true }).select("id").maybeSingle();
       item = ins.data ?? (await admin.from("external_items").select("id").eq("source", source).eq("source_id", sourceId).maybeSingle()).data;
       if (!item) return apiError(ui, "mb.err.failed", 503);
+    }
+    // 신청 상세·마이페이지·어드민이 한국어 제목을 보이게 번역을 한 번 저장한다(실패하면 원문 그대로)
+    if (!item.title_translated) {
+      const tr = await translateTexts([live.title], "ja", "ko").catch(() => null);
+      if (tr?.[0]) await admin.from("external_items").update({ title_translated: tr[0] }).eq("id", item.id).is("title_translated", null);
     }
     const ship = body.ship ?? {};
     const { data, error } = await admin.rpc("request_market_bid", {
@@ -90,6 +97,36 @@ export async function POST(req: Request) {
   } catch (e) {
     console.error("[market-bid] checkout", e instanceof Error ? e.message : e);
     return apiError(ui, "pay.err.session", 503);
+  }
+}
+
+export async function PUT(req: Request) {
+  if (!marketBidEnabled()) return NextResponse.json({ error: "not found" }, { status: 404 });
+  const lang = reqLang(req);
+  const supabase = await createServerSupabase();
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) return apiError(lang, "pay.err.unauthorized", 401);
+  const stripe = getStripe();
+  if (!stripe) return apiError(lang, "mb.err.notReady", 503);
+  const body = await req.json().catch(() => ({}));
+  if (!UUID.test(String(body.bidId ?? ""))) return apiError(lang, "mb.err.failed");
+  // 본인 신청만(RLS 세션으로 읽는다). 상태·기한·금액은 market_bid_repay_open 이 다시 본다
+  const { data: bid } = await supabase.from("market_bids").select("id, code, status, capture_krw, repay_session_id, pay_due_at, closed_at").eq("id", body.bidId).maybeSingle();
+  if (!bid || bid.status !== "capture_failed" || bid.closed_at || !bid.capture_krw || !bid.pay_due_at || new Date(bid.pay_due_at).getTime() <= Date.now()) {
+    return apiError(lang, "mb.err.payClosed", 409);
+  }
+  const { data: profile } = await supabase.from("profiles").select("language").eq("id", auth.user.id).single();
+  const ui = profile?.language === "ja" ? "ja" : lang;
+  try {
+    const url = await openRepayCheckout(stripe, createAdminSupabase(), {
+      bid, name: t(ui, "mb.stripeRepayName", { code: bid.code }), lang: ui, email: auth.user.email,
+      origin: process.env.NEXT_PUBLIC_SITE_URL ?? new URL(req.url).origin,
+    });
+    return NextResponse.json({ url });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error("[market-bid] repay", msg);
+    return msg.includes("pay closed") ? apiError(ui, "mb.err.payClosed", 409) : apiError(ui, "pay.err.session", 503);
   }
 }
 

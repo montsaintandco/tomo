@@ -84,7 +84,7 @@ export default function ExternalItemCard({ item, rate, viewerCurrency, lang = "k
 function CardBadge({ item, lang }: { item: ExternalCardItem; lang: Lang }) {
   const b = itemBadge(item);
   if (!b) return null;
-  const tone = b.key === "badge.auction" ? "bg-accent text-white" : b.key === "badge.rank" ? "bg-ink text-white" : "bg-white/95 text-ink shadow-soft";
+  const tone = b.key === "badge.auction" || b.key === "badge.auctionBid" ? "bg-accent text-white" : b.key === "badge.rank" ? "bg-ink text-white" : "bg-white/95 text-ink shadow-soft";
   return (
     <span className={`absolute bottom-1.5 left-1.5 rounded-full px-2 py-0.5 text-[11px] font-bold ${tone}`}>
       {b.key === "badge.rank" ? t(lang, "badge.rank", { n: b.n }) : t(lang, b.key)}

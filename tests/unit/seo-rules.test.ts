@@ -3,7 +3,7 @@ import robots from "../../app/robots";
 import sitemap from "../../app/sitemap";
 import { SITE_URL } from "../../lib/site";
 import { websiteJsonLd, langAlternates, pageMeta, directFeeText } from "../../lib/seo";
-import { isMissingDetail } from "../../proxy";
+import { isFlagOffPath, isMissingDetail } from "../../proxy";
 import { PLATFORM_FEE_RATE } from "../../lib/fees";
 import { GUIDE_C } from "../../lib/guide-content";
 import { HELP_C } from "../../lib/help-faq";
@@ -137,5 +137,18 @@ describe("없는 상세 주소 404 판정(proxy)", () => {
     expect(await isMissingDetail(`/listings/${id}`, { ...base, rsc: true })).toBe(false);
     expect(await isMissingDetail("/listings/abc/edit", base)).toBe(false);
     expect(await isMissingDetail("/guide", base)).toBe(false);
+  });
+});
+
+describe("플래그 꺼진 화면 404(proxy)", () => {
+  it("입찰 대행·경매 마이페이지는 플래그가 없으면 404, 있으면 통과, 다른 경로는 영향 없음", () => {
+    const off = { mb: undefined, au: undefined }, on = { mb: "1", au: "1" };
+    for (const p of ["/bids/00000000-0000-0000-0000-000000000000", "/mypage/bids", "/mypage/auctions"]) {
+      expect(isFlagOffPath(p, off)).toBe(true);
+      expect(isFlagOffPath(p, on)).toBe(false);
+    }
+    expect(isFlagOffPath("/mypage/bidsx", off)).toBe(false);
+    expect(isFlagOffPath("/mypage", off)).toBe(false);
+    expect(isFlagOffPath("/mypage/auctions", { mb: undefined, au: "1" })).toBe(false);
   });
 });

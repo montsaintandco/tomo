@@ -23,10 +23,10 @@ export async function POST(req: Request) {
   if (event.type === "checkout.session.completed" || event.type === "checkout.session.async_payment_succeeded") {
     try {
       const s = event.data.object as Stripe.Checkout.Session;
-      if (s.metadata?.kind === "mb") {
+      if (s.metadata?.kind === "mb" || s.metadata?.kind === "mbp") {
         // 입찰 신청(승인만, 0050). 완료 세션은 payment_status unpaid + PI requires_capture 라 아래 일반 확정과 따로 본다
         const m = await settleMarketBidSession(stripe, createAdminSupabase(), s);
-        if (m && m.status !== "authorized" && m.status !== "unpaid") console.error("[stripe webhook] mb", m);
+        if (m && m.status !== "authorized" && m.status !== "paid" && m.status !== "unpaid") console.error("[stripe webhook] mb", m);
       } else {
         const r = await settleSession(stripe, createAdminSupabase(), s);
         if (r && r.status !== "paid" && r.status !== "unpaid") console.error("[stripe webhook]", r);

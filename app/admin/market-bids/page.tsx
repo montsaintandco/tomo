@@ -6,7 +6,7 @@ import MarketBidActions from "@/components/admin/MarketBidActions";
 import MarketBidSettingsForm from "@/components/admin/MarketBidSettingsForm";
 import { hrefWith } from "@/components/admin/paging";
 import { nowMs } from "@/lib/admin-aging";
-import { holdText, isMbTab, mbAging, mbOpsFor, MB_STATUS_LABEL, MB_TAB_LABEL, MB_TABS } from "@/lib/market-bid-admin";
+import { holdText, isMbTab, mbAging, mbOpsFor, MB_EVENT_LABEL, MB_STATUS_LABEL, MB_TAB_LABEL, MB_TABS } from "@/lib/market-bid-admin";
 import type { MarketBidStatus } from "@/lib/market-bid";
 
 // 해외 마켓 경매 입찰 대행 운영(M5, 0052). 「입찰 필요」 줄(마감 임박순)을 보고 운영자가 메루카리에서 우리 계정으로 직접 입찰한 뒤
@@ -21,7 +21,7 @@ type Item = {
   updated_at: string; closed_at: string | null;
 };
 type Detail = {
-  bid: Item & { rate: number; fee_jpy: number; pccc: string | null; ship_name: string; ship_address: string; created_at: string; authorized_at: string | null };
+  bid: Item & { rate: number; fee_jpy: number; pay_due_at?: string | null; pccc: string | null; ship_name: string; ship_address: string; created_at: string; authorized_at: string | null };
   item: { url: string; title: string; title_translated: string | null; image: string | null } | null;
   user: { id: string; nickname: string | null; country: string } | null;
   auths: { id: string; status: string; amount_krw: number; captured_krw: number | null; payment_intent_id: string | null; capture_before: string | null; release_reason: string | null; created_at: string }[];
@@ -138,6 +138,7 @@ function BidDetail({ d, closeHref, now }: { d: Detail; closeHref: string; now: n
         {d.order && row("대행 주문", <Link href={`/admin/orders?q=${d.order.code}`} className="a-link">{d.order.code} · {d.request?.status ?? d.order.status}</Link>)}
         {b.hold_reason && row("보류 사유", holdText(b.hold_reason))}
         {b.fail_reason && row("종료 사유", b.fail_reason)}
+        {b.status === "capture_failed" && row("고객 재결제", b.closed_at ? "기한 지남 · 입찰 정지됨(상품은 우리가 보유)" : b.pay_due_at ? `${fmtDate(b.pay_due_at)}까지(고객 신청 화면에서 결제)` : "—")}
         {row("배송지", `${b.ship_name} · ${b.ship_address}`)}
       </section>
       {ops.length > 0 && (
@@ -159,7 +160,7 @@ function BidDetail({ d, closeHref, now }: { d: Detail; closeHref: string; now: n
         <ul className="px-3 py-2 text-[12px]">
           {d.events.map((e) => (
             <li key={e.id} className="border-b border-[var(--a-border)] py-1.5 last:border-b-0">
-              <span className="a-faint tnum mr-1.5">{fmtDate(e.at)}</span><b>{e.kind}</b>{e.amount_jpy != null && ` · ${money(e.amount_jpy, "JPY")}`} · {e.actor ?? "시스템"}
+              <span className="a-faint tnum mr-1.5">{fmtDate(e.at)}</span><b>{MB_EVENT_LABEL[e.kind] ?? e.kind}</b>{e.amount_jpy != null && ` · ${money(e.amount_jpy, "JPY")}`} · {e.actor ?? "시스템"}
               {typeof e.evidence.note === "string" && e.evidence.note && <span className="a-muted"> · {e.evidence.note}</span>}
               {typeof e.evidence.reason === "string" && <span className="a-muted"> · {holdText(e.evidence.reason)}</span>}
             </li>

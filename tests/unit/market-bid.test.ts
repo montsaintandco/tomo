@@ -282,3 +282,36 @@ describe("M3 낙찰 → 매입 → 주문(settleWon)", () => {
     expect(calls.some((c) => c.name.startsWith("rpc."))).toBe(false);
   });
 });
+
+describe("M6 매입 실패 뒤 재결제(mbp, 0053)", () => {
+  const paid = (meta: Record<string, string>, extra: Record<string, unknown> = {}) =>
+    ({ id: "cs_test_mbp", status: "complete", payment_status: "paid", payment_intent: "pi_mbp", amount_total: 23595, metadata: meta, ...extra }) as unknown as Stripe.Checkout.Session;
+  const withRefunds = (s: Stripe, calls: Call[], existing: unknown[] = []) => Object.assign(s, { refunds: {
+    list: (...args: unknown[]) => { calls.push({ name: "refund.list", args }); return Promise.resolve({ data: existing }); },
+    create: (...args: unknown[]) => { calls.push({ name: "refund.create", args }); return Promise.resolve({ id: "re_1" }); },
+  } });
+  it("결제 완료 → market_bid_repaid(세션·PI·금액) → paid, 환불 없음", async () => {
+    const calls: Call[] = [];
+    const r = await settleMarketBidSession(withRefunds(fakeStripe({}, calls), calls), fakeAdmin({}, { market_bid_repaid: { ok: true, order_id: "o1" } }, calls), paid({ app: APP_TAG, kind: "mbp", id: "b1" }));
+    expect(r).toMatchObject({ kind: "mbp", status: "paid", back: "/bids/b1" });
+    expect(calls.find((c) => c.name === "rpc.market_bid_repaid")?.args[0]).toEqual({ p_session: "cs_test_mbp", p_payment_intent: "pi_mbp", p_amount_krw: 23595 });
+    expect(calls.some((c) => c.name === "refund.create")).toBe(false);
+  });
+  it("DB 가 받지 않은 결제(기한 지남 등)는 전액 환불, 이미 환불이 있으면 다시 안 보낸다", async () => {
+    const calls: Call[] = [];
+    const r = await settleMarketBidSession(withRefunds(fakeStripe({}, calls), calls), fakeAdmin({}, { market_bid_repaid: { ok: false, refund: true, reason: "closed" } }, calls), paid({ app: APP_TAG, kind: "mbp", id: "b1" }));
+    expect(r).toMatchObject({ status: "refunded", code: "CLOSED" });
+    const cr = calls.find((c) => c.name === "refund.create");
+    expect(cr?.args[0]).toMatchObject({ payment_intent: "pi_mbp" });
+    expect(cr?.args[1]).toEqual({ idempotencyKey: "mbp_refund_pi_mbp" });
+    const calls2: Call[] = [];
+    await settleMarketBidSession(withRefunds(fakeStripe({}, calls2), calls2, [{ id: "re_0" }]), fakeAdmin({}, { market_bid_repaid: { ok: false, refund: true, reason: "closed" } }, calls2), paid({ app: APP_TAG, kind: "mbp", id: "b1" }));
+    expect(calls2.some((c) => c.name === "refund.create")).toBe(false);
+  });
+  it("결제 전 세션·다른 앱은 아무것도 안 한다", async () => {
+    const calls: Call[] = [];
+    expect(await settleMarketBidSession(fakeStripe({}, calls), fakeAdmin({}, {}, calls), paid({ app: APP_TAG, kind: "mbp", id: "b1" }, { payment_status: "unpaid", status: "open" }))).toMatchObject({ status: "unpaid" });
+    expect(await settleMarketBidSession(fakeStripe({}, calls), fakeAdmin({}, {}, calls), paid({ app: "airship", kind: "mbp", id: "b1" }))).toBeNull();
+    expect(calls).toEqual([]);
+  });
+});
