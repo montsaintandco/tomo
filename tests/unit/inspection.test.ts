@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { matchOps } from "../../lib/ops-api";
+import { matchOps, opsCodeQ } from "../../lib/ops-api";
 import { centerMatchTag, centerShipLines, newPhotoPath, photoPathOk } from "../../lib/inspection";
 import { parseOrderCode } from "../../lib/order-code";
 
@@ -32,6 +32,15 @@ describe("센터 발송 안내", () => {
   it("상자에 적힌 태그에서 TOMO 를 떼면 주문 번호로 읽힌다(센터 화면 검색)", () => {
     expect(parseOrderCode(centerMatchTag("TX000123").replace(/^TOMO\s*/i, ""))).toEqual({ kind: "tx", code: "TX000123" });
     expect(parseOrderCode(centerMatchTag("T000045").replace(/^TOMO\s*/i, ""))).toEqual({ kind: "po", code: "T000045" });
+  });
+});
+
+describe("운영 API 번호 검색", () => {
+  it("상자 태그·짧은 입력·uuid", () => {
+    expect(opsCodeQ("TOMO TX000123")).toBe("TX000123");
+    expect(opsCodeQ("tomo t45")).toBe("T000045");
+    expect(opsCodeQ(id)).toBe(id);
+    expect(opsCodeQ("")).toBe("");
   });
 });
 

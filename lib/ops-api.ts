@@ -9,6 +9,7 @@ import { auctionAging, isAuctionTab } from "@/lib/auction-admin";
 import { isMbTab, mbAging, MB_OPS, MB_OP_SCOPE } from "@/lib/market-bid-admin";
 import { runMbOp, saveMbSettings } from "@/lib/market-bid-ops";
 import { getStripe } from "@/lib/stripe";
+import { parseOrderCode } from "@/lib/order-code";
 import { INSPECTION_BUCKET, INSPECTION_MAX_PHOTOS, isInspectionKind, loadInspections, newPhotoPath, photoPathOk, type InspectionKind } from "@/lib/inspection";
 
 // 운영 API v1 경로 표. 경로·요청·응답 형태는 docs/aaa/12 9장. 조작은 모두 기존 RPC·lib/admin-actions.ts 를 운영자 세션으로 부른다.
@@ -230,10 +231,17 @@ const mbOpRoutes: Route[] = MB_OPS.map((op) => ({ method: "POST", path: `market-
     run: async (sb) => runMbOp(sb!, ctx.admin, getStripe(), id, op, ctx.body, String(ctx.body.expected_status)) });
 } }));
 
-async function orderIdsByCode(admin: SupabaseClient, q: string): Promise<string[] | null> {
-  if (!q) return null;
+/** 검색어 → uuid 또는 정확한 번호. 상자에 적힌 「TOMO TX000123」·「t12」 같은 입력도 받는다(T4) */
+export const opsCodeQ = (q: string) => {
+  const s = q.trim().replace(/^TOMO\s*/i, "");
+  return UUID_RE.test(s) ? s : (parseOrderCode(s)?.code ?? s.toUpperCase());
+};
+
+async function orderIdsByCode(admin: SupabaseClient, raw: string): Promise<string[] | null> {
+  if (!raw) return null;
+  const q = opsCodeQ(raw);
   if (UUID_RE.test(q)) return [q];
-  const { data } = await admin.from("proxy_orders").select("id").eq("code", q.toUpperCase());
+  const { data } = await admin.from("proxy_orders").select("id").eq("code", q);
   return (data ?? []).map((r) => r.id as string);
 }
 
@@ -276,8 +284,8 @@ const txList = (fixed?: { status?: string[]; center?: boolean }): Handler => asy
     if (!c) return opsFail(404, "unknown center (SEOUL|NARITA|KR|JP)");
     q = q.eq("center", c);
   }
-  const code = str(url.searchParams.get("q"), 60);
-  if (code) q = UUID_RE.test(code) ? q.eq("id", code) : q.eq("code", code.toUpperCase());
+  const code = opsCodeQ(str(url.searchParams.get("q"), 60));
+  if (code) q = UUID_RE.test(code) ? q.eq("id", code) : q.eq("code", code);
   const r = await q;
   if (r.error) return opsFail(502, `db: ${r.error.message}`);
   return opsOk({ items: (r.data ?? []).map((x) => txAging(country(x as { center: string | null }))), total: r.count });
