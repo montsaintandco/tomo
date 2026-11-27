@@ -4,6 +4,7 @@ import { translateListing } from "@/lib/translate";
 import { isListingCategory } from "@/lib/categories";
 import { apiError, reqLang } from "@/lib/api-error";
 import { loadPriceLock, PRICE_LOCK_ERR } from "../price-lock";
+import { auctionEditBlocked } from "@/lib/auction-server";
 
 const METHODS = ["direct","shipping","both"];
 const CONDITIONS = ["new","like_new","good","fair","poor"];
@@ -35,6 +36,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   if (!current || current.seller_id !== auth.user.id) return NextResponse.json({ error: "not found" }, { status: 404 });
   // 경매 상품(U3): 가격·거래 방법·국제 거래·제안은 경매 함수만 바꾼다(0046 잠금 트리거). 폼이 보낸 값 대신 지금 값을 그대로 쓴다
   const auctionLock = current.sale_type === "auction";
+  if (auctionLock && await auctionEditBlocked(supabase, id)) return apiError(reqLang(req), "auction.err.editBids", 409);
   if (!auctionLock && price !== current.price) {
     const lock = await loadPriceLock(supabase, id, current.status);
     if (lock) return apiError(reqLang(req), PRICE_LOCK_ERR[lock], 409);

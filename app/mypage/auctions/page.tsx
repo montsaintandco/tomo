@@ -50,6 +50,7 @@ export default async function MyAuctions(props: { searchParams: Promise<{ tab?: 
             t(lang, `auction.st.${a.status}`), t(lang, "auction.bids", { n: a.bid_count }),
             ...(a.status === "live" ? [timeLeftShort(lang, leftOf(a.ends_at))] : []),
             ...(choice ? [t(lang, "auction.my.needChoice")] : []),
+            ...(a.listings?.sale_type === "fixed" ? [t(lang, "auction.my.converted")] : []),
           ].join(" · ");
           return <Row key={a.id} href={`/listings/${a.listing_id}`} image={a.listings?.images?.[0]} title={a.listings?.title ?? ""}
             sub={sub} right={f(a.final_price ?? a.current_price, a.currency)} />;
@@ -60,6 +61,10 @@ export default async function MyAuctions(props: { searchParams: Promise<{ tab?: 
     const { data } = await supabase.rpc("my_auction_bids", { p_limit: 100 });
     const all = (Array.isArray(data) ? data : []) as MyBid[];
     const list = tab === "won" ? all.filter((a) => a.won) : all.filter((a) => a.status === "live");
+    // 남의 상품이라 내 언어 번역 제목이 있으면 그걸 보인다(상세·카드와 같은 제목)
+    const tr = list.length ? (await supabase.from("listing_translations").select("listing_id, title")
+      .eq("language", lang).in("listing_id", list.map((a) => a.listing_id))).data ?? [] : [];
+    const titleOf = (a: MyBid) => tr.find((x) => x.listing_id === a.listing_id)?.title ?? a.title;
     body = list.length ? (
       <div className="flex flex-col gap-2">
         {list.map((a) => {
@@ -70,7 +75,7 @@ export default async function MyAuctions(props: { searchParams: Promise<{ tab?: 
             : `${t(lang, a.leading ? "auction.my.leading" : "auction.my.outbid")} · ${t(lang, "auction.maxLabel")} ${f(a.my_max, a.currency)} · ${timeLeftShort(lang, leftOf(a.ends_at))}`;
           return (
             <div key={a.id} className={payNeeded ? "rounded-card ring-2 ring-tomo-rose/40" : ""}>
-              <Row href={`/listings/${a.listing_id}`} image={a.image ?? undefined} title={a.title} sub={sub}
+              <Row href={`/listings/${a.listing_id}`} image={a.image ?? undefined} title={titleOf(a)} sub={sub}
                 right={f(a.final_price ?? a.current_price, a.currency)}
                 extra={payNeeded ? (
                   <Link href={`/listings/${a.listing_id}`} className="btn shrink-0 bg-tomo-coral-deep px-3 py-2 text-[12px] text-white">{t(lang, "act.pay")}</Link>

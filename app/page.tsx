@@ -53,7 +53,11 @@ export default async function Home(props: { searchParams: Promise<{ tab?: string
     .limit(feedLimit);
 
   if (cat) query = query.eq("category", cat);
-  if (auctionOnly) query = query.eq("sale_type", "auction").eq("status", "active");
+  // 「경매만」은 마감 임박순 — 진행 중 경매를 마감 순으로 뽑아 그 순서대로 보인다
+  const endingIds = auctionOnly
+    ? ((await supabase.from("auctions").select("listing_id").eq("status", "live").order("ends_at").limit(feedLimit)).data ?? []).map((a) => a.listing_id as string)
+    : [];
+  if (auctionOnly) query = query.eq("sale_type", "auction").eq("status", "active").in("id", endingIds.length > 0 ? endingIds : ["00000000-0000-0000-0000-000000000000"]);
   if (tab === "local" && !viewer.guest) {
     query = query.eq("country", viewer.country).eq("region", viewer.region).in("trade_method", ["direct", "both"]);
   } else if (tab === "travel") {
@@ -74,9 +78,12 @@ export default async function Home(props: { searchParams: Promise<{ tab?: string
     query = query.in("id", ids.length > 0 ? ids : ["00000000-0000-0000-0000-000000000000"]);
   }
 
-  const { data: listings, error: feedError } = localNeedsLogin || hub
+  const { data: feedRows, error: feedError } = localNeedsLogin || hub
     ? { data: [], error: null }
     : await query;
+  const listings = auctionOnly && feedRows
+    ? [...feedRows].sort((a, b) => endingIds.indexOf(a.id) - endingIds.indexOf(b.id))
+    : feedRows;
 
   // 허브용 데이터 — 국내 판매중 최신 12 + 상대국 직거래 가능 최신 8 (병렬)
   const [hubOwn, hubTravel] = hub
@@ -186,7 +193,7 @@ export default async function Home(props: { searchParams: Promise<{ tab?: string
         {!feedError && !localNeedsLogin && (listings ?? []).length > 0 && (
           <div className="mb-5 hidden items-baseline justify-between md:flex">
             <h2 className="text-lg font-bold text-ink">
-              {q ? t(lang, "feed.results", { q }) : tab === "local" ? t(lang, "feed.localTitle") : tab === "travel" ? t(lang, "feed.travelTitle") : cat ? listingCategoryName(lang, cat) : t(lang, "feed.latest")}
+              {q ? t(lang, "feed.results", { q }) : tab === "local" ? t(lang, "feed.localTitle") : tab === "travel" ? t(lang, "feed.travelTitle") : cat ? listingCategoryName(lang, cat) : auctionOnly ? t(lang, "auction.sortEnding") : t(lang, "feed.latest")}
             </h2>
             <p className="text-xs text-ink-soft">{t(lang, "feed.legend")}</p>
           </div>

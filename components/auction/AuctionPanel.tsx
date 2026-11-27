@@ -285,7 +285,8 @@ export default function AuctionPanel({ initial, lang, listingStatus, foreign, co
           <p className="mt-1.5 text-[11px] text-ink-faint">{t(lang, "auction.payHint")}</p>
         </div>
       )}
-      {s.viewer.tx_id && (
+      {/* 미결제로 끝난 경매의 tx_id 는 취소된 마지막 결제창이다 — 판매자가 「거래 보기」로 취소된 거래를 보고 헷갈리지 않게 결제 대기·결제 완료일 때만 */}
+      {s.viewer.tx_id && (s.status === "awaiting_payment" || s.status === "paid") && (
         <Link href={`/transactions/${s.viewer.tx_id}`} className="press mt-3 inline-block text-[13px] font-bold text-accent underline underline-offset-2">{t(lang, "auction.viewTx")}</Link>
       )}
 

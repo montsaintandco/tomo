@@ -3,6 +3,20 @@ import { company } from "@/lib/company";
 import { CUSTOMS_FREE_LIMIT, CUSTOMS_RATE_ABOVE, CUSTOMS_RATE_BELOW, PROXY_SHIPPING_ESTIMATE_JPY, PROXY_SHIPPING_ESTIMATE_KRW } from "@/lib/fees";
 import { t } from "@/lib/i18n";
 import { directFeeText } from "@/lib/seo";
+import { auctionEnabled } from "@/lib/auction";
+
+// 자체 상품 경매 요약(기능이 켜졌을 때만). 규칙 정본: docs/aaa/14 A절, 화면 문구: lib/help-faq
+const AUCTION_SECTION = `## Auctions (경매 / オークション)
+- 판매자는 상품을 「바로 판매」 또는 「경매」(1·3·5·7일)로 올린다. 경매는 택배 거래만, 가격 제안 없음.
+- 입찰: 상한가 입찰 한 가지. 상한까지 필요한 만큼만 자동으로 올라가고 상한가는 비공개. 같은 금액이면 먼저 넣은 사람이 1등. 입찰은 취소할 수 없고, 입찰 단계에서는 돈이 나가지 않는다.
+- 마감 5분 안에 현재가가 오르면 마감이 5분 늦어난다.
+- 낙찰 뒤 48시간 안에 결제(낙찰가 + 국제 거래면 국제 배송비). 미결제면 낙찰 취소·경고 1회, 90일 안 2회면 30일 입찰 제한, 3회면 입찰 정지.
+- 수수료는 일반 판매와 같다(판매자 낙찰가의 10%). 결제 뒤 배송·정산은 일반 에스크로 거래와 같다.
+- Seller-listed auctions: proxy (max) bidding only, 5-minute extension when the price rises in the last 5 minutes, payment within 48 hours after winning, unpaid wins get a strike (2 in 90 days = 30-day bid ban, 3 = bidding suspended), shipping only, bids cannot be cancelled, same 10% seller fee.
+- 自社出品オークション: 上限額入札のみ、終了5分前以内の価格上昇で5分延長、落札後48時間以内に支払い、未払いは警告(90日以内2回で30日入札制限、3回で停止)、配送取引のみ、入札取消不可、手数料は通常と同じ。
+- 해외 마켓(메루카리·야후옥션) 경매 상품은 구매대행하지 않는다(구경만).
+
+`;
 
 // llms.txt — AI 검색 엔진용 서비스 요약. 사실만, 화면(/guide·/help·/about)과 같은 수치·문장. 숫자는 lib/fees 상수, 사업자 정보는 env가 있을 때만
 export const revalidate = 86400;
@@ -39,7 +53,7 @@ ${op}
 - 直接取引 (日本語): ${directFeeText("ja")}
 - 환율은 결제 시점 기준.
 
-## Shipping
+${auctionEnabled() ? AUCTION_SECTION : ""}## Shipping
 - 결제 후 약 10~18일: 판매자 발송 4~7일, 센터 검수 1~2일, 국제배송·통관 4~7일.
 - 검수 센터: 서울(한국 상품), 나리타(일본 상품).
 

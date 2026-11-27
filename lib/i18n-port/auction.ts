@@ -39,6 +39,8 @@ export const AUCTION_I18N = {
   "auction.err.payClosed": ["결제 기한이 지났어요", "お支払い期限を過ぎました"],
   "auction.err.notRelistable": ["지금은 다시 경매하거나 전환할 수 없어요", "現在は再出品・切り替えができません"],
   "auction.err.locked": ["경매 중인 상품은 가격·거래 방법·상태를 바꿀 수 없어요", "オークション中の商品は価格・取引方法・状態を変更できません"],
+  "auction.err.editBids": ["입찰이 들어온 경매는 내용을 고칠 수 없어요. 고칠 점이 있으면 문의로 알려 주세요", "入札が入ったオークションは内容を変更できません。修正が必要な場合はお問い合わせください"],
+  "auction.edit.back": ["상품으로 돌아가기", "商品に戻る"],
   "auction.err.useAuction": ["경매 상품이에요. 입찰로 참여해 주세요", "オークション商品です。入札でご参加ください"],
   "auction.err.tooMany429": ["요청이 너무 많아요. 잠시 후 다시 시도해 주세요", "リクエストが多すぎます。しばらくしてからお試しください"],
   "auction.err.off": ["경매 기능은 아직 열리지 않았어요", "オークション機能はまだ公開されていません"],
@@ -148,4 +150,6 @@ export const AUCTION_I18N = {
   "auction.my.todoPay": ["낙찰 결제가 필요해요 {n}건", "落札のお支払いが必要です {n}件"],
   "auction.my.todoChoice": ["끝난 경매를 다시 올리거나 전환해 주세요 {n}건", "終了したオークションを再出品または切り替えてください {n}件"],
   "auction.filter": ["경매만", "オークションのみ"],
+  "auction.my.converted": ["일반 판매로 전환함", "通常販売に切り替え済み"],
+  "auction.sortEnding": ["마감 임박순", "終了が近い順"],
 } as const satisfies Record<string, readonly [string, string]>;

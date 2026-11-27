@@ -28,3 +28,9 @@ export function rpcFail(lang: Lang, message: string) {
   const k = auctionErrorKey(message);
   return apiError(lang, k, auctionErrorStatus(k));
 }
+// 입찰이 들어온(또는 마감돼 결제 대기인) 경매 상품은 제목·설명·사진도 못 고친다(설계 A-1, 낙찰 뒤 내용 바꿔치기 방지)
+export async function auctionEditBlocked(supabase: Awaited<ReturnType<typeof createServerSupabase>>, listingId: string) {
+  const { data } = await supabase.from("auctions").select("status, bid_count")
+    .eq("listing_id", listingId).in("status", ["live", "awaiting_payment"]).maybeSingle();
+  return !!data && (data.status === "awaiting_payment" || data.bid_count > 0);
+}

@@ -1,6 +1,8 @@
 // 지원 봇 'AI 답변' 공용 정의 — 서버(app/api/support-ai)와 화면(SupportBot)이 같이 본다. 에어쉽 src/lib/support-ai.ts 이식.
 // 모델은 Vercel AI Gateway(서버 전용 AI_GATEWAY_API_KEY). 답변 근거는 사이트에 이미 있는 안내 문구뿐이다(support-ai.server).
 
+import { auctionEnabled } from "./auction";
+
 export const AI_LIMITS = {
   /** 고객 질문 1건 최대 글자 */
   maxChars: 500,
@@ -35,6 +37,7 @@ export const AI_LINKS: Record<string, string> = {
   "/mypage/support": "내 문의(상담원 답변 확인)",
   "/mypage/edit": "프로필 편집(거주 국가 KR/JP)",
   "/mypage/addresses": "배송지 주소록",
+  ...(auctionEnabled() && { "/mypage/auctions": "경매(입찰 중·낙찰 결제·내 경매)" }),
 };
 
 export type AiSegment = { text: string } | { text: string; to: string };
