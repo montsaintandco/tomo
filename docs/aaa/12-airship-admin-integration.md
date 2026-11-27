@@ -390,3 +390,4 @@
 | 멱등 | 시험 계정 문의에 같은 request_id 답변 2회 → 실행 1회(활동 기록 1건), 두 번째 `replayed: true`. 기대 상태 다름 409 |
 | 1안 | 시험 운영자로 `admin_set_user`(시험 계정 정지·해제), 문의 답변 → 활동 기록 `admin_id` 가 그 운영자. RPC 수정 없음 |
 | 훅 재전송 | SQL 리허설(실패 → 간격 → 재전송 → 성공) + 단위 테스트(5xx·네트워크 오류는 실패, 2xx 만 성공). 실제 받는 쪽은 A1 뒤 확인 |
+| 운영(4d5a412) | 서명된 `GET /api/ops/meta`·`counts` 200, health 200(version 4d5a412), 틀린 서명 401, 연결 없는 운영자 403, 버전 헤더 없음 400, 크론 경로 비밀값 없음 401, pg_cron 호출 200 `skipped`(훅 env 없음). Actions server-image #23·db-tests #14·smoke #14 성공 |
