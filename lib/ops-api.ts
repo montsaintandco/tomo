@@ -229,7 +229,7 @@ const mbSettingsPost: Handler = async (ctx) => runOp(ctx, { action: "market_bids
 const mbOpRoutes: Route[] = MB_OPS.map((op) => ({ method: "POST", path: `market-bids/:id/${op}`, need: MB_OP_SCOPE[op], h: async (ctx, [id]) => {
   const nf = uuidOr404(id); if (nf) return nf;
   return runOp(ctx, { action: `market_bids.${op}`, target: id, current: statusOf(ctx.admin, "market_bids", id),
-    run: async (sb) => runMbOp(sb!, ctx.admin, getStripe(), id, op, ctx.body, String(ctx.body.expected_status)) });
+    run: async (sb) => runMbOp(sb!, ctx.admin, getStripe(), id, op, ctx.body, String(ctx.body.expected_status), { workerClosed: op === "executor" }) });
 } }));
 
 // ── 0055 워커 연결(에어쉽 입찰 워커 다리 작업 전용, 시스템 주체·ops). 서버 권한(service_role)으로 DB 함수를 부른다. 매입은 여기서 못 한다 ──

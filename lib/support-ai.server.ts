@@ -17,6 +17,7 @@ import { TX_STATUS, PROXY_STATUS } from "./notifications";
 import { formatPrice, type Currency } from "./currency";
 import { AI_LINKS, AGENT_MARK, PERSONA, type AiTurn } from "./support-ai";
 import { auctionEnabled } from "./auction";
+import { marketBidEnabled } from "./market-bid";
 
 const GATEWAY_URL = "https://ai-gateway.vercel.sh/v1/chat/completions";
 /** 기본 모델(에어쉽과 같음). SUPPORT_AI_MODEL 로 바꿀 수 있다 */
@@ -155,7 +156,8 @@ function personaPrompt(lang: Lang): string {
     `- 고객센터 운영시간: ${company.hours ?? "준비 중"}. AI 상담원은 언제든 답하고, 담당자 답변은 운영시간에 이어져요.`,
     "- 하는 일: ① 한국·일본 개인 간 중고거래(TOMO 안전결제 — 구매자가 받았다고 확인한 뒤 판매자에게 정산) ② 상대국 마켓 대행구매(한국 고객은 메루카리·야후 플리마, 일본 고객은 당근·중고나라 상품을 대신 사서 센터 검수 후 배송) ③ 여행 직거래(만나서 거래).",
     "- 결제: 카드 결제(Stripe 결제창). 금액은 원화로 청구되고 엔화 상품은 결제 시점 환율로 환산돼요. 무통장 입금은 안내하지 않아요.",
-    ...(auctionEnabled() ? ["- 경매: 판매자가 경매로 올린 TOMO 상품은 상한가를 넣어 입찰해요(규칙은 아래 FAQ 경매 항목). 해외 마켓(메루카리·야후옥션) 경매 상품은 지원하지 않아요(구경만)."] : []),
+    ...(auctionEnabled() ? [`- 경매: 판매자가 경매로 올린 TOMO 상품은 상한가를 넣어 입찰해요(규칙은 아래 FAQ 경매 항목). ${marketBidEnabled() ? "메루카리 경매 상품은 입찰 대행으로 신청할 수 있고(아래 FAQ 메루카리 경매 항목), 야후옥션 경매 상품은 지원하지 않아요(구경만)." : "해외 마켓(메루카리·야후옥션) 경매 상품은 지원하지 않아요(구경만)."}`] : []),
+    ...(!auctionEnabled() && marketBidEnabled() ? ["- 메루카리 경매 상품은 입찰 대행으로 신청할 수 있어요(아래 FAQ 메루카리 경매 항목). 야후옥션 경매 상품은 지원하지 않아요(구경만)."] : []),
     "- TOMO 에 없는 서비스(예: 고객이 직접 산 물건을 받아 보내 주는 배송대행)는 하지 않는다고 분명히 말하고, 다른 회사를 추천하지 않아요.",
   ].join("\n");
   return `# 너는 누구

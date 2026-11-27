@@ -10,7 +10,7 @@ const OPEN = ["authorized", "placed", "outbid", "hold", "won", "capture_failed"]
 export async function loadMbPanel(supabase: SupabaseClient, viewer: ViewerOrGuest, sourceId: string):
   Promise<Pick<MbPanelProps, "rate" | "settings" | "addresses" | "mine" | "taken">> {
   const [set, rate, addr, mine, taken] = await Promise.all([
-    supabase.from("market_bid_settings").select("accepting, cap_max_jpy, min_lead_minutes, max_lead_hours, fee_jpy").maybeSingle(),
+    supabase.from("market_bid_settings").select("accepting, cap_max_jpy, min_lead_minutes, max_lead_hours, fee_jpy, executor").maybeSingle(),
     supabase.from("exchange_rates").select("rate").eq("pair", "JPY_KRW").maybeSingle(),
     viewer.id ? supabase.from("addresses").select("id, label, name, phone, postal, address, note, pccc, is_default")
       .eq("user_id", viewer.id).order("is_default", { ascending: false }) : Promise.resolve({ data: [] }),

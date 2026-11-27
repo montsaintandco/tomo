@@ -14,7 +14,7 @@ export const metadata = { robots: { index: false }, ...(marketBidEnabled() ? { t
 type Bid = {
   id: string; code: string; status: MarketBidStatus; source: string; source_id: string; cap_jpy: number; auth_krw: number; last_bid_jpy: number | null;
   is_top: boolean | null; ends_at: string; final_price_jpy: number | null; captured_krw: number | null; order_id: string | null; created_at: string;
-  capture_krw: number | null; pay_due_at: string | null; closed_at: string | null;
+  capture_krw: number | null; pay_due_at: string | null; closed_at: string | null; executor: string; armed_at: string | null;
   item: { title: string; title_translated: string | null; images: string[] | null } | null;
 };
 const LIVE: MarketBidStatus[] = ["pending_auth", "authorized", "placed", "outbid", "hold", "won"];
@@ -29,7 +29,7 @@ export default async function BidPage(props: { params: Promise<{ id: string }>; 
   if (!viewer) redirect(`/login?next=/bids/${id}`);
   const lang: Lang = viewer.language;
   const { data } = await supabase.from("market_bids")
-    .select("id, code, status, source, source_id, cap_jpy, auth_krw, last_bid_jpy, is_top, ends_at, final_price_jpy, captured_krw, order_id, created_at, capture_krw, pay_due_at, closed_at, item:external_items!market_bids_external_item_id_fkey(title, title_translated, images)")
+    .select("id, code, status, source, source_id, cap_jpy, auth_krw, last_bid_jpy, is_top, ends_at, final_price_jpy, captured_krw, order_id, created_at, capture_krw, pay_due_at, closed_at, executor, armed_at, item:external_items!market_bids_external_item_id_fkey(title, title_translated, images)")
     .eq("id", id).maybeSingle();
   const b = data as unknown as Bid | null;
   if (!b) notFound();
@@ -52,7 +52,7 @@ export default async function BidPage(props: { params: Promise<{ id: string }>; 
   return (
     <main className="mx-auto flex max-w-md flex-col gap-3 p-4 pb-10">
       {LIVE.includes(b.status) && <BidRefresh />}
-      {sp.mb === "ok" && <p role="status" className="rounded-card bg-tomo-navy/5 p-3 text-[13px]">{t(lang, "mb.d.payOk")}</p>}
+      {sp.mb === "ok" && <p role="status" className="rounded-card bg-tomo-navy/5 p-3 text-[13px]">{t(lang, b.executor === "airship" ? "mb.d.payOkWorker" : "mb.d.payOk")}</p>}
       {sp.mb === "void" && <p role="alert" className="rounded-card bg-tomo-rose/10 p-3 text-[13px] text-tomo-rose">{t(lang, "mb.d.payVoid")}</p>}
       {sp.mb === "refunded" && <p role="alert" className="rounded-card bg-tomo-rose/10 p-3 text-[13px] text-tomo-rose">{t(lang, "mb.d.repayRefunded")}</p>}
       {sp.mb === "repaid" && <p role="status" className="rounded-card bg-tomo-navy/5 p-3 text-[13px]">{t(lang, "mb.d.repayOk")}</p>}
@@ -76,7 +76,10 @@ export default async function BidPage(props: { params: Promise<{ id: string }>; 
           {repayOpen && <BidRepay lang={lang} bidId={b.id} label={t(lang, "mb.d.repay", { krw: krw(b.capture_krw ?? 0) })} />}
           {o && <Link href={`/order/${o.id}`} className="btn block bg-tomo-coral-deep py-3 text-center text-sm text-white">{t(lang, "mb.d.order", { code: o.code })}</Link>}
           <Link href={`/global/${b.source}/${b.source_id}`} className="btn block border border-tomo-navy/15 bg-white py-2.5 text-center text-[13px] text-ink">{t(lang, "mb.d.item")}</Link>
-          {(b.status === "pending_auth" || b.status === "authorized") && <BidCancel lang={lang} bidId={b.id} />}
+          {/* 워커 건은 입찰 준비(에어쉽 접수) 뒤 취소 불가(DB 0055 mb: cancel closed) — 버튼 대신 안내 */}
+          {b.status === "authorized" && b.executor === "airship" && b.armed_at
+            ? <p className="rounded-card bg-tomo-navy/5 p-3 text-[12px] text-ink-soft">{t(lang, "mb.d.armed")}</p>
+            : (b.status === "pending_auth" || b.status === "authorized") && <BidCancel lang={lang} bidId={b.id} />}
         </div>
         <p className="mt-3 text-[11px] text-ink-soft">{t(lang, "mb.panel.rule")}</p>
       </section>

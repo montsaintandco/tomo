@@ -12,7 +12,7 @@ export const isMbOp = (v: unknown): v is MbOp => typeof v === "string" && (MB_OP
 
 /** expected = 화면에서 본 상태(필수 아님: 운영 API 는 runOp 가 먼저 대조한다). Stripe 가 없으면 매입·해제를 못 하므로 낙찰·해제는 503 */
 export async function runMbOp(sb: SupabaseClient, admin: SupabaseClient, stripe: Stripe | null, id: string, op: MbOp,
-  b: Record<string, unknown>, expected: string | null): Promise<ActionResult> {
+  b: Record<string, unknown>, expected: string | null, opts: { workerClosed?: boolean } = {}): Promise<ActionResult> {
   const bad = (error: string, status = 400) => ({ status, body: { error } });
   const rpc = async (fn: string, args: Record<string, unknown>) => {
     const r = await sb.rpc(fn, args);
@@ -20,6 +20,12 @@ export async function runMbOp(sb: SupabaseClient, admin: SupabaseClient, stripe:
   };
   if ((op === "won" || op === "lost" || op === "missed" || op === "cancel") && !stripe) return bad("STRIPE_KEYS_MISSING", 503);
 
+  // 0056 수동 전환(워커 → 수동). workerClosed = 운영 API(에어쉽 화면 통로가 에어쉽 행을 먼저 닫음)만 true. tomo 어드민은 접수 전 건만 된다
+  if (op === "executor") {
+    if (b.executor != null && b.executor !== "manual") return bad("executor must be manual");
+    const r = await rpc("market_bid_set_executor", { p_id: id, p_to: "manual", p_note: txt(b.note ?? b.reason), p_expected: expected, p_worker_closed: !!opts.workerClosed });
+    return "err" in r ? bad(r.err!) : { status: 200, body: { ok: true, status: r.data!.status, executor: r.data!.executor, again: !!r.data!.again } };
+  }
   if (op === "placed") {
     const amount = int(b.amount);
     const ends = txt(b.ends_at, 40);

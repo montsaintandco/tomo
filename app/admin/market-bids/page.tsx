@@ -151,7 +151,7 @@ export default async function AdminMarketBidsPage(props: { searchParams: Promise
 
 function BidDetail({ d, closeHref, now }: { d: Detail; closeHref: string; now: number }) {
   const b = d.bid;
-  const ops = mbOpsFor(b.status, !!b.placed_at);
+  const ops = mbOpsFor(b.status, !!b.placed_at, { executor: b.executor, armed: !!b.armed_at });
   const row = (k: string, v: React.ReactNode) => (
     <div className="flex items-baseline justify-between gap-3 border-b border-[var(--a-border)] py-1.5 last:border-b-0">
       <span className="a-muted shrink-0">{k}</span><span className="min-w-0 break-words text-right">{v}</span>
@@ -166,7 +166,7 @@ function BidDetail({ d, closeHref, now }: { d: Detail; closeHref: string; now: n
         {row("고객", d.user ? <Link href={`/admin/users/${d.user.id}`} className="a-link">{d.user.nickname ?? "—"}</Link> : "—")}
         {row("상한가 · 우리 마지막 입찰", `${money(b.cap_jpy, "JPY")} · ${b.last_bid_jpy != null ? money(b.last_bid_jpy, "JPY") : "입찰 전"}`)}
         {row("마감", `${fmtDate(b.ends_at)} (${left(b.ends_at, now)})`)}
-        {row("실행자", <>{MB_EXECUTOR_LABEL[b.executor ?? "manual"] ?? b.executor}{b.executor === "airship" && <span className="a-faint ml-1 text-[11px]">수동 전환은 다음 작업(T2)</span>}</>)}
+        {row("실행자", <>{MB_EXECUTOR_LABEL[b.executor ?? "manual"] ?? b.executor}{b.executor === "airship" && !b.placed_at && <span className="a-faint ml-1 text-[11px]">{b.armed_at ? "수동 전환은 에어쉽 「마켓 입찰」 화면에서(에어쉽 행을 먼저 닫음)" : "아래 「수동 전환」으로 바꿀 수 있어요"}</span>}</>)}
         {b.executor === "airship" && row("워커 접수 확인", b.armed_at ? `${fmtDate(b.armed_at)} · 에어쉽 행 ${b.executor_ref ?? "—"}` : "아직 없음(마감 30분 전까지 없으면 자동 취소)")}
         {b.worker_final_jpy != null && row("워커 낙찰가(확인 전)", `${money(b.worker_final_jpy, "JPY")} · 구매 기한 ${buyDue(b.ends_at)}`)}
         {row("일본 내 송료(신청 때)", money(b.domestic_ship_jpy, "JPY"))}

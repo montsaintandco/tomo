@@ -16,24 +16,32 @@ export const MB_STATUS_LABEL: Record<MarketBidStatus, string> = {
 };
 
 /** 조작 종류와 운영 API 권한. 입찰됨·밀림·유찰·보류 = ops, 낙찰 매입·승인 해제 강제(못 넣음·운영 취소)·설정 = money */
-export const MB_OPS = ["placed", "outbid", "hold", "lost", "won", "missed", "cancel"] as const;
+export const MB_OPS = ["placed", "outbid", "hold", "lost", "won", "missed", "cancel", "executor"] as const;
 export type MbOp = (typeof MB_OPS)[number];
 export const MB_OP_SCOPE: Record<MbOp, OpsScope> = {
-  placed: "ops", outbid: "ops", hold: "ops", lost: "ops", won: "money", missed: "money", cancel: "money",
+  placed: "ops", outbid: "ops", hold: "ops", lost: "ops", won: "money", missed: "money", cancel: "money", executor: "ops",
 };
 export const MB_OP_LABEL: Record<MbOp, string> = {
-  placed: "입찰됨 기록", outbid: "밀림", hold: "보류", lost: "유찰 처리", won: "낙찰 처리", missed: "못 넣음(승인 해제)", cancel: "운영 취소(승인 해제)",
+  placed: "입찰됨 기록", outbid: "밀림", hold: "보류", lost: "유찰 처리", won: "낙찰 처리", missed: "못 넣음(승인 해제)", cancel: "운영 취소(승인 해제)", executor: "수동 전환(워커 → 수동)",
 };
 
-/** 상태별로 할 수 있는 조작(DB 0052 허용 전이와 같다). 못 넣음·운영 취소는 입찰이 한 번도 안 들어간 건만 */
-export function mbOpsFor(status: string, placed: boolean): MbOp[] {
-  switch (status) {
-    case "authorized": return ["placed", "hold", "missed", "cancel"];
-    case "placed": return ["placed", "outbid", "won", "lost", "hold"];
-    case "outbid": return ["placed", "won", "lost", "hold"];
-    case "hold": return placed ? ["placed", "won", "lost"] : ["placed", "missed", "cancel"];
-    default: return [];
-  }
+/**
+ * 상태별로 할 수 있는 조작(DB 0052 허용 전이와 같다). 못 넣음·운영 취소는 입찰이 한 번도 안 들어간 건만.
+ * 0056 워커 건(입찰 전): 「수동 전환」. 접수 확인(armed)된 워커 건은 에어쉽 행이 살아 있어 tomo 에서 바로 바꾸거나 닫지 못한다
+ * (에어쉽 「마켓 입찰」 화면의 수동 전환이 에어쉽 행을 먼저 닫는다) → 수동 전환·못 넣음·운영 취소·입찰됨 기록을 숨긴다
+ */
+export function mbOpsFor(status: string, placed: boolean, w?: { executor?: string | null; armed?: boolean }): MbOp[] {
+  const base: MbOp[] = (() => {
+    switch (status) {
+      case "authorized": return ["placed", "hold", "missed", "cancel"];
+      case "placed": return ["placed", "outbid", "won", "lost", "hold"];
+      case "outbid": return ["placed", "won", "lost", "hold"];
+      case "hold": return placed ? ["placed", "won", "lost"] : ["placed", "missed", "cancel"];
+      default: return [];
+    }
+  })();
+  if (w?.executor !== "airship" || placed || (status !== "authorized" && status !== "hold")) return base;
+  return w.armed ? base.filter((op) => op === "hold") : [...base.filter((op) => op !== "placed"), "executor"];
 }
 
 export type MbAgingRow = { status: string; ends_at: string; updated_at?: string | null; closed_at?: string | null; request_status?: string | null; auth_expires_at?: string | null };
@@ -80,6 +88,10 @@ const ADMIN_ERR: [string, string][] = [
   ["mb: not worker", "워커 실행 건이 아니에요"],
   ["mb: armed by other", "다른 작업이 이미 접수한 건이에요"],
   ["mb: bad health", "워커 건강 신호 형식이 맞지 않아요"],
+  // 0056
+  ["mb: worker armed", "워커가 접수한 건이에요. 에어쉽 「마켓 입찰」 화면에서 「수동 전환」(에어쉽 입찰 행을 먼저 닫음)한 뒤 처리하세요"],
+  ["mb: already placed", "입찰이 이미 들어간 건이라 워커가 끝까지 맡아요"],
+  ["mb: bad executor", "워커 → 수동 전환만 할 수 있어요"],
 ];
 export function adminMbError(msg: string): string {
   return ADMIN_ERR.find(([k]) => msg.includes(k))?.[1] ?? msg;
@@ -125,5 +137,5 @@ export const holdText = (r: string | null | undefined) => (r ? HOLD_REASON_LABEL
 export const MB_EVENT_LABEL: Record<string, string> = {
   requested: "신청", authorized: "카드 승인", auth_void: "승인 즉시 취소", placed: "입찰됨", rebid: "다시 입찰", outbid: "밀림", hold: "보류",
   released: "승인 해제", won: "낙찰", captured: "매입", ordered: "주문 생성", lost: "유찰", missed: "못 넣음", cancelled: "취소", expired: "결제창 만료",
-  loss_recorded: "손실 기록", armed: "워커 접수 확인", capture_failed: "매입 실패", repaid: "고객 재결제", pay_expired: "재결제 기한 지남",
+  loss_recorded: "손실 기록", armed: "워커 접수 확인", capture_failed: "매입 실패", repaid: "고객 재결제", pay_expired: "재결제 기한 지남", executor: "실행자 전환",
 };

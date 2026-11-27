@@ -449,3 +449,93 @@ money 경로 거절(시스템 주체가 `won`·`missed`·`cancel`·`settings` �
 - R: 켜는 순서 ① 에어쉽 `site_bid_bridge.enabled=true`(그 순간부터 다음 분에 가져오기 시작, 지금 tomo 에 authorized·airship 건 0) ② tomo 건강 신호 ok 확인 ③ tomo `executor='airship'` ④ `accepting=true`. 끄는 순서는 8절. 크론을 지우면 5분 뒤 tomo 가 워커 실행자 접수를 자동 중단한다.
 - R4(끝난 경매)·S1 전에: upsert 는 마감 10분 이내를 `bad_ends_at` 으로 거절하고 tomo 에 failed(못 넣음)를 보낸다 — 「끝난 경매로 R4」 는 에어쉽 행이 만들어지지 않는다. R4 는 마감이 10분 넘게 남은 상품(입찰 0건이면 워커가 바로 넣으므로 입찰 있는 상품)으로 하거나, 롤백 블록에서만 한다.
 - 연결 행이 있는 동안 워커 일일 한도는 에어쉽 고객 건과 합산된다(A1 그대로).
+
+## 13. T2·R 기록 (2026-11-27)
+
+범위: 수동 전환·워커 건 고객 취소 틈·실행자 기본값·고객 문구·구매 기한 재알림(T2), 실입찰 없는 리허설(R). 에어쉽 스위치 `site_bid_bridge.enabled=false`, tomo `accepting=false` 그대로. 워커 코드·env·재시작 없음.
+
+### 13.1 한 일
+
+| 항목 | tomo | 에어쉽 |
+|---|---|---|
+| 수동 전환 | `0056` `market_bid_set_executor(id, 'manual', 메모, expected, worker_closed)`: authorized·hold, 입찰 전(placed_at 없음)만. 접수 확인(armed)된 건은 `worker_closed=true`(운영 API = 에어쉽 통로)일 때만. 운영 API `POST /market-bids/:id/executor`(ops). 어드민 상세 「수동 전환(워커 → 수동)」 — 접수 전 워커 건만, 접수된 건은 「에어쉽 마켓 입찰 화면에서」 안내 | 마켓 입찰 상세 「수동 전환」 버튼. `connected-ops` 통로가 `site_bid_cancel` 을 먼저 부르고 못 닫으면(placed·firing·제출 발사) 409, tomo 를 부르지 않는다. `ops-routes.ts` executor=ops |
+| 접수된 워커 건 닫기 막기 | 트리거 `market_bid_worker_close_guard`: 접수된 워커 건(authorized·hold)을 사람이 「못 넣음」·「운영 취소」로 바꾸면 `mb: worker armed`(먼저 수동 전환). 서버 권한(다리 작업 결과 전달)은 그대로. 어드민 버튼도 접수된 워커 건은 「보류」만 | — |
+| 고객 취소 틈 | (2번 판정 13.2) | `20261128120000_site_bids_stage`: 접수 전 행 = `bidding`(워커가 안 읽음), armed 성공 뒤 `site_bid_release` → `requested` |
+| 실행자 기본값 | 운영 설정 `executor='airship'`(23:05 KST, `admin_market_bid_settings` 로 — 활동 기록 남음). 접수 켜기 시도 → `mb: worker down`(에어쉽 스위치 꺼짐 = 「bidding switched off」) | — |
+| 고객 문구 | 패널: 실행자 airship 이면 「마감 직전(약 2분 전)에 입찰, 입찰 0건 상품은 신청 직후 첫 입찰」(`mb.panel.workerNote`), 동의 1 「입찰 준비가 끝난 뒤(보통 몇 분 뒤) 취소 불가」(`agree1w`), 동의 2 「낙찰을 확인한 뒤 낙찰가 기준 금액만 결제」(수동·워커 공통, 「자동」 삭제). 상세: 결제 복귀 문구 `payOkWorker`, 접수된 워커 건은 취소 버튼 대신 `mb.d.armed`. 패널 설정 읽기에 executor 추가 | — |
+| FAQ·llms·AI 상담원 | `docs/aaa/15-market-bid-faq.patch` 적용 후 워커 방식으로 고침(5문항 ko/ja: 마감 직전 입찰·0건 상품 즉시, 낙찰 확인 뒤 결제, 취소는 입찰 준비 전·마감 30분 전까지, 유찰 = 승인 해제·청구 없음, 낙찰 보장 아님, 접수 중지 때 「지금은 입찰 신청을 받지 않아요」). 플래그(`marketBidEnabled`)일 때만. 환율 가산·전체 한도 문구 없음(단위 테스트로 막음). 패치 파일은 적용했으므로 삭제 | — |
+| 구매 기한 재알림 | 크론: 낙찰 확인 대기(보류 worker_won)·매입 중(won)·미구매 주문(ordered + 대행 paid)에 `bid.to_buy_due` — 마감 뒤 2·12·20시간 구간마다 1회(구간 지난 단계는 건너뜀, 크론이 멈췄다 와도 한 번만). 이벤트 종류·`OPS_EVENT_TYPES` 추가 | 이벤트 이름 표 `bid.to_buy_due` |
+
+### 13.2 틈 판정(고객 취소 직후 워커 입찰)
+
+| 경우 | 고치기 전 | 고친 뒤 |
+|---|---|---|
+| 마감 2분 전 창(예약 입찰) | 틈 없음. 고객 취소는 마감 30분 전까지, 대조가 1분 안에 requested 행을 닫는다 | 같음 |
+| **입찰 0건(마감 미정) 상품** | **틈 있음.** 워커는 `urgency.firstNow`(requested·placed_at 없음·화면 마감 null)면 행을 읽자마자(3초 주기) 첫 입찰을 넣는다. 다리 작업은 upsert(requested) 뒤에 armed 를 부른다. armed 가 무응답이거나 upsert~armed 사이에 고객이 취소하면 tomo 는 취소·승인 해제, 에어쉽 행은 이미 placed → 닫을 수 없다(승인 없는 입찰, 낙찰 시 우리 돈) | **막음.** upsert 는 `bidding`(메루카리 루프 조회 조건 밖). armed 가 성공해야 `requested` 로 연다. armed 뒤에는 tomo 가 고객 취소를 막는다(0055). armed 409(고객 먼저 취소) → bidding 행을 닫는다(입찰 0). armed 무응답 → bidding 그대로, 다음 분 재시도 |
+| 운영자가 tomo 에서 접수된 워커 건을 취소·못 넣음 | 틈 있음(에어쉽 행은 다음 분 대조까지 살아 있음, 그 사이 마감 2분 창이면 입찰) | DB 트리거로 거절. 에어쉽 화면 「수동 전환」(에어쉽 행 먼저 닫음) 뒤에만 |
+| 수동 전환 순서 | — | 에어쉽 통로: site_bid_cancel(requested·bidding 만) → tomo executor. tomo 어드민: 접수 전 건만(에어쉽 행이 있어도 bidding = 안 읽힘, 다음 분 armed 409 로 닫힘) |
+
+### 13.3 리허설 결과(R, 실입찰 없음)
+
+| 번호 | 방법 | 결과 |
+|---|---|---|
+| R① tomo | `docs/aaa/16-t2-rehearsal.sql` 을 0056 본문 뒤에 붙여 운영 DB 한 번(끝에서 예외 → 전부 롤백). 시험 행 MBT90n 8개 | 적용 전·뒤 모두 `TESTRESULT PASS A1~A8 B1~B6 C1~C3 D1~D5 E1 E2 F1`. A 수동 전환(접수 전 됨·again·접수된 건 거절/통로면 됨·메모 필수·manual 만·들어간 건 거절·권한), B 접수된 워커 건 운영 취소·못 넣음 거절·고객 취소 거절·접수 전 고객 취소 됨·서버 권한 못 넣음 됨·수동 전환 뒤 운영 취소 됨, C armed → 입찰됨 → 워커 낙찰 = 보류 worker_won·매입 없음 → 운영자 낙찰 처리 = won·매입액 ≤ 승인액 → 매입 기록(T 번호 생성은 시퀀스 때문에 생략, T1 에서 확인), D 구매 기한 재알림(2시간·12시간·지난 구간 건너뜀·결과 없는 건 제외·21시간에 처음 본 건 :20 하나만), E 실행자 airship·접수 켜기 거절, F 건강 신호 6분 전으로 당김 → 접수 자동 중단 `auto: worker signal lost`·bid.worker_down 1건 |
+| R① 결함 주입 | 접수 확인 검사 제거 → FAIL A3. 재알림 구간을 (2,24)(12,24)(20,24) 로 → FAIL D5(3건). 트리거 제거 → 예외(PASS 아님) | 검출 |
+| R① 에어쉽 | `docs/sql/20261128120000_site_bids_stage.rollback-test.sql` + 단위 검사 `site-bids.check.ts`(가짜 tomo 응답: armed 성공·무응답·409, release 실패 복구) | PASS(적용 전·뒤). 결함 주입(upsert=requested) FAIL 1·2·7. 단위 결함 주입 2종 검출 |
+| R② 건강 신호 끊김 | 에어쉽 크론은 멈추지 않고 tomo 롤백 블록에서 `received_at` 을 6분 전으로(F1) | 접수 자동 중단·이벤트 1회·크론 두 번에도 1회 |
+| R③ 스위치 꺼짐 호출 0 | 에어쉽 `net._http_response`(13:39~14:06 UTC 27회 전부 `rows:0`·`imported:[]`·`tomo:skip`), tomo `ops_requests` 시스템 주체 기록 0. 훅은 단위 검사 6(스위치 꺼짐 = 호출 0) | 0회 |
+
+운영 DB 영향: 롤백 블록이라 시험 행·이벤트 0(적용 뒤 MBT 0, 연결 행 0 확인). 시퀀스 소비: tomo `market_bid_code_seq` 는 code 를 직접 넣어 안 씀, ops_outbox id 등 bigserial 몇 개 건너뜀.
+
+### 13.4 켜기·끄기 절차서
+
+켜기(순서 지킴, 한 단계마다 확인):
+
+1. 에어쉽 어드민 「경매 설정」 메루카리 입찰 켜짐, 워커 생존 신호 5분 안(`/admin/sites/tomo/market-bids` 맨 위 줄).
+2. 에어쉽 `site_bid_bridge.enabled=true`(SQL: `update site_bid_bridge set enabled = true, updated_at = now() where site = 'tomo';`). 그 순간부터 다음 분에 tomo authorized·airship 건을 가져온다(지금 0건).
+3. 1~2분 기다린다. tomo 어드민 `/admin/market-bids` 워커 상태 「정상」, `market_bid_worker_health.ok=true`.
+4. tomo 실행자 = 워커 입찰인지 본다(이미 airship).
+5. tomo 어드민 설정에서 접수 켜기. 워커가 비정상이면 `mb: worker down` 으로 거절된다.
+6. 패널 문구가 「마감 직전에 입찰해요」로 보이는지 본다(lang= 쓰지 않는다).
+
+끄기(사고·점검):
+
+1. tomo 접수 끄기(새 신청 중단). 진행 중 건은 그대로 간다.
+2. 필요하면 tomo 실행자 = 수동(새 신청부터 수동, 워커 건강과 접수가 분리).
+3. 에어쉽 `site_bid_bridge.enabled=false`(새 가져오기 중단. 진행 중 행의 결과 전달·대조는 계속, 건강 신호도 계속 — 꺼진 동안 tomo 는 비정상으로 본다).
+4. 진행 중 건은 건별로 에어쉽 마켓 입찰 화면 「수동 전환」. 입찰이 들어간 건은 워커가 끝까지 맡는다(못 닫음).
+5. 크론(`site_bids_bridge`)은 지우지 않는다. 지우면 5분 뒤 접수 자동 중단·결과 전달 멈춤.
+
+되돌리기(코드·DB): 진행 연결 행 0 확인 → 에어쉽 `20261128120000_site_bids_stage.down.sql` → tomo 0056 아래 주석 순서.
+
+### 13.5 실입찰 시험 S 준비물·관찰표(Ren 승인 뒤)
+
+준비물:
+
+| 항목 | 값 |
+|---|---|
+| 선행 | 15번 시험 1(실카드 승인 → 취소)이 3D Secure 에서 멈춰 있음 → 먼저 통과해야 한다. 시험 고객 계정·카드 |
+| 상품 조건 | 메루카리 경매, 送料込み, 마감 10분~96시간 안(실제로는 3시간~96시간: tomo 접수 마감 180분 전, 에어쉽 upsert 는 10분 안 거절), **입찰이 이미 1건 이상 있는 상품**(0건이면 신청 직후 바로 입찰 — S 첫 회는 마감 직전 입찰을 보기 위해 피한다), 현재가 2,000엔 안팎 |
+| 상한가 | 최소 금액(현재가 + 100엔). 에어쉽 cap 30,000엔 이하 |
+| 예상 금액 | 낙찰되면 상품 약 2,100엔 + 국제배송·통관 예상 → 패널 「최대 결제액」(원화). 메루카리 결제는 우리 계정으로 약 2,100엔 |
+| 낙찰 시 | 운영자 1명이 마감 뒤 24시간 안에 ① 메루카리 낙찰자 표기 확인 ② tomo 「낙찰 처리」(매입) ③ 입찰한 그 계정으로 메루카리 구매 ④ 대행 주문 구매완료. 재알림 bid.to_buy_due 가 2·12·20시간에 온다 |
+| 유찰 시 | 다리 작업이 lost 전달 → tomo 승인 해제(청구 없음) → 고객 알림 mb_lost |
+
+관찰표(누가 보나: 메인 세션):
+
+| 시점 | 볼 것 | 기대 |
+|---|---|---|
+| 신청 직후 1분 | tomo 신청 authorized·executor airship → armed_at·executor_ref | 에어쉽 행 생성 → `bidding` → `requested`(armed 뒤). 행 user_id = 시스템 회원, deposit 0 |
+| 신청 직후 | 고객 상세 화면 | 접수 전 취소 버튼, 접수 뒤 「입찰 준비가 끝났어요」 |
+| 마감 2분 전 | `auction_bid_fires` 발사·증거 사진, 워커 상태 | ok=true 발사, 행 placed |
+| +1분 | tomo placed·last_bid_jpy = 발사 금액 | 고객 알림 mb_placed |
+| 마감 뒤 | 에어쉽 won/lost, tomo 보류 worker_won 또는 lost(승인 해제) | 낙찰이면 mb_won_check, 카드 매입 없음 |
+| 낙찰 확인 | 운영자 메루카리 화면 확인 → 낙찰 처리 | 매입액 ≤ 승인액, T 번호, mb_won |
+| 계속 | 에어쉽 `orders`·`voucher_ledger`·고객 알림 증가 0, auction_bids 고객 행 불변 | 0 |
+
+### 13.6 확인 못 한 것
+
+- 화면 눈 확인(visual): tomo 어드민 수동 전환 버튼·고객 패널·상세 문구, 에어쉽 마켓 입찰 상세 버튼. 빌드·타입·단위 테스트까지만.
+- 에어쉽 통로의 수동 전환 실제 호출(진행 중 워커 건 0이라 운영에서 누를 대상 없음). 순서는 코드(connected-ops)·DB 리허설(A4·site_bid_cancel)로만 확인.
+- 고객 취소 → 다음 분 대조로 bidding 행이 닫히는 것의 운영 실측(스위치 꺼짐이라 행이 없음). 단위 검사 13 으로만.
+- 워커가 `bidding` 상태 연결 행을 「바쁨」으로 보는 영향: 자체 업데이트·수취연락이 그 행 마감 30분 안이면 쉰다(입찰 영향 없음, bidding 은 길어야 1~2분).

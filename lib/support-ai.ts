@@ -2,6 +2,7 @@
 // 모델은 Vercel AI Gateway(서버 전용 AI_GATEWAY_API_KEY). 답변 근거는 사이트에 이미 있는 안내 문구뿐이다(support-ai.server).
 
 import { auctionEnabled } from "./auction";
+import { marketBidEnabled } from "./market-bid";
 
 export const AI_LIMITS = {
   /** 고객 질문 1건 최대 글자 */
@@ -38,6 +39,7 @@ export const AI_LINKS: Record<string, string> = {
   "/mypage/edit": "프로필 편집(거주 국가 KR/JP)",
   "/mypage/addresses": "배송지 주소록",
   ...(auctionEnabled() && { "/mypage/auctions": "경매(입찰 중·낙찰 결제·내 경매)" }),
+  ...(marketBidEnabled() && { "/mypage/bids": "메루카리 경매 입찰 신청(진행 상태·입찰 전 취소)" }),
 };
 
 export type AiSegment = { text: string } | { text: string; to: string };

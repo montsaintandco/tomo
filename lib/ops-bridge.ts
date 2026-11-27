@@ -9,7 +9,7 @@ export const OPS_EVENT_TYPES = ["order.paid", "order.cancel_requested", "dispute
   "refund.pending", "payout.requested", "report.opened", "errors.spike", "cron.failed",
   "auction.ended", "auction.unpaid", "auction.cancelled", "auction.flagged",   // auction.* = 0048
   "bid.requested", "bid.hold", "bid.won", "bid.missed", "bid.capture_failed", "bid.auth_expiring",   // bid.* = 0052 입찰 대행
-  "bid.to_place_due", "bid.worker_down"] as const;   // 0055 워커 연결: 재알림(마감 2·1시간 전·접수 확인 10분 지연), 워커 이상으로 접수 자동 중단
+  "bid.to_place_due", "bid.worker_down", "bid.to_buy_due"] as const;   // 0055 워커 연결: 재알림(마감 2·1시간 전·접수 확인 10분 지연), 워커 이상으로 접수 자동 중단
 export const CENTER_COUNTRY: Record<string, "KR" | "JP"> = { SEOUL: "KR", NARITA: "JP" };
 export const MAX_SKEW_S = 300;
 

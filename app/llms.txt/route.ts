@@ -4,6 +4,7 @@ import { CUSTOMS_FREE_LIMIT, CUSTOMS_RATE_ABOVE, CUSTOMS_RATE_BELOW, PROXY_SHIPP
 import { t } from "@/lib/i18n";
 import { directFeeText } from "@/lib/seo";
 import { auctionEnabled } from "@/lib/auction";
+import { marketBidEnabled } from "@/lib/market-bid";
 
 // 자체 상품 경매 요약(기능이 켜졌을 때만). 규칙 정본: docs/aaa/14 A절, 화면 문구: lib/help-faq
 const AUCTION_SECTION = `## Auctions (경매 / オークション)
@@ -14,10 +15,18 @@ const AUCTION_SECTION = `## Auctions (경매 / オークション)
 - 수수료는 일반 판매와 같다(판매자 낙찰가의 10%). 결제 뒤 배송·정산은 일반 에스크로 거래와 같다.
 - Seller-listed auctions: proxy (max) bidding only, 5-minute extension when the price rises in the last 5 minutes, payment within 48 hours after winning, unpaid wins get a strike (2 in 90 days = 30-day bid ban, 3 = bidding suspended), shipping only, bids cannot be cancelled, same 10% seller fee.
 - 自社出品オークション: 上限額入札のみ、終了5分前以内の価格上昇で5分延長、落札後48時間以内に支払い、未払いは警告(90日以内2回で30日入札制限、3回で停止)、配送取引のみ、入札取消不可、手数料は通常と同じ。
-- 해외 마켓(메루카리·야후옥션) 경매 상품은 구매대행하지 않는다(구경만).
+${marketBidEnabled() ? "- 해외 마켓 경매: 메루카리 경매는 입찰 대행(아래 Mercari auction bidding), 야후옥션 경매는 구매대행하지 않는다(구경만)." : "- 해외 마켓(메루카리·야후옥션) 경매 상품은 구매대행하지 않는다(구경만)."}
 
 `;
 
+// 메루카리 경매 입찰 대행 요약(플래그가 켜졌을 때만). 규칙 정본: docs/aaa/15, 화면 문구: lib/help-faq MARKET_BID_FAQ
+const MARKET_BID_SECTION = `## Mercari auction bidding (메루카리 경매 입찰 대행 / メルカリオークション入札代行)
+- 한국 회원이 메루카리 경매 상품 화면에서 최대 입찰가(30,000엔까지)를 넣고 신청하면 TOMO 계정으로 대신 입찰한다. 입찰은 마감 직전(약 2분 전)에 넣고, 입찰이 아직 없는 상품은 신청을 받은 뒤 바로 첫 입찰을 넣는다. 일본 내 송료 포함(送料込み) 출품만, 마감 4일 전부터 마감 3시간 전까지, 진행 중 신청은 한 사람당 1건. 신청을 받지 않는 동안에는 상품 화면에 「지금은 입찰 신청을 받지 않아요」가 보인다.
+- 신청 때는 카드 승인만 한다(청구 없음, 카드만). 낙찰되면 TOMO 가 메루카리에서 낙찰을 확인한 뒤 낙찰가 기준 실제 금액(상품가·국제 배송비·통관 예상)만 한 번 결제하고 최대 결제액을 넘지 않는다. 유찰·입찰 못 함·입찰 전 취소면 승인을 취소한다(청구 없음).
+- 고객 취소는 입찰 준비가 끝나기 전(보통 신청 뒤 몇 분 안)이고 마감 30분 전까지다. 낙찰은 보장하지 않는다. 낙찰되면 일반 구매대행 주문으로 이어진다.
+- Mercari auctions: Korean members set a max bid (up to 30,000 JPY) and TOMO bids on their behalf from its own account, shortly before the end (about 2 minutes before; listings with no bids yet get the first bid right after the request). Card authorization only at request; charged only after TOMO confirms the win on Mercari (never above the authorized maximum); authorization released if lost. Shipping-included listings only, requests from 4 days to 3 hours before the end, one open request per member, cancellable only until bid preparation completes (usually within minutes of the request) and no later than 30 minutes before the end, winning not guaranteed. While requests are paused the item page says so. Yahoo! Auctions: browse only.
+
+`;
 // llms.txt — AI 검색 엔진용 서비스 요약. 사실만, 화면(/guide·/help·/about)과 같은 수치·문장. 숫자는 lib/fees 상수, 사업자 정보는 env가 있을 때만
 export const revalidate = 86400;
 
@@ -53,7 +62,7 @@ ${op}
 - 直接取引 (日本語): ${directFeeText("ja")}
 - 환율은 결제 시점 기준.
 
-${auctionEnabled() ? AUCTION_SECTION : ""}## Shipping
+${auctionEnabled() ? AUCTION_SECTION : ""}${marketBidEnabled() ? MARKET_BID_SECTION : ""}## Shipping
 - 결제 후 약 10~18일: 판매자 발송 4~7일, 센터 검수 1~2일, 국제배송·통관 4~7일.
 - 검수 센터: 서울(한국 상품), 나리타(일본 상품).
 

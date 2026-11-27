@@ -17,13 +17,14 @@ export type MbPanelProps = {
   info: { price: number; bids: number; endsAt: string };
   shipJpy: number | null;            // 출품자 부담 0, 모름 null(신청 불가)
   rate: number | null;               // exchange_rates JPY_KRW(DB 가 신청 때 고정하는 값과 같은 표)
-  settings: { accepting: boolean; cap_max_jpy: number; min_lead_minutes: number; max_lead_hours: number; fee_jpy: number } | null;
+  settings: { accepting: boolean; cap_max_jpy: number; min_lead_minutes: number; max_lead_hours: number; fee_jpy: number; executor?: string | null } | null;
   guest: boolean; country: string | null; addresses: Addr[]; mine: { id: string } | null; taken?: boolean; now: number;
 };
 
 export default function MarketBidPanel(p: MbPanelProps) {
   const { lang } = p;
   const left = new Date(p.info.endsAt).getTime() - p.now;
+  const worker = p.settings?.executor === "airship";   // 워커 입찰(docs/aaa/16): 마감 직전 입찰, 취소는 입찰 준비 전까지
   const min = minCapJpy(p.info.price, p.info.bids);
   const first = p.addresses.find((a) => a.is_default) ?? p.addresses[0];
   const [cap, setCap] = useState(String(min));
@@ -115,7 +116,7 @@ export default function MarketBidPanel(p: MbPanelProps) {
       )}
       <p className="text-[12px] text-ink-soft">{t(lang, "mb.panel.cardOnly")}</p>
       <p className="text-[12px] text-ink-soft">{t(lang, "mb.panel.rule")}</p>
-      <p className="text-[11px] text-ink-soft">{t(lang, "mb.panel.manualNote")}</p>
+      <p className="text-[11px] text-ink-soft">{t(lang, worker ? "mb.panel.workerNote" : "mb.panel.manualNote")}</p>
 
       {/* 저장된 배송지가 있으면 한 줄 요약으로 접는다(390px 화면에서 패널이 너무 길어서). 빈 칸이 있으면 제출 때 펼친다(onInvalidCapture) */}
       <details open={!first} className="rounded-card bg-tomo-navy/5 px-3 py-2.5">
@@ -147,7 +148,7 @@ export default function MarketBidPanel(p: MbPanelProps) {
       </label>
 
       <div className="flex flex-col gap-1.5">
-        {(["mb.panel.agree1", "mb.panel.agree2", "mb.panel.agree3"] as const).map((k, i) => (
+        {([worker ? "mb.panel.agree1w" : "mb.panel.agree1", "mb.panel.agree2", "mb.panel.agree3"] as const).map((k, i) => (
           <label key={k} className="flex items-start gap-2 text-[12px] text-ink">
             <input type="checkbox" checked={agree[i]} onChange={(e) => setAgree((a) => a.map((v, j) => (j === i ? e.target.checked : v)))} className="mt-0.5" />
             <span>{t(lang, k)}</span>

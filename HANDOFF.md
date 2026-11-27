@@ -359,3 +359,9 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=<Supabase 대시보드 → Project Settings → AP
 ### 2026-11-27 입찰 워커 연결 A2·A3(에어쉽) 운영 배포 — 스위치 꺼짐 (docs/aaa/16 12.6·12.7)
 - 에어쉽 `3fbd8040`: 다리 작업(가져오기·접수 확인·결과 전달·대조 취소·못 넣은 건 닫기·건강 신호), `/api/cron/site-bids` + pg_cron `site_bids_bridge` 1분 운영 등록, 훅 `bid.requested` → 가져오기, 어드민 표시 분리(A3). 스위치 `site_bid_bridge.enabled=false` 그대로라 지금은 건강 신호만 간다(tomo 에는 「bidding switched off」로 보임 — 의도).
 - tomo 설정 그대로(executor=manual, accepting=false). 다음: T2(수동 전환·워커 건 고객 취소 동기·고객 문구) → R(리허설) → S(Ren 승인 실입찰). 켜기는 Ren 승인 뒤.
+### 2026-11-27 입찰 워커 연결 T2·R — 실행자 airship, 접수 꺼짐 (docs/aaa/16 13절)
+- 0056_market_bid_t2(운영 적용, 되돌림 리허설 `docs/aaa/16-t2-rehearsal.sql` PASS 25단언·결함 주입 검출 뒤): 수동 전환 `market_bid_set_executor`(접수된 건은 에어쉽 통로만), 접수된 워커 건 사람 취소·못 넣음 막는 트리거, 재알림 `bid.to_buy_due`(마감 뒤 2·12·20시간). 운영 API `POST /market-bids/:id/executor`(ops).
+- 틈 판정: 입찰 0건 상품은 워커가 행을 읽자마자 입찰 → armed 전 고객 취소와 겹칠 수 있었다. 에어쉽 `20261128120000_site_bids_stage`(접수 전 행 = bidding, armed 뒤 release)로 막음. 에어쉽 커밋 855743ae.
+- 고객 문구: 패널·상세 워커 방식(마감 직전 입찰, 입찰 준비 뒤 취소 불가, 낙찰 확인 뒤 결제), FAQ 5문항·llms·AI 상담원(15번 패치를 고쳐 적용, 플래그일 때만).
+- 운영 설정 executor=airship, accepting=false(에어쉽 스위치 꺼짐이라 켜기 거절 `mb: worker down`). 켜기·끄기 절차와 실입찰 시험 S 관찰표는 docs/aaa/16 13.4·13.5.
+- tomo 설정 그대로(executor=manual, accepting=false). 다음: T2(수동 전환·워커 건 고객 취소 동기·고객 문구) → R(리허설) → S(Ren 승인 실입찰). 켜기는 Ren 승인 뒤.

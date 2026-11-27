@@ -203,8 +203,8 @@ describe("M3 0052 정산·크론", () => {
     }
     expect(notifHref({ kind: "mb_won", ref_id: "b1", data: {} })).toBe("/bids/b1");
   });
-  it("ops_outbox 종류 = OPS_EVENT_TYPES(SQL 과 코드가 같다, 마지막 제약 파일 0055), capability market_auction", () => {
-    const m = readFileSync("supabase/migrations/0055_market_bid_worker.sql", "utf8").match(/ops_outbox_type_check check \(type in \(([^)]+)\)\)/)!;
+  it("ops_outbox 종류 = OPS_EVENT_TYPES(SQL 과 코드가 같다, 마지막 제약 파일 0056), capability market_auction", () => {
+    const m = readFileSync("supabase/migrations/0056_market_bid_t2.sql", "utf8").match(/ops_outbox_type_check check \(type in \(([^)]+)\)\)/)!;
     const sqlTypes = [...m[1].matchAll(/'([a-z_.]+)'/g)].map((x) => x[1]).sort();
     expect(sqlTypes).toEqual([...OPS_EVENT_TYPES].sort());
     expect(OPS_CAPABILITIES).toContain("market_auction");
@@ -232,7 +232,7 @@ describe("M3 0052 정산·크론", () => {
 
 describe("M5 운영 권한·조작", () => {
   it("입찰됨·밀림·보류·유찰 = ops, 낙찰 매입·승인 해제 강제(못 넣음·운영 취소) = money", () => {
-    expect(MB_OP_SCOPE).toEqual({ placed: "ops", outbid: "ops", hold: "ops", lost: "ops", won: "money", missed: "money", cancel: "money" });
+    expect(MB_OP_SCOPE).toEqual({ placed: "ops", outbid: "ops", hold: "ops", lost: "ops", won: "money", missed: "money", cancel: "money", executor: "ops" });
     for (const [op, s] of Object.entries(MB_OP_SCOPE)) expect(OPS_ROUTE_LIST).toContain(`POST /api/ops/market-bids/:id/${op} (${s})`);
     expect(OPS_ROUTE_LIST).toContain("GET /api/ops/market-bids (ops)");
     expect(OPS_ROUTE_LIST).toContain("POST /api/ops/market-bids/settings (money)");
