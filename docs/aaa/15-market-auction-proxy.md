@@ -636,3 +636,37 @@
 - 1~3 은 같은 날 같이 할 수 있다(고객당 1건 한도라 고객 계정 3개 또는 한도를 잠시 3 으로).
 - 2 의 낙찰 뒤 24시간 안 구매를 놓치면 우리 메루카리 계정이 이용 제한을 받을 수 있다. 시험 날 구매 담당을 정해 둔다.
 - 시험 뒤 확인: Stripe 대시보드에서 1·3 의 PI 가 canceled, 2 의 PI 가 부분 매입(남은 승인 해제)인지 본다.
+## 운영 켜기 기록 (2026-11-27, Ren 승인 「시험 1만 하고 켜기」)
+
+### 켜기
+- `server-image.yml` build env 에 `NEXT_PUBLIC_MARKET_AUCTION: ${{ vars.NEXT_PUBLIC_MARKET_AUCTION }}` 줄이 있음을 먼저 확인했다(빌드는 Actions 의 `npm run build`, 이미지는 결과물만 복사).
+- GitHub Actions Variables 에 `NEXT_PUBLIC_MARKET_AUCTION=1` 추가(21:1x KST) → `server-image` 수동 실행 #42 success(커밋 e460c62 그대로).
+- 운영 확인: `/api/health` ok·embeds ok, `/mypage/bids` 200(꺼진 빌드는 404), 메루카리 경매 상세에 「경매 입찰 신청」 패널(접수 꺼짐일 때 「지금은 입찰 신청을 받지 않아요」).
+- 접수 스위치는 시험 계정 tomo.test.center(admin)로 tomo 어드민에서 21:17 켬 → 21:19:39 다시 끔.
+
+### 시험 1(실카드 승인 → 취소) — 3D Secure 로 멈춤
+| 단계 | 결과 |
+|---|---|
+| 상품 | 메루카리 m18364816876(현재가 2,000엔·입찰 1건·送料込み·마감 11/28 20:01) |
+| 신청 | MB000001, 상한 2,100엔(최소), 환율 8.8615, 승인액 ₩28,469(상품 18,609 + 국제 8,000 + 통관 1,860) |
+| 결제창 | Stripe 운영 Checkout, 제목 「경매 입찰 신청 MB000001 (최대 결제액 승인)」, ₩28,469 |
+| 카드 | Aside Vault 「Visa ending 0759」 자동 입력, 청구 국가 KR |
+| 결과 | 카드사 3D Secure(SMS 일회용 비밀번호, 일본 CAFIS 인증 화면 「AIRSHIPで28,469 KRW」)가 떠서 지시대로 입력하지 않고 취소 |
+| PI | `…r8jKah` Incomplete(승인 없음·청구 0). 결제창은 30분 뒤 만료, 신청은 45분 뒤 크론이 expired 로 닫는다 |
+| capture_before | 측정 못 함(승인 전 멈춤). 이 카드는 일본 발급으로 보인다(인증 화면이 CAFIS) — 한국 발급 카드 실측은 다른 카드가 필요 |
+- 어드민 「입찰 필요」 0, 에어쉽 연결 화면 「마켓 입찰 필요」 0 — 승인 전(pending_auth)은 세지 않는 것이 설계대로다. `bid.requested` 는 authorized 때만 나가므로 이번 시험의 텔레그램·에어쉽 이벤트는 0건. 에어쉽 「최근 받은 이벤트」에 리허설 때의 「마켓 입찰 필요(카드 승인됨) · MB000017」이 있어 이벤트 경로 자체는 동작한 기록이 있다.
+- 판정: 승인·취소를 확인하지 못해 **접수 중지(accepting=false)**. 플래그는 켜 둠(패널은 「지금은 입찰 신청을 받지 않아요」로 보임 확인). 한도는 확정값 그대로(30,000엔·전체 5·고객당 1·하루 100,000엔·180분·96시간).
+- 감사 기록으로 남김: MB000001·승인 행(pending)·사건 requested 1건·external_items(m18364816876, 신청이 참조). 삭제한 데이터 없음.
+- 시험 계정 로그인 동안 Ren 브라우저의 tomo 로그인 쿠키를 보관했다 원복(21:16:59~21:19:55 KST, 보관 파일 삭제, 원복 뒤 마이페이지 「렌」 확인).
+
+### 고객 안내(보류)
+- FAQ(lib/help-faq.ts MARKET_BID_FAQ ko/ja 5문항)·llms.txt(MARKET_BID_SECTION)·AI 상담원 사실·링크(/mypage/bids)는 플래그 조건으로 만들었으나 접수가 멈춘 상태라 배포하지 않고 `docs/aaa/15-market-bid-faq.patch` 로 보관(tsc·단위 테스트 366 통과). 시험 1 통과 뒤 `git apply docs/aaa/15-market-bid-faq.patch` → 커밋.
+
+### 발견
+- 운영자 재알림 없음: `bid.requested`(승인 때 1회) 뒤 「입찰 필요」 건이 마감 임박인데 미처리여도 알림이 다시 가지 않는다. 다음 알림은 마감 30분 전 자동 취소 뒤의 `bid.missed` 뿐이다. 제안: 크론에서 `authorized` 이고 `ends_at < now() + 2시간`(그리고 1시간)인 건에 `bid.to_place_due:<id>:<h>` 로 ops_emit(dedupe 키로 1회씩).
+- 3D Secure 를 실패·취소한 고객은 Stripe 화면에 남고 신청은 45분 동안 「카드 승인 대기」로 보인다(그 뒤 만료). 결제창·인증 화면 이름이 「AirShip」/「AIRSHIP」(같은 Stripe 계정)이다.
+
+### 다음 시험 방법
+1. Ren 이 SMS 를 받을 수 있을 때 같은 절차로 신청한다(고객당 1건 한도 — MB000001 이 expired 가 된 뒤).
+2. 3D Secure 화면에서 Ren 이 받은 번호를 넣는다 → 승인 → 신청 상세 「취소」 → PI canceled 확인.
+3. 깨끗하면 접수 켜기, FAQ 패치 적용·배포.

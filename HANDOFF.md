@@ -339,7 +339,11 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=<Supabase 대시보드 → Project Settings → AP
 - 0053_market_bid_repay(운영 적용, 되돌림 리허설 10묶음·결함 주입 4종 뒤): 매입 실패 → 48시간 재결제(kind mbp, 즉시 결제, 금액 = 매입액) → 주문 전환, 받지 않은 결제는 전액 환불, 기한 + 35분 지나면 닫고 입찰 정지. fee_jpy = 0 표 제약.
 - 고침: 플래그 꺼진 화면 실제 404(proxy isFlagOffPath), 패널 배송지 접기, 「경매 · 구경만」 배지, 입찰 수 중복 문구, 제목 번역 저장, 알림 MB 번호, 선점 상품 미리 표시, 결제 복귀 문구(void/refunded), 어드민 확인창·사유·사건 이름.
 - 정리: 시험 신청 8·승인 9·사건 41·정지 1·주문 2·요청 2·알림 25·활동 10·상품 4·outbox 17(전송 전 삭제), MB 번호 1부터.
-### 2026-11-27 T4 센터 검수·센터 발송 안내·운영 띠 (docs/aaa/12 10장)
+### 2026-11-27 해외 마켓 경매 입찰 대행 운영 켜기 시도 (docs/aaa/15 「운영 켜기 기록」)
+- 플래그 `NEXT_PUBLIC_MARKET_AUCTION=1` 운영 Variables 추가·server-image #42 배포. 패널은 운영에 보인다.
+- 시험 1(실카드 승인→취소): MB000001 ₩28,469 결제창까지 갔으나 카드사 3D Secure(SMS)가 떠서 멈춤. PI …r8jKah Incomplete(청구 0). 판정: accepting=false(접수 중지), 한도는 확정값.
+- 고객 FAQ·llms·AI 상담원 변경은 `docs/aaa/15-market-bid-faq.patch` 로 보관(미배포). 시험 통과 뒤 적용.
+- 발견: 「입찰 필요」 마감 임박 재알림 없음(제안만, 미구현).### 2026-11-27 T4 센터 검수·센터 발송 안내·운영 띠 (docs/aaa/12 10장)
 - 0054_inspections(운영 적용, 되돌림 리허설 26단언·결함 주입 2종 뒤): inspections(추가만, 정상/문제·메모·사진 10장·검수자·입고 함께), 비공개 버킷 inspection-photos(당사자 읽기·운영자 올리기), admin_record_inspection(입고 처리 함께), center_addresses(에어쉽 센터 주소 옮김, 받는 사람 TOMO)·admin_set_center_address.
 - 판매자 거래 상세(국제·결제 완료) 「센터로 보내는 방법」: 주소 끝에 `TOMO TX000123`(새 매칭 코드 없음). 거래·대행 상세에 검수 기록(읽기, 서명 URL).
 - 어드민: 센터 화면 직거래+대행·번호 검색·검수 입력·주소 수정, 분쟁 화면 검수 열람, 위쪽 띠(에어쉽 어드민 안내, 닫기).
