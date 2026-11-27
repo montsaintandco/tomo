@@ -7,7 +7,8 @@ import { auctionEnabled, timeLeftShort, type AuctionStatus, type Cur } from "@/l
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
-export const metadata = { title: "경매 · オークション", robots: { index: false } };
+// 플래그가 꺼지면 제목도 남기지 않는다(본문은 404)
+export const metadata = { ...(auctionEnabled() ? { title: "경매 · オークション" } : {}), robots: { index: false } };
 
 // 마이페이지 경매(U4) — 입찰 중(1등/밀림) · 낙찰(결제 필요 강조) · 내 경매(판매). 상세가 입찰·결제·다시 경매 화면이다.
 type MyBid = {
