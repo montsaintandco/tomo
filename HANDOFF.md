@@ -250,3 +250,10 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=<Supabase 대시보드 → Project Settings → AP
 - 직접 쓰기 기록: banners·notices·trending_themes·exchange_rates·external_items(입력·수정·삭제), support_tickets(수정), reviews(삭제) — 운영자 세션만(service_role·크론은 기록 안 함). 활동 기록 「콘텐츠·직접 수정」 필터.
 - Stripe 웹훅: settleSession이 metadata.app≠APP_TAG면 DB·Stripe 호출 없이 null → 200. 가드 추가 불필요, 단위 테스트(tests/unit/stripe-cross-app) 추가.
 - 주의: worktree 안 turbopack 빌드는 node_modules junction을 거부한다 → `next build --webpack`으로 확인했다.
+### 2026-11-27 T2 주문 번호·크론·알림 (0042, docs/aaa/12 T2)
+- 0042(운영 적용 완료, begin…rollback 리허설 2회 후): proxy_orders.code T+6자리·transactions.code TX+6자리(기존 21·60행 만든 순서로 채움, 기본값 시퀀스, 고유 제약). transactions.delivered_at(배송 완료 시각 트리거). cron_runs(운영자만 읽기).
+- pg_cron·pg_net 켬. 작업 3개: tomo_release_reservations(5분, 결제 대기 예약 45분 그대로 정리만), tomo_auto_complete(매시 15분, 배송 완료 7일 뒤 completed, disputed·refund_pending 제외, 활동 기록 tx_auto_complete), tomo_rates(매일 00:30 UTC → POST /api/cron/rates, 헤더 x-cron-secret = Vault tomo_cron_secret, 서버는 cron_secret_ok()로 확인 — env 불필요).
+- 환율(lib/fx-refresh.ts): 원천 airship.click/api/fx-rate(관세청 고시, 에어쉽과 같음), 가산 0 유지. 지금 적용 값보다 3% 넘게 바뀌면 보류 → /admin/rates 「이 값으로 적용」, 텔레그램 「[TOMO]」(OPS_TELEGRAM_* 없으면 무음).
+- 알림: proxy_paid(주문당 평생 1회), tx_to_center(구매자), tx_center_received(양쪽), tx_auto_completed(양쪽). 인앱만(웹푸시는 여전히 채팅만).
+- 화면: 어드민 주문·거래 목록·시트에 번호와 번호 검색(?q=T000012 / TX000034), 고객 주문·거래 상세, 마이페이지 구매·판매 목록.
+- 되돌리기: 0042 파일 하단 주석(cron.unschedule 3개 등).
