@@ -3,13 +3,14 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { NODES, ROOT, GREETING, PICK, MORE, type Lang } from "@/lib/support-tree";
 import { t } from "@/lib/i18n";
-import { AI_LIMITS, aiSegments, cleanAiText, type AiTurn } from "@/lib/support-ai";
+import { AI_LIMITS, aiSegments, cleanAiText, PERSONA, type AiTurn, type Mood } from "@/lib/support-ai";
 
 // 지원 봇 — 사조(채널톡 봇) 답변 구조: 봇 말풍선(인사+안내) → 대분류 버튼 → 질문 버튼 → 답변 말풍선 + "추가 질문?" + 관련 질문·바로가기·상담원 연결·처음으로.
 // "상담원 연결"도 사조처럼 바로 사람이 아니라 폼 카드(주문 전: 상품 URL·옵션·수량·내용 / 주문 후: 주문·내용 / 그 외: 내용) → 접수 → 마이페이지 문의에서 답변.
 // 버튼을 누르면 내 말풍선으로 남고 다음 봇 말풍선이 붙는다. 트리는 서버 없이 동작한다.
 // ai=true(서버에 AI_GATEWAY_API_KEY 있음)면 아래 입력창으로 자유 질문 → /api/support-ai 스트림 답. 실패하면 입력창을 숨기고 트리만(조용히 폴백)
-type Msg = { who: "bot" | "me"; lines: string[]; link?: { href: string; label: string }; form?: true; ai?: true; id?: number };
+// mood: 토미 표정(생각 중=답 쓰는 중, 미안해요=실패·상담원 연결 권유, 기뻐요=접수 완료). 없으면 기본
+type Msg = { who: "bot" | "me"; lines: string[]; link?: { href: string; label: string }; form?: true; ai?: true; id?: number; mood?: Mood };
 type Cat = "before" | "after" | "sell" | "travel";
 
 export default function SupportBot({ lang, compact = false, loggedIn = true, ai = false }: { lang: Lang; compact?: boolean; loggedIn?: boolean; ai?: boolean }) {
@@ -63,8 +64,8 @@ export default function SupportBot({ lang, compact = false, loggedIn = true, ai 
     const res = await fetch("/api/support", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
     const ok = res.ok;
     setMsgs((m) => [...m.filter((x) => !x.form), { who: "me", lines: [String(fd.get("body") ?? "")] },
-      ok ? { who: "bot", lines: [t(lang, "support.received")], link: { href: "/mypage/support", label: t(lang, "support.myTickets") } }
-         : { who: "bot", lines: [t(lang, "support.failed")] }]);
+      ok ? { who: "bot", lines: [t(lang, "support.received")], link: { href: "/mypage/support", label: t(lang, "support.myTickets") }, mood: "happy" }
+         : { who: "bot", lines: [t(lang, "support.failed")], mood: "sorry" }]);
     setForm(null); setChoices(ROOT); setStack([]);
   }
 
@@ -77,7 +78,7 @@ export default function SupportBot({ lang, compact = false, loggedIn = true, ai 
     const put = (repl: Msg[]) => setMsgs((m) => m.flatMap((x) => (x.id === id ? repl : [x])));
     const lines = (s: string) => s.split("\n").map((l) => l.trim()).filter(Boolean);
     setQ(""); setBusy(true); setForm(null);
-    setMsgs((m) => [...m, { who: "me", lines: [text] }, { who: "bot", lines: [t(lang, "support.ai.thinking")], ai: true, id }]);
+    setMsgs((m) => [...m, { who: "me", lines: [text] }, { who: "bot", lines: [t(lang, "support.ai.thinking")], ai: true, id, mood: "thinking" }]);
     try {
       const res = await fetch("/api/support-ai", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ lang, messages: turns }) });
       if (!res.ok || !res.body || !(res.headers.get("content-type") ?? "").startsWith("text/plain")) throw new Error(String(res.status));
@@ -89,15 +90,15 @@ export default function SupportBot({ lang, compact = false, loggedIn = true, ai 
         if (done) break;
         raw += dec.decode(value, { stream: true });
         const shown = cleanAiText(raw).text;
-        if (shown) put([{ who: "bot", lines: lines(shown), ai: true, id }]);
+        if (shown) put([{ who: "bot", lines: lines(shown), ai: true, id, mood: "thinking" }]);
       }
       const { text: answer, agent } = cleanAiText(raw);
       if (!answer) throw new Error("empty");
       turnsRef.current = [...turns, { role: "assistant", content: answer }];
-      put([{ who: "bot", lines: lines(answer), ai: true }, ...(agent ? [{ who: "bot" as const, lines: [t(lang, "support.ai.agentHint")] }] : [])]);
+      put([{ who: "bot", lines: lines(answer), ai: true }, ...(agent ? [{ who: "bot" as const, lines: [t(lang, "support.ai.agentHint")], mood: "sorry" as const }] : [])]);
     } catch {
       setAiOn(false); // 키 없음·한도·게이트웨이 오류 — 이 창에서는 트리만
-      put([{ who: "bot", lines: [t(lang, "support.ai.fallback")] }]);
+      put([{ who: "bot", lines: [t(lang, "support.ai.fallback")], mood: "sorry" }]);
     } finally {
       setBusy(false);
     }
@@ -108,7 +109,11 @@ export default function SupportBot({ lang, compact = false, loggedIn = true, ai 
     <div className={`flex flex-col ${compact ? "h-[min(70dvh,560px)]" : "max-h-[70dvh]"}`}>{/* 패널은 고정 높이, 인라인은 내용만큼(최대 70dvh 스크롤) */}
       <div className="flex-1 space-y-2 overflow-y-auto px-4 py-3">
         {msgs.map((m, i) => (
-          <div key={i} className={`flex ${m.who === "me" ? "justify-end" : "justify-start"}`}>
+          <div key={i} className={`flex gap-2 ${m.who === "me" ? "justify-end" : "justify-start"}`}>
+            {/* 토미 아바타 — 연속된 봇 말풍선은 첫 개에만, 표정은 그 말풍선 기준 */}
+            {m.who === "bot" && (msgs[i - 1]?.who !== "bot" || m.mood || msgs[i - 1]?.mood !== m.mood
+              ? <img src={PERSONA.avatar[m.mood ?? "default"]} alt="" width={28} height={28} className="mt-0.5 h-7 w-7 shrink-0 rounded-full object-cover ring-1 ring-tomo-navy/10" aria-hidden />
+              : m.who === "bot" ? <span className="w-7 shrink-0" aria-hidden /> : null)}
             <div className={`chat-bubble ${m.form ? "w-full" : "max-w-[85%]"} px-3.5 py-2.5 text-[13px] leading-relaxed ${m.who === "me" ? "chat-bubble-mine bg-tomo-coral-deep/10 text-ink" : "chat-bubble-theirs bg-tomo-navy/5 text-ink"}`}>
               {m.ai && <p className="mb-1 text-[11px] font-bold text-ink-soft">{t(lang, "support.ai.badge")}</p>}
               {m.lines.map((line, j) => (

@@ -98,8 +98,11 @@ export function parseAiTurns(v: unknown): AiTurn[] | null {
 export const PERSONA = {
   name: { ko: "토미", ja: "トミ" },
   mark: "T",
+  /** 아바타 표정 4종(2026-11-26 Ren 선택: 헤드셋 고양이, 치이카와풍 색연필 그림). public/brand/tomi-<표정>.webp, 원본 tomi-default@1024.png */
+  avatar: { default: "/brand/tomi-default.webp", thinking: "/brand/tomi-thinking.webp", sorry: "/brand/tomi-sorry.webp", happy: "/brand/tomi-happy.webp" },
   character: {
     ko: "한국과 일본 양쪽 중고 시장을 잘 아는 친구 같은 상담원. 다정하고 차분하며, 돈·일정·안전결제 얘기는 꼼꼼하고 정확하게 말해요.",
     ja: "日本と韓国の中古市場どちらにも詳しい、友だちのような相談スタッフ。やさしく落ち着いていて、お金・日程・安心決済の話は正確に伝えます。",
   },
 } as const;
+export type Mood = keyof typeof PERSONA.avatar;

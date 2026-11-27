@@ -1,4 +1,5 @@
 "use client";
+import { PERSONA } from "@/lib/support-ai";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -87,9 +88,9 @@ export default function SupportLauncher({ lang, loggedIn: loggedInGuess, ai = fa
                 <p className="mt-1 text-[13px] text-ink-soft">{t(lang, "footer.thesis")}</p>
               </div>
               <div className="flex gap-2.5">
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-tomo-navy text-[11px] font-extrabold text-white" aria-hidden>T</span>
+                <img src={PERSONA.avatar.default} alt="" width={40} height={40} className="h-10 w-10 shrink-0 rounded-full object-cover ring-1 ring-tomo-navy/10" aria-hidden />
                 <div className="chat-bubble chat-bubble-theirs bg-tomo-navy/5 px-3.5 py-2.5 text-[13px] leading-relaxed text-ink">
-                  <p className="text-[11px] font-bold text-ink-soft">TOMO bot</p>
+                  <p className="text-[11px] font-bold text-ink-soft">{PERSONA.name[lang]} · TOMO</p>
                   <p className="mt-0.5">{t(lang, "support.homeHello")}</p>
                   <p className="mt-1 line-clamp-2 text-ink-soft">{t(lang, "support.homeHint")}</p>
                 </div>
