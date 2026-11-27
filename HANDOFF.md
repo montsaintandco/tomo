@@ -257,3 +257,11 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=<Supabase 대시보드 → Project Settings → AP
 - 알림: proxy_paid(주문당 평생 1회), tx_to_center(구매자), tx_center_received(양쪽), tx_auto_completed(양쪽). 인앱만(웹푸시는 여전히 채팅만).
 - 화면: 어드민 주문·거래 목록·시트에 번호와 번호 검색(?q=T000012 / TX000034), 고객 주문·거래 상세, 마이페이지 구매·판매 목록.
 - 되돌리기: 0042 파일 하단 주석(cron.unschedule 3개 등).
+### 2026-11-27 T3 운영 API(서명 브리지, 0043, docs/aaa/12 T3·8장 — 구현 표는 같은 문서 9장)
+- 0043_ops_bridge(운영 적용 완료, begin…rollback 리허설 2회 후): ops_actors(센터 운영자 → tomo 운영자, is_owner = money), ops_requests(request_id 멱등), ops_outbox(이벤트 9종, 24시간 재전송). 이벤트 트리거는 AFTER 로 따로 붙였다(notify_transaction·notify_proxy 는 0042 그대로). pg_cron `tomo_ops_outbox` 1분 → POST /api/cron/ops-outbox(x-cron-secret, cron_secret_ok).
+- 코드: lib/ops-bridge.ts(HMAC 서명·상수 시간 비교·멱등 executeOnce·이벤트 본문), lib/ops-server.ts(인증·운영자 연결·운영자 세션·저장), lib/ops-api.ts(경로 31개), app/api/ops/[...path], app/api/cron/ops-outbox. 어드민 취소·회원 삭제 본체를 lib/admin-actions.ts 로 옮겨 /api/admin/* 와 /api/ops/* 가 같이 쓴다(로직 복사 없음).
+- 운영자 이름으로 실행 = 설계 1안. 서비스 키로 generateLink(magiclink, 메일 안 보냄) → verifyOtp 로 그 운영자 세션을 만들고 RPC 를 부른 뒤 signOut. 짧은 토큰 직접 발급은 불가(JWT 서명키가 ES256 비대칭, 비밀키 없음). 액세스 토큰 수명은 프로젝트 기본 1시간이고 서버 메모리 밖으로 나가지 않는다. RPC 수정 없음.
+- env(Coolify tomo-image): OPS_BRIDGE_SECRET·OPS_BRIDGE_KEY_ID(=tomo-1) 넣음(2026-11-27). 같은 값이 C:\dev\tomo\.env.local 에 있다(A1 이 에어쉽 integration_secrets 에 넣는다). OPS_HOOK_URL·OPS_HOOK_TOKEN 은 아직 없음 → 이벤트는 outbox 에 쌓이고 24시간 뒤 포기. A1 이 받는 쪽을 만든 뒤 넣는다.
+- 연결된 운영자: Ren(mellowdazzle@gmail.com, 소유자). center_actor_id 는 비어 있고 센터의 첫 서명 요청 id 로 채워진다(이후 id 가 다르면 403). 시험 중 채워진 값은 비웠다.
+- 점검 도구: `node node_modules/tsx/dist/cli.mjs scripts/ops-call.mts GET /api/ops/meta`(.env.local 비밀값 사용, 출력 안 함).
+- 되돌리기: Coolify 에서 OPS_BRIDGE_SECRET 삭제 후 재시작 → /api/ops/** 전부 503. DB 는 0043 하단 주석.

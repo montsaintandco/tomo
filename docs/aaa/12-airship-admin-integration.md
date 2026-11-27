@@ -270,3 +270,123 @@
 - 서명·시각 검사·`request_id` 멱등·`expected_status`·outbox 재전송(3.2·3.3).
 - 매출 통계를 사이트끼리 합치지 않는다(3.4).
 - 에어쉽·요루에 운영 API 를 붙이는 일, 센터를 따로 배포하는 일은 13번 3단계로 미룬다.
+
+
+## 9. 구현된 운영 API(v1)
+
+- 구현: 2026-11-27 T3. 코드 `lib/ops-bridge.ts`(서명·멱등·이벤트 본문, 순수 함수), `lib/ops-server.ts`(인증·운영자 세션·멱등 저장), `lib/ops-api.ts`(경로 표), `app/api/ops/[...path]/route.ts`, `app/api/cron/ops-outbox/route.ts`. DB `0043_ops_bridge.sql`(운영 적용 완료).
+- 이 절이 7장·8.3 과 다르면 이 절이 실제 동작이다. 서명 호출 예시는 `scripts/ops-call.mts`.
+
+### 9.1 공통 규칙
+
+| 항목 | 값 |
+|---|---|
+| 주소 | `https://tomo.airship.click/api/ops/<경로>` |
+| 꺼짐 | env `OPS_BRIDGE_SECRET` 이 없으면 모든 경로 503 `ops bridge disabled` |
+| 필수 헤더 | `x-ops-version: 1`, `x-ops-key-id`, `x-ops-ts`(유닉스 초), `x-ops-sig`(hex 소문자) |
+| 운영자 헤더 | `x-ops-actor-id`(센터 관리자 id), `x-ops-actor-email`, `x-ops-scope`(`ops`\|`money`). meta·health 는 없어도 된다. 7장의 본문 `actor` 대신 이 헤더를 쓴다 |
+| 서명 문자열 | 줄바꿈(`\n`)으로 9칸: `v1`, 키 id, ts, 메서드(대문자), 경로+쿼리, 운영자 id, 운영자 이메일(소문자), scope, 본문 SHA-256 hex(빈 본문도 빈 문자열의 해시) |
+| 경로+쿼리 정규화 | 쿼리는 `new URLSearchParams(q).toString()` 으로 다시 직렬화한 값을 쓴다(`,` → `%2C`). 쿼리가 비면 `?` 없이 경로만 |
+| 서명 | `HMAC-SHA256(OPS_BRIDGE_SECRET, 서명 문자열)`. 비교는 상수 시간. 시각 차이 300초 초과는 401 |
+| 버전 | `x-ops-version` 이 1 이 아니거나 없으면 400 `unsupported x-ops-version (supported: 1)` |
+| 응답 | 항상 JSON `{ api_version: 1, ok, data \| error, request_id, ... }`. 조작 응답에는 `replayed`(저장된 결과를 다시 준 것인지)가 붙는다 |
+| 오류 코드 | 400 입력 오류·RPC 거부(`error` 에 DB 메시지), 401 서명, 403 운영자·권한, 404 없음, 409 상태 불일치·중복 id·실행 중, 500 결과 모름, 502 DB 조회 실패, 503 꺼짐 |
+| 목록 쪽수 | `limit`(1~200, 기본 50), `offset`(기본 0). 응답 `data = { items, total }` |
+| 센터 칸 | 목록·상세 행에 `center`(SEOUL/NARITA)와 `center_country`(KR/JP) |
+
+### 9.2 운영자·권한
+
+| 규칙 | 동작 |
+|---|---|
+| 연결 | `ops_actors` 에서 `center_actor_id` 로 먼저 찾고, 없으면 `center_actor_email` 로 찾는다. 이메일로 찾은 행의 `center_actor_id` 가 비어 있으면 **첫 서명 요청의 `x-ops-actor-id` 로 채운다**. 그 뒤로는 id 가 달라지면 403 |
+| 지금 연결 | Ren(`mellowdazzle@gmail.com`, tomo 닉네임 「렌」, `is_owner=true`), `center_actor_id` 는 비어 있다(A1 첫 요청이 채운다) |
+| 403 | `actor required`, `scope required (ops\|money)`, `actor not linked`, `money scope required`(돈 경로를 ops 로 부름), `money scope is owner only`, `linked operator is not an active admin`(tomo 프로필이 운영자 아님·정지·삭제) |
+| 실행 이름 | 조작은 그 운영자의 tomo 사용자 세션으로 기존 RPC 를 부른다(설계 1안). 활동 기록(`admin_actions.admin_id`)에 tomo 운영자가 남는다. 환불 실행만 기존과 같이 서버 권한(`runRefund`) |
+
+### 9.3 조작 공통 본문
+
+```json
+{ "request_id": "uuid", "expected_status": "현재 상태", "...경로별 칸": "..." }
+```
+
+| 상황 | 응답 |
+|---|---|
+| `request_id` 없음·uuid 아님 | 400 |
+| `expected_status` 없음 | 400 |
+| 처음 받은 id | 현재 상태를 읽어 다르면 409 `{ error: "status mismatch", current_status, expected_status }`(실행 안 함). 같으면 실행 |
+| 같은 id 재요청(같은 동작·대상·운영자) | 저장된 결과 그대로, `replayed: true`. 다시 실행하지 않는다 |
+| 같은 id 를 다른 동작·대상·운영자에 | 409 `request_id already used for another action` |
+| 같은 id 가 실행 중 | 409 `in_progress` → 상세를 다시 읽어 판정 |
+| 실행 중 예외 | 500 `result unknown: …` 를 저장한다. 같은 id 로는 다시 실행되지 않는다. 상세를 다시 읽고 새 id 로 보낸다 |
+
+- 409·400 결과도 저장된다. 상태를 다시 읽은 뒤에는 **새 request_id** 로 보낸다.
+
+### 9.4 경로 표
+
+| 경로 | 메서드 | scope | 요청(쿼리·본문) | 응답 `data` | expected_status 대상 |
+|---|---|---|---|---|---|
+| `/api/ops/meta` | GET | 서명만 | — | `{ api_version, site{key,name,currency,url}, capabilities[10], events[9], money_actions[] }` | — |
+| `/api/ops/health` | GET | 서명만 | — | `{ version, db, db_ms, cron{job:{ok,at}}, outbox{hook_configured,pending,failing,dead_24h,last_sent_at}, errors_24h }` | — |
+| `/api/ops/counts` | GET | ops | — | `[{ key, label, count, overdue, capability, url }]` 10줄. 조회 실패한 줄은 `count: null, overdue: null`(「확인 못 함」) | — |
+| `/api/ops/proxy` | GET | ops | `status`(쉼표), `q`(T 번호·주문 uuid), `cancel_requested=1` | `{ items[대행 요청 행 + external_items + customer + proxy_orders{code,…}], total }` | — |
+| `/api/ops/proxy/:id` | GET | ops | `:id` = proxy_requests.id | `{ item, order(배송지·통관번호 포함), items[같은 주문 형제], refunds[], cancel_preview{amount,cap,currency,full} \| null }` | — |
+| `/api/ops/proxy/:id/status` | POST | ops | `to`, `note`, `tracking` → `admin_set_order_status` | `{ result: proxy_requests 행 }` | proxy_requests.status |
+| `/api/ops/proxy/:id/cancel` | POST | money | `reason`(필수), `refund_amount`(없으면 기본값) → `adminCancel(type proxy)` | `{ ok, refund: null \| { id, status, error? } }` | proxy_requests.status |
+| `/api/ops/trades` | GET | ops | `status`(쉼표), `q`(TX 번호·uuid) | `{ items[거래 + listing + buyer + seller], total }` | — |
+| `/api/ops/trades/:id` | GET | ops | — | `{ item, refunds[] }` | — |
+| `/api/ops/trades/:id/advance` | POST | ops | `to`, `tracking` → `advance_transaction` | `{ result: transactions 행 }` | transactions.status |
+| `/api/ops/trades/:id/cancel` | POST | money | `reason`(필수) → `admin_cancel_transaction` + 환불 | `{ ok, refund }` | transactions.status |
+| `/api/ops/trades/:id/complete` | POST | money | `note` → `admin_complete_transaction` | `{ ok, refund: null }` | transactions.status |
+| `/api/ops/center/:center` | GET | ops | `:center` = SEOUL·NARITA·KR·JP. `shipped_to_center`·`center_received` 거래 | `{ items, total }` | — |
+| `/api/ops/center/:center/:id/advance` | POST | ops | 위 `trades/:id/advance` 와 같음. 그 센터 거래가 아니면 404 | `{ result }` | transactions.status |
+| `/api/ops/disputes` | GET | ops | `disputed` 거래(`dispute_reason`·`disputed_from` 포함) | `{ items, total }` | — |
+| `/api/ops/disputes/:id/resolve` | POST | money | `to`(`completed`\|`cancelled`), `note` → `resolve_dispute` + 환불 | `{ ok, refund }` | transactions.status(`disputed`) |
+| `/api/ops/refunds` | GET | money | `status`(기본 `pending,failed`) | `{ items[환불 + customer], total }` | — |
+| `/api/ops/refunds/:id/run` | POST | money | — → `runRefund`(Stripe, 같은 환불 id 는 한 번만) | `{ id, status: done\|failed\|pending, error? }`. done 200, 그 밖 202 | refunds.status(`pending`·`failed`) |
+| `/api/ops/payouts` | GET | money | `status`(기본 `requested`). 계좌 정보 포함 | `{ items, total }` | — |
+| `/api/ops/payouts/:id/paid` | POST | money | `note` → `admin_process_payout(sent=true)` | `{ result: payouts 행 }` | payouts.status(`requested`) |
+| `/api/ops/payouts/:id/reject` | POST | money | `note` → `admin_process_payout(sent=false)` | `{ result }` | payouts.status |
+| `/api/ops/support` | GET | ops | `status`(기본 `open`) | `{ items[문의 + customer{nickname,language}], total }` | — |
+| `/api/ops/support/:id/reply` | POST | ops | `reply`(필수, 2000자) → 상태 `answered` | `{ result: { id, status } }` | support_tickets.status |
+| `/api/ops/support/:id/close` | POST | ops | — → 상태 `closed` | `{ result }` | support_tickets.status |
+| `/api/ops/reports` | GET | ops | `status`(기본 `open`) | `{ items, total }` | — |
+| `/api/ops/reports/:id/act` | POST | ops | `status`(`resolved`\|`dismissed`\|`open`), `note`, `hide_listing`(true 면 상품 신고 대상 숨김) → `admin_resolve_report` | `{ result, listing_hidden }` | reports.status |
+| `/api/ops/users` | GET | ops | `q`(닉네임 일부·uuid) | `{ items[프로필], total }` | — |
+| `/api/ops/users/:id` | GET | ops | — | 프로필 + `email` | — |
+| `/api/ops/users/:id/suspend` | POST | ops | `suspended`(boolean) → `admin_set_user`(운영자 여부는 그대로) | `{ result: null }` | `active`·`suspended` |
+| `/api/ops/users/:id/delete` | POST | money | — → `adminDeleteUser`(진행 거래 등 있으면 409 + `blockers`) | `{ deleted: true }` | `active`·`suspended`·`deleted` |
+| `/api/ops/activity` | GET | ops | `limit`, `before_id`, `action` | `{ items[admin_actions + admin{nickname}] }`(id 내림차순) | — |
+
+### 9.5 이벤트(tomo → 센터)
+
+| 항목 | 값 |
+|---|---|
+| 보내는 곳 | env `OPS_HOOK_URL`(예정: `https://airship.click/api/site-hook/tomo`), 헤더 `authorization: Bearer <OPS_HOOK_TOKEN>`, `x-ops-version: 1`, `x-ops-site: tomo` |
+| 꺼짐 | 둘 중 하나라도 없으면 보내지 않는다(outbox 에 쌓이고 24시간 뒤 포기). **2026-11-27 현재 둘 다 없음** — A1 이 받는 쪽을 만든 뒤 Coolify 에 넣는다 |
+| 주기 | pg_cron `tomo_ops_outbox` 1분마다 → `POST /api/cron/ops-outbox`(x-cron-secret) → 한 번에 50건 |
+| 성공 | 받는 쪽이 2xx. 그 밖은 실패 → 1·2·4·…분(최대 2시간) 뒤 다시. 첫 발생 24시간 뒤 포기(`dead_at`) |
+| 중복 | 같은 `event_id` 가 두 번 갈 수 있다(타임아웃 뒤 재전송). 받는 쪽은 `(site_key, event_id)` 로 버린다 |
+| 본문 | `{ api_version: 1, event_id, site_key: "tomo", type, code, amount, currency, url, occurred_at, target: { type, id } \| null }`. 개인정보 없음 |
+
+| type | 언제 | code / amount | target.type |
+|---|---|---|---|
+| `order.paid` | 대행 주문(proxy_orders) 결제 완료. 주문당 한 번 | T 번호 / 주문 총액 | `proxy_order` |
+| `order.cancel_requested` | 고객 취소 요청(cancel_requested_at 기록) | T 번호 / 견적 합계(없으면 null) | `proxy_request` |
+| `dispute.opened` | 거래가 `disputed` 로 바뀜 | TX 번호 / 상품가 | `transaction` |
+| `ticket.opened` | 문의 접수 | null | `support_ticket` |
+| `refund.pending` | 환불 대기 행 생성 | TX·T 번호 / 환불액 | `refund` |
+| `payout.requested` | 출금 신청 | null / 금액 | `payout` |
+| `report.opened` | 신고 접수 | null | `report` |
+| `errors.spike` | 서버 오류가 15분 안 5회 이상(시간당 한 번) | null / 횟수 | `error_events` |
+| `cron.failed` | `cron_runs` 에 실패 기록 | 작업 이름 | `cron_run` |
+
+### 9.6 검증(2026-11-27)
+
+| 항목 | 결과 |
+|---|---|
+| 0043 리허설 | 운영 DB `begin … rollback` 2회: 이벤트 8종 트리거(errors.spike 는 미시험)·중복 방지·잘못된 종류가 업무 쓰기를 막지 않음·잡기/실패 1분·2분 뒤/재잡기/성공/24시간 포기·클라이언트 권한 없음·request_id 유일 확인. 되돌림 확인 후 적용 |
+| 서명 | 틀린 서명 401, 시각 초과 401, 쉼표 쿼리 정규화(단위 테스트 + 실서버) |
+| 운영자 | 연결 없는 운영자 403, ops scope 로 돈 경로 403, 소유자 아닌 운영자 money 403 |
+| 멱등 | 시험 계정 문의에 같은 request_id 답변 2회 → 실행 1회(활동 기록 1건), 두 번째 `replayed: true`. 기대 상태 다름 409 |
+| 1안 | 시험 운영자로 `admin_set_user`(시험 계정 정지·해제), 문의 답변 → 활동 기록 `admin_id` 가 그 운영자. RPC 수정 없음 |
+| 훅 재전송 | SQL 리허설(실패 → 간격 → 재전송 → 성공) + 단위 테스트(5xx·네트워크 오류는 실패, 2xx 만 성공). 실제 받는 쪽은 A1 뒤 확인 |
