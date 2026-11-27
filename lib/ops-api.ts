@@ -9,6 +9,7 @@ import { auctionAging, isAuctionTab } from "@/lib/auction-admin";
 import { isMbTab, mbAging, MB_OPS, MB_OP_SCOPE } from "@/lib/market-bid-admin";
 import { runMbOp, saveMbSettings } from "@/lib/market-bid-ops";
 import { getStripe } from "@/lib/stripe";
+import { INSPECTION_BUCKET, INSPECTION_MAX_PHOTOS, isInspectionKind, loadInspections, newPhotoPath, photoPathOk, type InspectionKind } from "@/lib/inspection";
 
 // 운영 API v1 경로 표. 경로·요청·응답 형태는 docs/aaa/12 9장. 조작은 모두 기존 RPC·lib/admin-actions.ts 를 운영자 세션으로 부른다.
 
@@ -382,6 +383,52 @@ const txAdvance = (checkCenter: boolean): Handler => async (ctx, p) => {
     run: async (sb) => rpcRes(await sb!.rpc("advance_transaction", { p_tx_id: id, p_to: to, p_tracking: str(ctx.body.tracking, 100) || null })) });
 };
 
+// ── T4 센터 검수(0054). :kind = tx(직거래)|proxy(대행 요청). 사진은 서명 업로드 URL 로 센터 브라우저가 버킷에 바로 올린다(브리지로 파일을 나르지 않는다) ──
+const inspTarget = (p: string[]): { kind: InspectionKind; id: string } | null =>
+  isInspectionKind(p[0]) && UUID_RE.test(p[1] ?? "") ? { kind: p[0], id: p[1] } : null;
+const inspStatus = (admin: SupabaseClient, k: { kind: InspectionKind; id: string }) =>
+  statusOf(admin, k.kind === "tx" ? "transactions" : "proxy_requests", k.id);
+/** 기록 목록(최신 먼저) + 대상의 지금 상태. 사진 = 서명 URL(10분) */
+const inspectionsGet: Handler = async ({ admin }, p) => {
+  const k = inspTarget(p);
+  if (!k) return opsFail(404, "not found");
+  const st = await inspStatus(admin, k)();
+  if (!st) return opsFail(404, "not found");
+  const items = await loadInspections(admin, k.kind, k.id);
+  return items ? opsOk({ status: st, items }) : opsFail(502, "db: inspections");
+};
+/** 사진 올릴 자리 count 개(서명 업로드 URL, 2시간). DB 를 바꾸지 않아 request_id 기록 없이 expected_status 만 맞춘다 */
+const inspectionsUpload: Handler = async ({ admin, body }, p) => {
+  const k = inspTarget(p);
+  if (!k) return opsFail(404, "not found");
+  const n = Number(body.count);
+  if (!Number.isInteger(n) || n < 1 || n > INSPECTION_MAX_PHOTOS) return bad(`count must be 1~${INSPECTION_MAX_PHOTOS}`);
+  const st = await inspStatus(admin, k)();
+  if (!st) return opsFail(404, "not found");
+  if (st !== body.expected_status) return opsFail(409, "status mismatch", { current_status: st, expected_status: body.expected_status });
+  const uploads: { path: string; url: string }[] = [];
+  for (let i = 0; i < n; i++) {
+    const path = newPhotoPath(k.kind, k.id, i);
+    const { data, error } = await admin.storage.from(INSPECTION_BUCKET).createSignedUploadUrl(path);
+    if (error || !data) return opsFail(502, `storage: ${error?.message ?? "no url"}`);
+    uploads.push({ path, url: data.signedUrl });
+  }
+  return opsOk({ uploads, method: "PUT", content_type: "image/jpeg", max_bytes: 5_242_880, expires_in: 7200 });
+};
+/** 기록 남기기 → admin_record_inspection(운영자 세션). receive=true 면 입고 처리(거래 shipped_to_center·대행 purchasing)도 같은 트랜잭션 */
+const inspectionsRecord: Handler = async (ctx, p) => {
+  const k = inspTarget(p);
+  if (!k) return opsFail(404, "not found");
+  const result = str(ctx.body.result, 10);
+  if (result !== "ok" && result !== "issue") return bad("result must be ok|issue");
+  const note = str(ctx.body.note, 2000);
+  if (result === "issue" && !note) return bad("note required for issue");
+  const photos = Array.isArray(ctx.body.photos) ? ctx.body.photos.map(String) : [];
+  if (photos.length > INSPECTION_MAX_PHOTOS || photos.some((x) => !photoPathOk(k.kind, k.id, x))) return bad("bad photos");
+  return runOp(ctx, { action: "inspections.record", target: k.id, current: inspStatus(ctx.admin, k),
+    run: async (sb) => rpcRes(await sb!.rpc("admin_record_inspection", {
+      p_kind: k.kind, p_target: k.id, p_result: result, p_note: note, p_photos: photos, p_receive: ctx.body.receive === true })) });
+};
 const ROUTES: Route[] = [
   { method: "GET", path: "meta", need: null, h: meta },
   { method: "GET", path: "health", need: null, h: health },
@@ -531,6 +578,10 @@ const ROUTES: Route[] = [
       run: async (sb) => rpcRes(await sb!.rpc("admin_release_listing_hold", { p_id: id, p_note: note })) });
   } },
   { method: "GET", path: "activity", need: "ops", h: activityList },
+  // T4 센터 검수(0054). upload 를 :kind/:id 보다 먼저(길이가 달라 겹치지는 않는다)
+  { method: "GET", path: "inspections/:kind/:id", need: "ops", h: inspectionsGet },
+  { method: "POST", path: "inspections/:kind/:id/upload", need: "ops", h: inspectionsUpload },
+  { method: "POST", path: "inspections/:kind/:id", need: "ops", h: inspectionsRecord },
   // U5 경매(0048)
   { method: "GET", path: "auctions", need: "ops", h: auctionsList },
   { method: "GET", path: "auctions/:id", need: "ops", h: auctionDetail },

@@ -379,6 +379,9 @@
 | `/api/ops/market-bids/:id/lost` | POST | ops | `final_seen`(엔, 마감 뒤 본 낙찰가, 경매 취소면 0), `reason` → `market_bid_release(lost)` → 서버가 승인 해제(`mb_cancel_<승인 id>`). 입찰이 안 들어간 건·본 낙찰가 = 우리 마지막 입찰액이면 거절 | `{ ok, status, released, error }`(해제 실패 = 크론 재시도) | `placed`·`outbid`·`hold` |
 | `/api/ops/market-bids/:id/won` | POST | **money** | `final_price`(엔), `ship`(엔, 선택 — 없으면 신청 때 송료), `note` → `market_bid_set_won`(낙찰가 > 상한·매입액 > 승인액·메루카리 낙찰가 ≠ 우리 입찰이면 **409 + 보류로 바뀜**) → 서버 매입(`mb_capture_<신청 id>`, DB 매입액) → `market_bid_to_order`(T 번호 대행 주문 paid) | `{ ok, status: ordered\|pending\|capture_failed, order_code, capture_krw, again }` 200(주문)·202(매입 대기 = 크론 재시도) | `placed`·`outbid`·`hold` |
 | `/api/ops/market-bids/:id/missed` · `/cancel` | POST | **money** | `reason` → `market_bid_release(missed\|cancelled)` → 승인 해제. 입찰이 한 번도 안 들어간 건(`placed_at` 없음)만 | `{ ok, status, released, error }` | `authorized`·`hold` |
+| `/api/ops/inspections/:kind/:id` | GET | ops | `:kind` = `tx`(센터 경유 직거래)·`proxy`(대행 요청) (T4, 0054) | `{ status(대상 지금 상태), items[{ id, result(ok\|issue), note, photos[경로], photo_urls[서명 URL 10분 \| null], received, created_at, inspector{nickname} }] }` 최신 먼저 | — |
+| `/api/ops/inspections/:kind/:id/upload` | POST | ops | `count`(1~10). DB 를 바꾸지 않아 request_id 기록 없음 → 서명 업로드 URL(2시간). 센터 브라우저가 `PUT <url>`(content-type image/jpeg, 5MB 이하)로 tomo 비공개 버킷 `inspection-photos` 에 바로 올린다 | `{ uploads[{ path, url }], method: "PUT", content_type, max_bytes, expires_in }` | 대상 status(다르면 409) |
+| `/api/ops/inspections/:kind/:id` | POST | ops | `result`(ok\|issue), `note`(issue 면 필수, 2000자, **고객에게 보임**), `photos`(upload 가 준 path, 10개 이하, 버킷에 실제로 있어야 함), `receive`(true 면 입고 처리 함께: 거래 shipped_to_center·대행 purchasing → center_received, 알림 포함) → `admin_record_inspection` | `{ result: inspections 행 }` | 대상 status(거래 transactions.status·대행 proxy_requests.status) |
 ### 9.5 이벤트(tomo → 센터)
 
 | 항목 | 값 |

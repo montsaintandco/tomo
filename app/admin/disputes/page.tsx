@@ -4,6 +4,8 @@ import TxActions from "@/components/TxActions";
 import Link from "next/link";
 import { rows as safeRows } from "@/lib/safe";
 import ReleaseHoldButton from "@/components/admin/ReleaseHoldButton";
+import InspectionList from "@/components/InspectionList";
+import { loadInspectionsMany } from "@/lib/inspection";
 
 const REFUND: Record<string, { label: string; tone: "amber" | "red" | "green" }> = {
   pending: { label: "환불 대기", tone: "amber" }, failed: { label: "환불 실패", tone: "red" }, done: { label: "환불 완료", tone: "green" },
@@ -24,6 +26,8 @@ export default async function AdminDisputesPage() {
   }[];
   const refundRes = await supabase.from("refunds").select("transaction_id, status").eq("kind", "tx").in("transaction_id", rows.map((r) => r.id));
   const refundOf = Object.fromEntries((safeRows(refundRes) as { transaction_id: string; status: string }[]).map((f) => [f.transaction_id, f.status]));
+  // 센터 검수 기록(0054) — 분쟁 판단 근거. 센터 경유 거래만
+  const insp = await loadInspectionsMany(supabase, "tx", rows.filter((r) => r.is_cross_border && !r.meetup).map((r) => r.id));
   const open = rows.filter((r) => r.status === "disputed");
   const closed = rows.filter((r) => r.status !== "disputed");
 
@@ -37,6 +41,13 @@ export default async function AdminDisputesPage() {
       <td className="max-w-[320px]">
         <p className="whitespace-pre-wrap">{r.dispute_reason}</p>
         {r.dispute_resolution && <p className="a-muted mt-1 text-[12px]">처리: {r.dispute_resolution}</p>}
+        {r.is_cross_border && !r.meetup && (
+          <details className="mt-1">
+            <summary className="a-link text-[12px]">센터 검수 {!insp ? "(확인 못 함)" : `${insp.get(r.id)?.length ?? 0}건`} ▾</summary>
+            <div className="reveal mt-1"><InspectionList items={insp?.get(r.id) ?? []} failed={!insp} lang="ko" admin /></div>
+            {insp && !insp.get(r.id)?.length && <p className="a-faint text-[12px]">검수 기록 없음</p>}
+          </details>
+        )}
       </td>
       <td><Pill tone={r.status === "disputed" ? "red" : r.status === "completed" ? "green" : "gray"}>{r.status === "disputed" ? "처리 필요" : r.status === "completed" ? "정산" : "환불"}</Pill>
         {refundOf[r.id] && <span className="mt-1 block"><Pill tone={REFUND[refundOf[r.id]]?.tone}>{REFUND[refundOf[r.id]]?.label ?? refundOf[r.id]}</Pill></span>}

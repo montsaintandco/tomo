@@ -1,6 +1,7 @@
 import { createServerSupabase } from "@/lib/supabase/server";
 import { getViewer } from "@/lib/listings";
 import AdminNav from "@/components/admin/AdminNav";
+import OpsBanner from "@/components/admin/OpsBanner";
 import { redirect } from "next/navigation";
 import { nowMs } from "@/lib/admin-aging";
 
@@ -42,7 +43,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           auctions: (ac.flagged ?? 0) + (ac.live_overdue ?? 0) + (ac.pay_overdue ?? 0),
           marketBids: (mc.to_place ?? 0) + (mc.hold ?? 0) + (mc.to_buy ?? 0) + (mc.capture_failed ?? 0) }} />
       <main className="min-w-0 flex-1 px-4 py-5 md:px-8 md:py-7">
-        <div className="mx-auto max-w-6xl">{children}</div>
+        <div className="mx-auto max-w-6xl"><OpsBanner />{children}</div>
       </main>
     </div>
   );

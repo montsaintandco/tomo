@@ -15,6 +15,7 @@ import { HOME_I18N } from "./i18n-port/home";
 import { DETAIL_I18N } from "./i18n-port/detail";
 import { ADMIN_I18N } from "./i18n-port/admin";
 import { SEO_I18N } from "./i18n-port/seo";
+import { INSPECT_I18N } from "./i18n-port/inspect";
 import { AUCTION_I18N } from "./i18n-port/auction";
 import { MARKET_BID_I18N } from "./i18n-port/market-bid";
 
@@ -36,6 +37,7 @@ const D = {
   ...DETAIL_I18N,
   ...ADMIN_I18N,
   ...SEO_I18N,
+  ...INSPECT_I18N,
   ...AUCTION_I18N,
   ...MARKET_BID_I18N,
   "nav.home": ["홈", "ホーム"],

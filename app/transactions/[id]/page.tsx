@@ -14,6 +14,9 @@ import { notFound, redirect } from "next/navigation";
 import PayNotice from "@/components/PayNotice";
 import { Suspense } from "react";
 import { rows as safeRows } from "@/lib/safe";
+import CenterShipGuide from "@/components/CenterShipGuide";
+import InspectionList from "@/components/InspectionList";
+import { loadInspections } from "@/lib/inspection";
 
 type TxDetail = {
   id: string; code?: string | null; status: string; is_cross_border: boolean; meetup: boolean; center: string | null;
@@ -72,6 +75,15 @@ export default async function TransactionPage(props: { params: Promise<{ id: str
     : [{ data: [], error: null }, { data: [], error: null }];
   const cancelReason = (safeRows(cancelRes) as { cancel_reason: string | null }[])[0]?.cancel_reason ?? null;
   const refund = (safeRows(refundRes) as { amount: number; currency: Currency; status: string }[])[0];
+
+  // 센터 경유 거래: 판매자 발송 안내(결제 완료 뒤)·센터 검수 기록(0054, 당사자 읽기 전용, 사진은 서명 URL)
+  const viaCenter = tx.is_cross_border && !tx.meetup;
+  const showGuide = viaCenter && role === "seller" && tx.status === "paid";
+  const [addrRes, insp] = await Promise.all([
+    showGuide && tx.center ? supabase.from("center_addresses").select("recipient, postal, address, phone").eq("center", tx.center).maybeSingle() : null,
+    viaCenter && !["pending_payment", "paid", "shipped"].includes(tx.status) ? loadInspections(supabase, "tx", tx.id) : [],
+  ]);
+  const centerAddr = (addrRes?.data ?? null) as { recipient: string; postal: string | null; address: string; phone: string | null } | null;
 
   let alreadyReviewed = false;
   if (tx.status === "completed" && isParty) {
@@ -161,6 +173,15 @@ export default async function TransactionPage(props: { params: Promise<{ id: str
         </dl>
       )}
 
+      {(insp === null || insp.length > 0) && (
+        <section className="mb-4">
+          <h2 className="mb-1 text-[14px] font-bold text-ink">{t(lang, "insp.title")}</h2>
+          <p className="mb-2 text-[12px] text-ink-soft">{t(lang, "insp.sub")}</p>
+          <InspectionList items={insp ?? []} failed={insp === null} lang={lang} admin={role === "admin"} />
+        </section>
+      )}
+
+      {showGuide && <CenterShipGuide addr={centerAddr} code={orderLabel(tx.code, tx.id)} lang={lang} />}
       {role === "buyer" && tx.status === "pending_payment" && <div className="mb-2"><PayTxButton txId={tx.id} lang={lang} /></div>}
       <TxActions txId={tx.id} status={tx.status} isCrossBorder={tx.is_cross_border} meetup={tx.meetup} role={role} lang={lang} />
 

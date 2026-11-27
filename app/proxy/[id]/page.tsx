@@ -4,6 +4,8 @@ import { formatPrice, convertPrice, type Currency } from "@/lib/currency";
 import { type MarketSource } from "@/lib/market/types";
 import { t, type Lang } from "@/lib/i18n";
 import ProxyActions from "@/components/ProxyActions";
+import InspectionList from "@/components/InspectionList";
+import { loadInspections } from "@/lib/inspection";
 import { TomoSymbol } from "@/components/Brand";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -59,6 +61,9 @@ export default async function ProxyDetailPage(props: { params: Promise<{ id: str
   ]);
   const extra = (safeRows(extraRes) as { cancel_requested_at: string | null; cancel_reason: string | null; refund_amount: number | null }[])[0];
   const refund = (safeRows(refundRes) as { amount: number; currency: Currency; status: string }[])[0];
+  // 센터 검수 기록(0054) — 센터 단계 뒤에만. 고객은 읽기 전용, 사진은 서명 URL
+  const inspRaw = ["requested", "quoted", "approved", "paid"].includes(r.status) ? [] : await loadInspections(supabase, "proxy", r.id);
+  const insp = inspRaw === null ? ("failed" as const) : inspRaw;
   const cur = Math.max(0, STEPS.findIndex((s) => s === r.status));
   const cancelled = r.status === "cancelled";
   const totalBuyer = r.quote_total != null && viewer.currency === "KRW"
@@ -147,6 +152,14 @@ export default async function ProxyDetailPage(props: { params: Promise<{ id: str
         <dl className="card mb-4 grid grid-cols-[auto_1fr] gap-x-3 p-3 text-xs text-ink-soft">
           <dt className="font-bold text-ink">{t(lang, "tx.intlTracking")}</dt><dd className="tnum">{r.intl_tracking}</dd>
         </dl>
+      )}
+
+      {insp && (insp === "failed" || insp.length > 0) && (
+        <section className="mb-4">
+          <h2 className="mb-1 text-[14px] font-bold text-ink">{t(lang, "insp.title")}</h2>
+          <p className="mb-2 text-[12px] text-ink-soft">{t(lang, "insp.sub")}</p>
+          <InspectionList items={insp === "failed" ? [] : insp} failed={insp === "failed"} lang={lang} admin={viewer.isAdmin && !isOwner} />
+        </section>
       )}
 
       <ProxyActions id={r.id} status={r.status} isOwner={isOwner} isAdmin={viewer.isAdmin} lang={lang}
