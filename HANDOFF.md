@@ -307,3 +307,9 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=<Supabase 대시보드 → Project Settings → AP
 - 화면: /admin/auctions(탭·검색·지연·의심, 상세 시트 조작), 메뉴 「경매」, 대시보드 처리 대기 줄. 플래그와 무관.
 - 운영 API: capability auction, GET auctions·auctions/:id, POST auctions/:id/close·void_bid·clear_strike(ops), counts 3줄. 에어쉽 화면은 에어쉽 docs/connected-sites.md 「U5」.
 - 되돌리기: 0048 파일 하단 주석 → 코드 revert.
+### 2026-11-27 U6 경매 리허설·켜기 (docs/aaa/14-auction.md 부록 「U6 기록」)
+- 로컬(운영 DB·Stripe 테스트 키) 14단계 브라우저 리허설: 실결제(10번)만 빼고 통과. 시각은 시험 행만 service role 로 당김. 결함 고침(aad4be8): 입찰 있는 경매 내용 수정 잠금, 빌드 env 에 NEXT_PUBLIC_AUCTION 누락, 미결제 경매 「거래 보기」, 내 경매 전환 표시, 번역 제목, 「경매만」 마감 임박순.
+- 켬: Actions Variables `NEXT_PUBLIC_AUCTION=1` + aad4be8 배포(gate·image·db-tests·smoke success). 운영 판매 폼 「판매 방식」·「경매만」·/mypage/auctions·경매 API 확인. 고객센터 FAQ·llms.txt·AI 상담에 경매 규칙(플래그 켜질 때만).
+- 시험 데이터 전부 정리(표별 건수는 14 부록), 에어쉽 connected_site_events 3건 삭제.
+- 남은 것: 낙찰 결제창 45분 만료 때 tx_cancelled 알림이 양쪽에 감(오해 소지, SQL 0049 필요), 실결제 1회(Ren 승인), 「추가 설명 덧붙이기」 없음, 공지 등록(Ren).
+- 끄기: Actions 변수 삭제 → 재빌드.

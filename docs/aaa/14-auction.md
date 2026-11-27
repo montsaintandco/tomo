@@ -450,3 +450,41 @@
 3. 시험 경매를 정리할 때 `auction_flags`·`auction_bid_voids`·`ops_outbox`(type `auction.%`, 에어쉽 훅으로 이미 나갔을 수 있음 → 에어쉽 `connected_site_events` 도)·`admin_actions`(target_type `auction`) 를 같이 지운다.
 4. 강제 종료된 상품은 숨김 상태다. 시험 뒤 판매자 화면에서 다시 경매/전환이 되는지(cancelled 도 대상)도 보면 좋다.
 5. 진행 중 경매 상품은 어드민 상품 숨김·판매자 정지가 거절된다. 시험 순서에서 alice 정지를 쓰면 먼저 강제 종료해야 한다.
+
+## 부록. U6 기록 (2026-11-27, 리허설·켜기)
+
+- 환경: 로컬 `next build`+`start`(NEXT_PUBLIC_AUCTION=1, NEXT_PUBLIC_SITE_URL=http://localhost:3100, 운영 DB, Stripe **테스트 키**). 세 계정을 주소별로 로그인했다: alice=localhost, bob=127.0.0.1(일본어), center=center.localhost. 보안 주소가 아닌 `http://100.x` 에서는 `crypto.randomUUID` 가 없어 입찰 확인 단계가 안 열린다(운영은 https 라 해당 없음).
+- 시각은 service role 로 시험 행만 당겼다: 경매 A `ends_at`(3분 뒤·마감), 결제창 거래 2건 `created_at`(50·55분 전) + `release_stale_reservations` 직접 호출, `pay_due_at`(50분 전), 다시 올린 경매 `ends_at`(지금). 시험 전용 코드는 넣지 않았다.
+
+| 번호 | 절차 | 결과 |
+|---|---|---|
+| 1 | alice 시작가 10,000원·1일 등록 | 통과. 「경매 진행 중」, 제안·바로구매 없음 |
+| 2 | alice 본인 입찰 | 통과. 화면 「내 경매에는 입찰할 수 없어요」, API 400 `auction.err.own` |
+| 3 | bob 상한 30,000원 | 통과. 현재가 10,000원, bob 1등, 최대 결제액 ₩38,000(약 ¥4,546, 국제배송비 ₩8,000 포함) |
+| 4 | center 20,000원 | 통과. 현재가 21,000원, bob 1등. center 에 밀림 알림은 없다: 1등이었던 적이 없어 A-5 정의(1등을 뺏겼을 때)대로다. 화면이 즉시 「더 높은 상한이 있어요」를 보인다. 고치지 않음 |
+| 5 | center 30,000원 | 통과. 현재가 30,000원, bob 1등(먼저 넣음) |
+| 6 | center 토큰으로 상한가 조회 | 통과. `auction_max_bids` 본인 1행만, `auctions.leader_id` 403 |
+| 7 | 마감 3분 전 center 31,000원 | 통과. 마감 = 입찰 + 5분, 「1번 연장」. 이어서 bob 40,000원 → 32,000원·2번 연장 |
+| 8 | 마감 | 통과. 1분 크론에 `awaiting_payment`, 알림 won·sold·lost, 상품 reserved, `auction.ended` 에어쉽 도착 |
+| 9 | 결제하기 → 45분 만료 → 다시 결제하기 | 통과. Stripe 결제창(테스트) ₩40,000 열림(카드 입력 안 함) → 거래 cancelled·상품 reserved 유지 → 새 결제창 열림 |
+| 10 | 실제 결제 | **안 함**(Ren 실결제 시험 미승인). 결제 완료 → 경매 paid 는 U2 롤백 리허설(mark_tx_paid)로만 확인돼 있다 |
+| 11 | 48시간 미결제 | 통과. unpaid, bob 경고 1건(입찰 제한 없음), 상품 숨김, 알림 unpaid·unpaid_seller, `auction.unpaid` 도착 |
+| 12 | 판매자 「같은 설정으로 다시 경매」 | 통과. 새 경매 `relist_of` 연결 |
+| 13 | 입찰 0건 마감 → 「일반 판매로 전환」 | 통과. unsold·알림 → 전환 뒤 `sale_type=fixed`·15,000원·공개·제안 꺼짐 |
+| 14 | 어드민 입찰 무효 → 강제 종료 | 통과. 상세 시트에서 bob 무효(사유 필수·확인 창) → center 1등·현재가 5,000원 재계산·알림 bid_voided, 강제 종료 → cancelled·알림(입찰자·판매자)·활동 기록 2건·`auction.cancelled` 도착. 판매자 화면에 다시 경매/전환 버튼 |
+| 추가 | 입찰 있는 경매 수정 폼 | **결함 → 고침**(아래) |
+| 추가 | 일본어(bob) 화면 | 상세·확인 단계·낙찰·마이페이지·알림 문구 누락 없음 |
+
+- 고친 것(aad4be8):
+  - 입찰이 들어온(또는 결제 대기) 경매는 제목·설명·사진도 못 고친다(설계 A-1). 전에는 가격 칸만 잠그고 내용은 고칠 수 있었다(낙찰 뒤 바꿔치기 위험). `PATCH /api/listings/[id]` 409 `auction.err.editBids`, 수정 화면은 안내만. 「추가 설명 덧붙이기」는 아직 없다.
+  - `server-image.yml` 빌드 env 에 `NEXT_PUBLIC_AUCTION` 이 없었다. 변수만 넣었으면 운영은 계속 꺼져 있었을 것이다. 한 줄 추가.
+  - 「경매만」 목록 = 마감 임박순(진행 중 경매를 `ends_at` 순으로 골라 그 순서로). 데스크톱 제목 「마감 임박순」.
+  - 미결제·취소 경매의 「거래 보기」(취소된 마지막 결제창으로 가던 링크)를 숨김. 결제 대기·결제 완료일 때만.
+  - 마이페이지 내 경매: 일반 판매로 바꾼 상품에 「일반 판매로 전환함」. 입찰 중·낙찰 목록 제목은 내 언어 번역 제목.
+  - 고객 안내: 고객센터 FAQ 6문항(ko/ja), llms.txt 「Auctions」, AI 상담 기본 정보 한 줄·링크 `/mypage/auctions`. 모두 플래그가 켜졌을 때만 나온다. 약관·공지는 건드리지 않았다.
+- 남은 것:
+  - 낙찰자 결제창이 45분 만료되면 기존 `notify_transaction` 이 양쪽에 「거래가 취소됐어요」(tx_cancelled)를 보낸다. 경매는 아직 결제 대기인데 판매자·낙찰자가 낙찰 취소로 오해할 수 있다. SQL(알림 트리거 예외) 변경이라 롤백 리허설 뒤 0049 로 하는 것이 맞다.
+  - 실결제(10번)는 Ren 승인 뒤.
+- 정리(service role, 시험 상품 2개에 딸린 것만): notifications 19 · auction_bids 11 · auction_max_bids 3 · auction_bid_requests 6 · auction_strikes 1 · auction_flags 0 · auction_bid_voids 1 · admin_actions 2 · ops_outbox 3 · auctions 3 · transactions 2(TX000066·67, 결제창만) · listing_translations 2 · listings 2 · 저장소 사진 2 · 에어쉽 connected_site_events 3(SQL 편집기). Stripe 테스트 결제창 2개 만료. 잔여: 경매 표 7개 0행, 알림 id>175 0, 거래 60행(시험 전과 같음), admin_actions(auction) 0, ops_outbox(auction.*) 0, 에어쉽 0. bob·alice·center `bid_banned_until` null. 텔레그램 「[TOMO]」 알림 3건(낙찰·미결제·강제 종료)은 남아 있을 수 있다.
+- 켜기: GitHub Actions Variables `NEXT_PUBLIC_AUCTION=1`(API 로 추가) → aad4be8 푸시 → server-image·db-tests·smoke success → `/api/health` version aad4be8. 운영 확인: 판매 폼 「판매 방식」(경매 선택 시 시작가·기간·안내), 홈 목록 「경매만」 칩, `/mypage/auctions` 3탭, `GET /api/auctions/mine` 200(로그인)·401(비로그인), `/state` 404 `auction.err.notFound`(꺼짐이면 `auction.err.off`), `/help` 경매 문항, `/llms.txt` 「Auctions」. Coolify 런타임 env 는 필요 없었다(NEXT_PUBLIC 은 빌드 때 박힘).
+- 끄기: Actions 변수 `NEXT_PUBLIC_AUCTION` 삭제 → 재빌드(코드 푸시 또는 Run workflow).
