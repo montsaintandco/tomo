@@ -349,3 +349,6 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=<Supabase 대시보드 → Project Settings → AP
 - 어드민: 센터 화면 직거래+대행·번호 검색·검수 입력·주소 수정, 분쟁 화면 검수 열람, 위쪽 띠(에어쉽 어드민 안내, 닫기).
 - 운영 API: GET/POST `inspections/:kind/:id`, POST `…/upload`(서명 업로드 URL). 번호 검색 `opsCodeQ`. 에어쉽은 센터·대행 상세 입력, 직거래·분쟁 상세 읽기.
 - 시험 데이터 전부 정리. 남은 것: 받는 사람 이름·전화(지금 TOMO·없음)는 Ren 확인 뒤 어드민 센터 화면에서 바꾼다. 판매자 안내·고객 검수 블록 화면 실측 없음.
+### 2026-11-27 입찰 워커 연결 A1(에어쉽 DB) 운영 적용 (docs/aaa/16 12절)
+- 에어쉽 `daa85c27` 마이그레이션 20261128100000_site_bids 운영 적용, 스위치 site_bid_bridge.enabled=false. 돈 함수 md5 불변, 분기 8곳, 리허설 ①~⑤·결함 주입 5종 통과.
+- T1(tomo 0055·운영 API·크론·이벤트)은 아직. 다음 작업자 메모는 docs/aaa/16 12.3.
