@@ -45,7 +45,7 @@ export const MB_ERRORS: [string, I18nKey][] = [
   ["mb: cap too high", "mb.err.capHigh"], ["mb: address required", "mb.err.address"], ["mb: pccc required", "mb.err.pccc"],
   ["mb: item taken", "mb.err.taken"], ["mb: already requested", "mb.err.already"], ["mb: user limit", "mb.err.userLimit"],
   ["mb: full", "mb.err.full"], ["mb: daily limit", "mb.err.daily"], ["mb: rate missing", "mb.err.notReady"],
-  ["mb: not cancellable", "mb.err.notCancellable"],
+  ["mb: not cancellable", "mb.err.notCancellable"], ["mb: cancel closed", "mb.err.cancelClosed"],
 ];
 export function mbErrorKey(msg: string): I18nKey {
   return MB_ERRORS.find(([k]) => msg.includes(k))?.[1] ?? "mb.err.failed";

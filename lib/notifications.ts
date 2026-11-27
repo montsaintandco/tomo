@@ -9,7 +9,7 @@ export const NOTIF_KINDS = [
   "offer_received", "offer_accepted", "offer_declined", "wish_price_drop", "listing_held", "listing_released",
   "auction_first_bid", "auction_outbid", "auction_ending", "auction_won", "auction_lost", "auction_sold", "auction_unsold",
   "auction_pay_reminder", "auction_unpaid", "auction_unpaid_seller", "auction_cancelled", "auction_bid_voided", "auction_pay_expired",
-  "mb_authorized", "mb_cancelled", "mb_auth_void", "mb_placed", "mb_outbid", "mb_won", "mb_lost", "mb_missed", "mb_hold", "mb_pay_needed", "mb_pay_expired",
+  "mb_authorized", "mb_cancelled", "mb_auth_void", "mb_placed", "mb_outbid", "mb_won", "mb_lost", "mb_missed", "mb_hold", "mb_pay_needed", "mb_pay_expired", "mb_won_check",
 ] as const;
 export type NotifKind = (typeof NOTIF_KINDS)[number];
 

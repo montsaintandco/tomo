@@ -352,3 +352,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=<Supabase 대시보드 → Project Settings → AP
 ### 2026-11-27 입찰 워커 연결 A1(에어쉽 DB) 운영 적용 (docs/aaa/16 12절)
 - 에어쉽 `daa85c27` 마이그레이션 20261128100000_site_bids 운영 적용, 스위치 site_bid_bridge.enabled=false. 돈 함수 md5 불변, 분기 8곳, 리허설 ①~⑤·결함 주입 5종 통과.
 - T1(tomo 0055·운영 API·크론·이벤트)은 아직. 다음 작업자 메모는 docs/aaa/16 12.3.
+### 2026-11-27 입찰 워커 연결 T1(tomo) 운영 적용 (docs/aaa/16 12.4, 경로 표 docs/aaa/12 9장)
+- 0055_market_bid_worker(운영 적용, 되돌림 리허설 1묶음 30여 단언 통과·결함 주입 4종 검출 뒤): 접수 확인(armed), 워커 낙찰 = 보류 `worker_won`(낙찰 확인 대기, 매입 없음), 건강 신호 표 `market_bid_worker_health` + 5분 끊기면 접수 자동 중단(실행자 airship 일 때만, 자동 재개 없음, `bid.worker_down` 1회), 크론 워커 규칙(미접수 워커 건 마감 30분 전 자동 취소, 접수된 건은 워커 비정상·결과 지연 때 보류), 재알림 `bid.to_place_due`(2·1시간 전·접수 10분 지연), 고객 취소 마감(마감 30분 전·접수된 워커 건), 시스템 주체 `site-bids@system.airship.click`(ops_actors.is_system, money 불가).
+- 운영 API 워커 경로 4개(시스템 주체 전용): GET `market-bids/worker-queue`, POST `market-bids/worker-health`, POST `market-bids/:id/armed`, POST `market-bids/:id/worker-result`. 어드민 /admin/market-bids 에 실행자·워커 상태 띠·자동 중단 사유·「낙찰 확인 대기(워커)」 줄.
+- 설정은 그대로: executor=manual, accepting=false. MB000001 안 건드림. 수동 전환 버튼·워커 건 고객 취소(에어쉽 동기 취소)는 T2.

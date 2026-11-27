@@ -6,7 +6,7 @@ import { SITE_URL } from "@/lib/site";
 import { CENTER_COUNTRY, OPS_API_VERSION, OPS_CAPABILITIES, OPS_EVENT_TYPES, OPS_SITE, UUID_RE, type OpResult, type OpsScope } from "@/lib/ops-bridge";
 import { listParam, opsFail, opsOk, paging, runOp, withActorSession, type OpsCtx } from "@/lib/ops-server";
 import { auctionAging, isAuctionTab } from "@/lib/auction-admin";
-import { isMbTab, mbAging, MB_OPS, MB_OP_SCOPE } from "@/lib/market-bid-admin";
+import { isMbTab, isMbWorkerResult, mbAging, mbWorkerPlan, MB_OPS, MB_OP_SCOPE } from "@/lib/market-bid-admin";
 import { runMbOp, saveMbSettings } from "@/lib/market-bid-ops";
 import { getStripe } from "@/lib/stripe";
 import { parseOrderCode } from "@/lib/order-code";
@@ -15,7 +15,7 @@ import { INSPECTION_BUCKET, INSPECTION_MAX_PHOTOS, isInspectionKind, loadInspect
 // 운영 API v1 경로 표. 경로·요청·응답 형태는 docs/aaa/12 9장. 조작은 모두 기존 RPC·lib/admin-actions.ts 를 운영자 세션으로 부른다.
 
 type Handler = (ctx: OpsCtx, p: string[]) => Promise<Response>;
-type Route = { method: "GET" | "POST"; path: string; need: OpsScope | null; h: Handler };
+type Route = { method: "GET" | "POST"; path: string; need: OpsScope | null; h: Handler; sys?: true };   // sys = 워커 경로(시스템 주체 전용, 0055)
 
 const res = (r: ActionResult): OpResult => r;
 const rpcRes = (r: { data: unknown; error: { message: string } | null }, okStatus = 200): OpResult =>
@@ -141,6 +141,7 @@ const counts: Handler = async ({ admin }) => {
     // 입찰 대행(0052) 4줄: 입찰 필요(마감 2시간 안 = 지연), 보류(전부 지연), 낙찰 구매 필요(메루카리 24시간 기한, 18시간 지나면 지연), 매입 실패
     mline("market_bid.to_place", "마켓 입찰 필요", "to_place", "to_place", "to_place_soon"),
     mline("market_bid.hold", "마켓 입찰 보류", "hold", "hold", "hold"),
+    mline("market_bid.won_check", "마켓 낙찰 확인 대기(워커)", "hold", "won_check", "won_check"),
     mline("market_bid.to_buy", "마켓 낙찰 구매 필요", "won", "to_buy", "to_buy_late"),
     mline("market_bid.capture_failed", "마켓 낙찰 매입 실패", "won", "capture_failed", "capture_failed")]);
 };
@@ -230,6 +231,53 @@ const mbOpRoutes: Route[] = MB_OPS.map((op) => ({ method: "POST", path: `market-
   return runOp(ctx, { action: `market_bids.${op}`, target: id, current: statusOf(ctx.admin, "market_bids", id),
     run: async (sb) => runMbOp(sb!, ctx.admin, getStripe(), id, op, ctx.body, String(ctx.body.expected_status)) });
 } }));
+
+// ── 0055 워커 연결(에어쉽 입찰 워커 다리 작업 전용, 시스템 주체·ops). 서버 권한(service_role)으로 DB 함수를 부른다. 매입은 여기서 못 한다 ──
+// 대기 목록: executor='airship' · authorized(기본). ?ids=a,b(최대 100) 면 상태·실행자 상관없이 그 건들(에어쉽 행 맞추기용)
+const MB_WORKER_COLS = `id, code, status, executor, executor_ref, armed_at, source, source_id, cap_jpy, seen_price_jpy, seen_bids, ends_at,
+  authorized_at, auth_expires_at, placed_at, last_bid_jpy, worker_final_jpy, hold_reason, updated_at,
+  item:external_items!market_bids_external_item_id_fkey(url, title, images)`;
+const mbWorkerQueue: Handler = async ({ admin, url }) => {
+  const ids = listParam(url, "ids");
+  if (ids.length > 100 || ids.some((x) => !UUID_RE.test(x))) return bad("ids must be up to 100 uuids");
+  let q = admin.from("market_bids").select(MB_WORKER_COLS, { count: "exact" });
+  q = ids.length ? q.in("id", ids) : q.eq("executor", "airship").eq("status", "authorized");
+  const r = await q.order("ends_at").limit(200);
+  if (r.error) return opsFail(502, `db: ${r.error.message}`);
+  return opsOk({ items: ((r.data ?? []) as unknown as (Row & { item: { url: string; title: string; images: string[] | null } | null })[]).map(({ item, ...x }) =>
+    ({ ...x, url: item?.url ?? null, title: item?.title ?? null, image: item?.images?.[0] ?? null })), total: r.count ?? null });
+};
+// 워커 건이 아니면 상태 앞에 「manual:」을 붙여 expected_status 대조에서 409 가 나게 한다
+const workerStatusOf = (admin: SupabaseClient, id: string) => async () => {
+  const { data } = await admin.from("market_bids").select("status, executor").eq("id", id).maybeSingle();
+  return data ? (data.executor === "airship" ? String(data.status) : `${data.executor}:${data.status}`) : null;
+};
+const mbArmed: Handler = async (ctx, [id]) => {
+  const nf = uuidOr404(id); if (nf) return nf;
+  const ref = str(ctx.body.executor_ref, 100);
+  if (!ref) return bad("executor_ref required");
+  return runOp(ctx, { action: "market_bids.armed", target: id, current: workerStatusOf(ctx.admin, id), session: false,
+    run: async () => rpcRes(await ctx.admin.rpc("market_bid_set_armed", { p_id: id, p_ref: ref, p_expected: String(ctx.body.expected_status) })) });
+};
+const mbWorkerResult: Handler = async (ctx, [id]) => {
+  const nf = uuidOr404(id); if (nf) return nf;
+  const result = ctx.body.result;
+  if (!isMbWorkerResult(result)) return bad("result must be placed|outbid|lost|failed|unknown|won");
+  const expected = String(ctx.body.expected_status);
+  return runOp(ctx, { action: `market_bids.worker.${result}`, target: id, current: workerStatusOf(ctx.admin, id), session: false,
+    run: async () => {
+      const { data: b } = await ctx.admin.from("market_bids").select("placed_at").eq("id", id).maybeSingle();
+      const plan = mbWorkerPlan(result, ctx.body, !!b?.placed_at);
+      if (typeof plan === "string") return { status: 400, body: { error: plan } };
+      if (plan.op === "worker_won") return rpcRes(await ctx.admin.rpc("market_bid_worker_won", { p_id: id, p_final: plan.final, p_expected: expected }));
+      return res(await runMbOp(ctx.admin, ctx.admin, getStripe(), id, plan.op, plan.body, expected));
+    } });
+};
+// 건강 신호(1분마다, 덮어쓰기). 멱등 기록 없음(request_id 불필요)
+const mbWorkerHealth: Handler = async ({ admin, body }) => {
+  const r = await admin.rpc("market_bid_worker_health", { p: body });
+  return r.error ? opsFail(400, r.error.message) : opsOk(r.data);
+};
 
 /** 검색어 → uuid 또는 정확한 번호. 상자에 적힌 「TOMO TX000123」·「t12」 같은 입력도 받는다(T4) */
 export const opsCodeQ = (q: string) => {
@@ -555,7 +603,7 @@ const ROUTES: Route[] = [
   } },
   // A3: 미지급 합계(admin_seller_liability, 운영자 세션), 판매자 원장 잔액·조정, 보류 상품 반송 확인·해제
   { method: "GET", path: "payouts/summary", need: "money", h: async ({ admin, actor }) => {
-    const r = await withActorSession(admin, actor!.profile_id, async (sb) => sb.rpc("admin_seller_liability"));
+    const r = await withActorSession(admin, actor!.profile_id!, async (sb) => sb.rpc("admin_seller_liability"));
     return r.error ? opsFail(502, `db: ${r.error.message}`) : opsOk({ items: r.data ?? [] });
   } },
   { method: "GET", path: "users/:id/ledger", need: "money", h: async ({ admin }, [id]) => {
@@ -599,6 +647,10 @@ const ROUTES: Route[] = [
   // M5 입찰 대행(0052). settings 를 :id 보다 먼저
   { method: "GET", path: "market-bids", need: "ops", h: mbList },
   { method: "GET", path: "market-bids/settings", need: "ops", h: mbSettingsGet },
+  { method: "GET", path: "market-bids/worker-queue", need: "ops", h: mbWorkerQueue, sys: true },
+  { method: "POST", path: "market-bids/worker-health", need: "ops", h: mbWorkerHealth, sys: true },
+  { method: "POST", path: "market-bids/:id/armed", need: "ops", h: mbArmed, sys: true },
+  { method: "POST", path: "market-bids/:id/worker-result", need: "ops", h: mbWorkerResult, sys: true },
   { method: "POST", path: "market-bids/settings", need: "money", h: mbSettingsPost },
   { method: "GET", path: "market-bids/:id", need: "ops", h: mbDetail },
   ...mbOpRoutes,

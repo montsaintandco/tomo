@@ -76,6 +76,10 @@ const ADMIN_ERR: [string, string][] = [
   ["mb: was placed", "입찰이 들어간 건이에요. 결과(낙찰·유찰)로 처리하세요"],
   ["mb: not found", "신청을 찾을 수 없어요"],
   ["mb: bad setting", "설정 값 범위를 확인해 주세요"],
+  ["mb: worker down", "입찰 워커가 정상이 아니에요. 워커 상태를 확인하거나 실행자를 수동으로 두고 켜세요"],
+  ["mb: not worker", "워커 실행 건이 아니에요"],
+  ["mb: armed by other", "다른 작업이 이미 접수한 건이에요"],
+  ["mb: bad health", "워커 건강 신호 형식이 맞지 않아요"],
 ];
 export function adminMbError(msg: string): string {
   return ADMIN_ERR.find(([k]) => msg.includes(k))?.[1] ?? msg;
@@ -83,12 +87,43 @@ export function adminMbError(msg: string): string {
 export const HOLD_REASON_LABEL: Record<string, string> = {
   "final over cap": "낙찰가가 상한가보다 높음", "capture over auth": "매입액이 승인액보다 큼", "auth not live": "카드 승인이 살아 있지 않음",
   "final differs from our bid": "낙찰가가 우리 마지막 입찰액과 다름", "result overdue": "마감 15분 뒤에도 결과 없음",
+  // 0055 워커 건
+  worker_won: "낙찰 확인 대기 — 메루카리에서 낙찰자 표기를 확인한 뒤 「낙찰 처리」", submit_unknown: "워커 제출 여부 불명",
+  failed_after_submit: "워커 실패(제출 뒤) — 넣었는지 확인 필요", "worker down before end": "마감 전 워커 이상(접수된 건)",
 };
+
+// ── 0055 워커 연결 ──
+export const MB_EXECUTOR_LABEL: Record<string, string> = { manual: "수동", airship: "워커 입찰" };
+/** 워커 결과(에어쉽 다리 작업 → POST /market-bids/:id/worker-result) */
+export const MB_WORKER_RESULTS = ["placed", "outbid", "lost", "failed", "unknown", "won"] as const;
+export type MbWorkerResult = (typeof MB_WORKER_RESULTS)[number];
+export const isMbWorkerResult = (v: unknown): v is MbWorkerResult => typeof v === "string" && (MB_WORKER_RESULTS as readonly string[]).includes(v);
+export type MbWorkerPlan =
+  | { op: "placed" | "outbid" | "lost" | "missed" | "hold"; body: Record<string, unknown> }
+  | { op: "worker_won"; final: number };
+/**
+ * 워커 결과 → 실행할 조작. 낙찰은 매입하지 않고 「낙찰 확인 대기」(보류 worker_won)로만. 실패는 입찰이 한 번도 안 들어간 건(placed_at 없음)만
+ * 「못 넣음」(승인 해제), 들어간 적 있으면 보류. 불명은 보류. 값이 모자라면 오류 문자열
+ */
+export function mbWorkerPlan(result: MbWorkerResult, b: Record<string, unknown>, placedBefore: boolean): MbWorkerPlan | string {
+  const n = (v: unknown) => { const x = Number(v); return Number.isInteger(x) && x >= 0 ? x : null; };
+  const ev = typeof b.evidence === "string" && b.evidence.trim() ? b.evidence.trim().slice(0, 200) : "";
+  const why = typeof b.reason === "string" && b.reason.trim() ? b.reason.trim().slice(0, 200) : "";
+  switch (result) {
+    case "placed": { const a = n(b.amount); if (!a) return "amount (엔) required"; return { op: "placed", body: { amount: a, ends_at: b.ends_at ?? null, note: `worker${ev ? `: ${ev}` : ""}` } }; }
+    case "outbid": { const p = n(b.price); if (!p) return "price (엔) required"; return { op: "outbid", body: { price: p, note: `worker${ev ? `: ${ev}` : ""}` } }; }
+    case "lost": { const f = n(b.final_price); if (f == null) return "final_price (엔, 낙찰자 없으면 0) required"; return { op: "lost", body: { final_seen: f, reason: `worker: lost${ev ? ` ${ev}` : ""}` } }; }
+    case "failed": if (!why) return "reason required";
+      return placedBefore ? { op: "hold", body: { reason: "failed_after_submit" } } : { op: "missed", body: { reason: `worker: ${why}` } };
+    case "unknown": return { op: "hold", body: { reason: "submit_unknown" } };
+    case "won": { const f = n(b.final_price); if (!f) return "final_price (엔) required"; return { op: "worker_won", final: f }; }
+  }
+}
 export const holdText = (r: string | null | undefined) => (r ? HOLD_REASON_LABEL[r] ?? r : "");
 
 // 사건 기록(market_bid_events.kind) 운영 화면 이름. 모르는 종류는 그대로
 export const MB_EVENT_LABEL: Record<string, string> = {
   requested: "신청", authorized: "카드 승인", auth_void: "승인 즉시 취소", placed: "입찰됨", rebid: "다시 입찰", outbid: "밀림", hold: "보류",
   released: "승인 해제", won: "낙찰", captured: "매입", ordered: "주문 생성", lost: "유찰", missed: "못 넣음", cancelled: "취소", expired: "결제창 만료",
-  loss_recorded: "손실 기록", capture_failed: "매입 실패", repaid: "고객 재결제", pay_expired: "재결제 기한 지남",
+  loss_recorded: "손실 기록", armed: "워커 접수 확인", capture_failed: "매입 실패", repaid: "고객 재결제", pay_expired: "재결제 기한 지남",
 };

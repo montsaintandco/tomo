@@ -10,7 +10,7 @@ async function handle(req: Request, { params }: { params: Promise<{ path: string
   if (!process.env.OPS_BRIDGE_SECRET) return opsFail(503, "ops bridge disabled");
   const m = matchOps(req.method, (await params).path ?? []);
   if (!m) return opsFail(404, "unknown ops route");
-  const a = await opsAuth(req, m.route.need);
+  const a = await opsAuth(req, m.route.need, !!m.route.sys);
   if ("res" in a) return a.res;
   try {
     return await m.route.h(a.ctx, m.params);

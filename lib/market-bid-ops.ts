@@ -68,6 +68,7 @@ export async function runMbOp(sb: SupabaseClient, admin: SupabaseClient, stripe:
 export async function saveMbSettings(sb: SupabaseClient, b: Record<string, unknown>): Promise<ActionResult> {
   const p: Record<string, unknown> = {};
   if (typeof b.accepting === "boolean") p.accepting = b.accepting;
+  if (b.executor === "manual" || b.executor === "airship") p.executor = b.executor;   // 0055: 새 신청의 실행자(워커 = airship). 워커가 비정상이면 DB 가 접수 켜기를 거절
   for (const k of ["cap_max_jpy", "max_open", "max_open_per_user", "daily_cap_jpy", "min_lead_minutes", "max_lead_hours"]) {
     if (b[k] != null && b[k] !== "") { const n = int(b[k]); if (n == null) return { status: 400, body: { error: `${k} must be integer` } }; p[k] = n; }
   }

@@ -350,9 +350,7 @@ tomo 고객 신청 → 카드 승인(authorized, executor='airship')
 | admin_ops_counts | auction_unreleased 는 deposit_krw>0 만 세어 연결 행 제외. members_new 에 시스템 회원 1 |
 | 온보딩 메일 | email_confirmed_at 없는 회원 제외 → 시스템 회원 대상 아님 |
 
-### 12.2 T1 tomo — 이번에 못 함
-
-0055·운영 API 4경로·크론 규칙·이벤트 3종은 손대지 않았다. 운영 상태 그대로(플래그 켜짐, accepting=false, MB000001 시험 신청).
+### 12.2 T1 tomo — 12.4에 기록(아래)
 
 ### 12.3 다음 작업자(T1·A2·A3·T2·R)가 알아야 할 것
 
@@ -362,3 +360,60 @@ tomo 고객 신청 → 카드 승인(authorized, executor='airship')
 - A3(켜기 전 필수): `/admin/auction` 목록·건수·통계·「내 차례」에서 `origin_site is not null` 제외, 「낙찰 주문 만들기」·「예치 해제」 숨김.
 - 워커 일일 한도는 연결 행 합산. 워커 관리자 알림 제목에는 TOMO 표시가 없다.
 - 리허설 행은 반드시 DO 블록 안에서 만들고 롤백한다. 커밋된 mercari·requested 행은 워커가 3초 안에 실제로 입찰한다.
+
+### 12.4 T1 tomo 구현 기록 (2026-11-27) — 0055 운영 적용
+
+설계와 다르게 정한 것: 낙찰 확인 대기는 새 상태가 아니라 **보류 + `hold_reason='worker_won'`**(0052 의 보류 → 낙찰 처리 전이를 그대로 쓴다). 실행자 값은 0050 그대로 `'airship'`(= 워커). `auto_capture`·`bid.to_buy_due`·`executor` 전환 경로·고객 취소의 에어쉽 동기 요청은 이번 범위 밖(T2).
+
+**DB(0055_market_bid_worker.sql)**
+
+| 항목 | 내용 |
+|---|---|
+| 칸 | `market_bid_settings.pause_reason`·`paused_at`(자동 중단 사유), `market_bids.worker_final_jpy`(워커가 본 낙찰가, 확인 전) |
+| 표 | `market_bid_worker_health`(한 행): received_at·worker_at·enabled·dry_run·logged_in·bid_enabled·ok·reason·meta. 운영자 읽기만 |
+| 판정 | `market_bid_worker_problem()` → 정상이면 null, 아니면 `no signal`·`signal lost`(받은 지 5분 넘음)·`worker heartbeat stale`·`worker disabled`·`worker dry run`·`mercari login needed`·`bidding switched off` |
+| 자동 중단 | `market_bid_worker_watch()`(크론 1분 + 건강 신호 받을 때): 설정 `executor='airship'` 이고 접수 중인데 비정상이면 accepting=false, pause_reason=`auto: worker <이유>`, 이벤트 `bid.worker_down` 1회. 자동 재개 없음. 운영자가 접수를 켜면 사유를 지운다. 워커가 비정상인데 켜려 하면 `mb: worker down`. `executor='manual'` 이면 무관 |
+| 크론 | ① 마감 30분 전 `authorized` 인 수동 건·**접수 확인 없는 워커 건** → missed + 승인 해제 ② 접수 확인된 워커 건: 마감 30분 안에서 워커 비정상 → 보류 `worker down before end`, 마감 15분 지나도 `authorized` → 보류 `result overdue`(둘 다 승인 유지) ③ 재알림 `bid.to_place_due:<id>:2`·`:1`(마감 2·1시간 전, 수동 건 전부·워커 건은 미접수 또는 워커 비정상), `:arm`(워커 건 승인 10분 뒤에도 미접수). 건당 시점당 1회(dedupe 키) |
+| 고객 취소 | 고객 본인은 `authorized` 에서 마감 30분 전부터, 그리고 접수 확인된 워커 건은 `mb: cancel closed`(화면 문구 mb.err.cancelClosed). 운영자·서버는 그대로 |
+| 시스템 주체 | `ops_actors.is_system`, 행 `site-bids@system.airship.click`(profile 없음, 소유자 아님, CHECK 로 강제) |
+| 알림 | `mb_won_check`(「낙찰된 것으로 보여요. 확인한 뒤 결제하고 알려 드릴게요」) |
+| 운영 적용 | 2026-11-27 22:0x KST, pg-meta 쿼리 한 번. 적용 전후 md5 불변: request_market_bid c7b50f33·market_bid_set_won 9a1e23ea·market_bid_to_order c238a5bb·market_bid_release 615fc7ff. 설정 그대로(executor=manual, accepting=false), MB000001 그대로 |
+
+**리허설(BEGIN … ROLLBACK, 시험 행은 MBT 코드)** — 1묶음 통과(`TESTRESULT PASS`), 적용 전 잔존 0 확인.
+
+| 묶음 | 확인 |
+|---|---|
+| A 워커 낙찰 | armed(사건 기록·같은 ref 재호출 again·다른 ref 거절) → 입찰됨 → `market_bid_worker_won` = 보류 worker_won·승인 그대로·매입액 없음·알림 mb_won_check·이벤트 bid.hold, 같은 값 재호출 again → 운영자 `market_bid_set_won`(hold → won) → 매입 기록 → `market_bid_to_order` → 대행 주문 paid, paid_krw = 매입액 |
+| B 자동 취소 | 미접수 워커 건(마감 20분) → missed + 승인 releasing. 수동 건(회귀) → missed. 접수 + 워커 정상 → 그대로 |
+| C 불명 | 보류 submit_unknown 은 크론 뒤에도 보류·승인 authorized |
+| D 건강 신호 | 실행자 manual 이면 6분 끊겨도 접수 유지. 접수된 워커 건(마감 20분)은 보류 `worker down before end`. 실행자 airship → 접수 자동 중단 `auto: worker signal lost`·bid.worker_down 1건(크론 다시 돌려도 1건). 비정상일 때 운영자 켜기 → `mb: worker down`. 신호 복구 → 자동 재개 안 함. 운영자 켜기 → 사유 지움. `logged_in=false` 신호 → 바로 중단·이벤트 2건째 |
+| E 시스템 주체 | 시스템 행 존재, `is_system + is_owner` 거절(CHECK). 운영자 세션으로 `market_bid_set_armed`·`market_bid_worker_won` → `mb: admin only`(서버 권한만) |
+| F 재알림 | 마감 90분 → `:2` 1건·`:1` 0건 → 마감 50분으로 → `:1` 1건, 크론 세 번에도 건당 시점당 1건. 접수된 워커 건은 재알림 없음. 미접수 20분 → `:arm` 1건 |
+| G 고객 취소 | 마감 25분 → cancel closed, 접수된 워커 건(5시간) → cancel closed, 5시간 수동 건 → 취소·승인 해제, 운영자 → 25분 건 취소됨 |
+| 결함 주입 | ① 자동 취소 조건에서 `armed_at is null` 제거 → B1 실패 ② 워커 낙찰을 바로 won → A4 실패 ③ 자동 중단의 실행자 조건 두 겹 제거 → D0 실패(한 겹만 빼면 UPDATE 조건이 막아 통과 — 이중 방어 확인) ④ 고객 취소 마감 제거 → G1 실패 |
+
+money 경로 거절(시스템 주체가 `won`·`missed`·`cancel`·`settings` 호출)은 앱 `opsActorGate`(단위 테스트)와 운영 서명 호출(아래)로 확인했다.
+
+**운영 API — A2 작업자가 그대로 부르는 형태**
+
+공통: 서명 v1(docs/aaa/12 3.2). 헤더 `x-ops-actor-email: site-bids@system.airship.click`, `x-ops-actor-id: <에어쉽 쪽 고정 id, 예 site-bids>`(첫 호출 때 묶이고 그 뒤로 같아야 한다), `x-ops-scope: ops`. 시스템 주체는 아래 4경로만 부를 수 있다(다른 경로·money scope = 403 `system actor: …`). 사람 운영자가 이 4경로를 부르면 403 `system route only`.
+
+| 경로 | 요청 | 응답 `data` | 비고 |
+|---|---|---|---|
+| `GET /api/ops/market-bids/worker-queue` | 쿼리 없음 = `executor='airship'`·`authorized` 전부(마감 순, 200건). `?ids=<uuid,…>`(100개까지) = 그 건들(상태·실행자 상관없이) | `{ items: [{ id, code(MB), status, executor, executor_ref, armed_at, source, source_id(메루카리 상품 id m…), cap_jpy(상한가 엔), seen_price_jpy, seen_bids, ends_at, authorized_at, auth_expires_at, placed_at, last_bid_jpy, worker_final_jpy, hold_reason, updated_at, url, title, image }], total }` | 작업 생성(`site_bid_upsert`)에 필요한 값 전부. `ids` 는 에어쉽 행 맞추기용(tomo 쪽이 이미 닫혔는지) |
+| `POST /api/ops/market-bids/worker-health` | `{ worker_at: ISO(worker_heartbeat 시각), enabled, dry_run, logged_in, bid_enabled: boolean, meta?: object }` | `{ ok, reason, paused_now, accepting, executor, pause_reason }` | 1분마다. request_id 없음(덮어쓰기). 형식이 틀리면 400 `mb: bad health` |
+| `POST /api/ops/market-bids/:id/armed` | `{ request_id: uuid, expected_status: "authorized", executor_ref: "<auction_bids.id>" }` | `{ result: { status, armed_at, executor_ref, again? } }` | 수동 건이면 409(`current_status: "manual:authorized"`). 다른 ref 로 이미 접수됐으면 400 `mb: armed by other` |
+| `POST /api/ops/market-bids/:id/worker-result` | `{ request_id, expected_status, result, … }` result 별: `placed` {amount, ends_at?, evidence?} · `outbid` {price, evidence?} · `lost` {final_price(낙찰자 없으면 0)} · `failed` {reason} · `unknown` {} · `won` {final_price} | placed/outbid/lost/failed = M5 응답 형태(`{ ok, status, released?, error? }`), won = `{ result: { status: "hold", reason: "worker_won", buy_due } }` | `failed` 는 입찰이 한 번도 안 들어간 건이면 「못 넣음」+ 승인 해제, 들어간 적 있으면 보류 failed_after_submit. `unknown` = 보류 submit_unknown. **`won` 은 매입하지 않는다**(낙찰 확인 대기). 수동 건 409 |
+
+멱등: 같은 `request_id` 는 한 번만 실행되고 다시 보내면 저장된 응답(`replayed: true`). request_id 는 uuid 여야 하므로 설계 3절의 `armed:<행 id>` 같은 문자열은 uuid v5(이름 기반)로 바꿔 보낸다. `expected_status` 가 지금 상태와 다르면 409 `{ current_status, expected_status }` — 다리 작업은 `worker-queue?ids=` 로 지금 상태를 읽고 보낸다.
+
+**검증**: tsc 0, eslint 오류 0, vitest unit 48파일 378개 통과(새 `tests/unit/market-bid-worker.test.ts`), next build 성공. 운영 확인은 HANDOFF·결과 보고 참고.
+
+### 12.5 A2 가 알아야 할 것(T1 뒤)
+
+- 접수 확인이 실패한 채(armed 응답을 못 받음) 마감 30분 전이 되면 tomo 가 그 신청을 「못 넣음」으로 닫고 승인을 푼다. **이때 에어쉽 행이 살아 있으면 워커가 승인 없는 입찰을 한다.** 1분 크론에서 열린 연결 행마다 `worker-queue?ids=` 로 tomo 상태를 읽고, tomo 가 `authorized`·`placed`·`outbid`·`hold` 가 아니면 즉시 `site_bid_cancel`. armed 가 409 를 돌려줘도 같다.
+- 낙찰은 `result: "won"` 만 보낸다(tomo 가 보류로 둔다). `won`·`missed`·`cancel` 사람용 경로는 시스템 주체로 못 부른다.
+- 접수 확인된 워커 건은 고객이 tomo 에서 취소하지 못한다(T2 에서 `bid.cancel` 동기 요청과 같이 연다).
+- `bid.requested` 훅 본문은 바꾸지 않았다(`target.id` = 신청 id, `code` = MB 번호). 수동 건도 같은 이벤트를 보내므로 `worker-queue` 로 실행자를 거른다. 새 이벤트 `bid.to_place_due`(재알림)·`bid.worker_down`(접수 자동 중단)은 운영 알림용이다.
+- 건강 신호가 5분 끊기면 tomo 가 접수를 멈춘다(실행자 airship 일 때). 다리 스위치를 끌 때도 건강 신호는 계속 보내야 한다(아니면 접수가 멈춘다 — 의도된 동작).
+- 리허설 중 운영 DB 에서 `cron_market_bids()` 를 한 번 직접 불렀다(할 일 0건, cron_runs 1행). T 번호 시퀀스는 롤백된 리허설의 주문 생성으로 1개 건너뛰었다(시퀀스는 롤백되지 않음).
