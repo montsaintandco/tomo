@@ -125,3 +125,10 @@ DB enum 값은 그대로다. 고객 화면·어드민·알림·FAQ·AI 상담원
 - 결함 주입 5종 모두 검출: 가산율 1.0(R1·R3·R7 등), 예치금 기준 내림(R5), 정산 차감 빠짐(R12d), 환불액 예치금 빠짐(R13d·R15), 단계 메모 고객 노출(R9d).
 - 2차 실행이 중간 실패(seller_ledger memo not null)로 끝나 거래 번호 시퀀스가 최대 6개 건너뛰었을 수 있다(실제 거래 영향 없음). 3차부터는 리허설이 시퀀스를 되돌린다.
 - 적용 전 md5: start_transaction 3f58fc4a · start_auction_transaction 17b676c5 · credit_sale_on_complete 59fc137a · admin_cancel_transaction 2e22082d · resolve_dispute 6b7fd839. 적용 후: f2147615 · 3da7a794 · 06261150 · 22433b8d · addc73d3. mark_tx_paid·notify_transaction 은 바꾸지 않았다.
+
+## 7. 운영 확인(2026-11-28, 실결제 없음)
+- 배포: tomo ca4fc56·cd3f183(server-image #45·#46, db-tests #36, smoke #37·#38 성공, `/api/health` embeds ok). db-tests #35 는 시드의 한국 국제 상품에 무게가 없어 실패 → cd3f183 에서 시드·DB 테스트에 무게를 넣어 통과. 에어쉽 7f510cee(server-image #103 성공).
+- 시험 계정 토큰(alice·bob, 브라우저 쿠키 안 씀)과 서명 호출(Ren 주체)로 확인: 공개 `listing_quote` = 국제배송비 11,650원(2kg)·기준가 139,326원, `intl_ship_bands` 37구간, 고객 토큰으로 `intl_ship_rates` 읽기 = 빈 목록, 일본어 게스트 상세에 「通関預かり金」 줄, start_transaction(₩200,000·2kg) = 배송비 11,650·예치금 20,000, 일본 상품 = 900엔·예치금 0.
+- 가짜 결제 확인(PI 문자열만, Stripe 호출 없음, 운영 이벤트는 보내지 않게 보류): counts 「배송대행 신청 필요(CarryToJ)」1·「입고 예정 등록 필요(재팬비즈)」1, `trades?step=open` 2건, center_step 두 건 200, 일본 센터 판매자 `tx_center_ref` = 번호·구매자 null·한국 센터 null, measured_weight 3.2kg → 차감 2,040원, customs_settle 25,000원 → 운영 부담 5,000·환불 없음, `trades?customs=open` 정산 뒤 0건.
+- 시험 데이터 정리: 상품 2·거래 2(TX000088·TX000089 번호는 건너뜀)·단계 2·알림 8·활동 기록 4·운영 요청 4·운영 이벤트 2(보내기 전 삭제).
+- 확인 못 한 것: tomo 어드민 `/admin/center`·에어쉽 연결 센터 화면의 실제 렌더(운영자 로그인 쿠키를 바꾸지 않기로 해서 화면은 열지 않음), 판매 폼 무게 버튼 화면, 실제 Stripe 부분 환불(통관 정산 남는 경우).
