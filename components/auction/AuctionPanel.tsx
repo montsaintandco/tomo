@@ -9,7 +9,7 @@ import {
   AUCTION_RULES, amountOk, clockSkew, countdownText, ENDING_SOON_MS, increment, needsBigConfirm, pollMs,
   sellerCanRelist, viewerPhase, type AuctionState,
 } from "@/lib/auction";
-import { directDetailTotal } from "@/components/detail/total";
+import { directDetailTotal, type DirectQuote } from "@/components/detail/total";
 import { convertPrice, formatPrice } from "@/lib/currency";
 import { t, type I18nKey, type Lang } from "@/lib/i18n";
 
@@ -19,6 +19,8 @@ type Props = {
   foreign: boolean;
   /** 상품이 국제 거래를 껐고 보는 사람이 다른 나라 */
   countryBlocked: boolean;
+  /** 0057 listing_quote — 국제배송비(무게 구간)·통관 예치금 기준가. 결제(start_auction_transaction)와 같은 표 */
+  quote?: DirectQuote | null;
   viewerCurrency: "KRW" | "JPY"; rate: number; guest: boolean; suspended: boolean;
 };
 type Msg = { text: string; err?: boolean } | null;
@@ -28,7 +30,7 @@ const fmtAt = (iso: string, lang: Lang) =>
     timeZone: "Asia/Seoul", month: "numeric", day: "numeric", weekday: "short", hour: "2-digit", minute: "2-digit",
   });
 
-export default function AuctionPanel({ initial, lang, listingStatus, foreign, countryBlocked, viewerCurrency, rate, guest, suspended }: Props) {
+export default function AuctionPanel({ initial, lang, listingStatus, foreign, countryBlocked, quote, viewerCurrency, rate, guest, suspended }: Props) {
   const router = useRouter();
   const [s, setS] = useState(initial);
   const [skew, setSkew] = useState(0);
@@ -96,7 +98,7 @@ export default function AuctionPanel({ initial, lang, listingStatus, foreign, co
   const floor = floorOf(s);
   const n = Number(amount);
   const valid = Number.isInteger(n) && amountOk(cur, n) && n >= floor;
-  const total = directDetailTotal(valid ? n : floor, cur, foreign);
+  const total = directDetailTotal(valid ? n : floor, cur, foreign, quote);
   const banned = s.viewer.bid_banned_until;
   const bannedDate = banned && !Number.isNaN(new Date(banned).getTime()) ? fmtAt(banned, lang) : null;
 
@@ -235,11 +237,13 @@ export default function AuctionPanel({ initial, lang, listingStatus, foreign, co
           <p id="auction-max-help" className="mt-1.5 text-[12px] leading-relaxed text-ink-soft">
             {t(lang, phase === "leading" ? "auction.raiseHelp" : "auction.maxHelp")} · {t(lang, "auction.unit", { unit: f(increment(cur, s.current_price)) })}
           </p>
-          {/* 예상 결제액 — 결제와 같은 directShippingFee(국경 간 8,000원/900엔) */}
+          {/* 예상 결제액 — 결제와 같은 표(0057 listing_quote: 한국 상품 무게 구간·통관 예치금, 일본 상품 900엔) */}
           <div className="mt-3 rounded-card border border-tomo-navy/10 p-3 text-[13px]">
             <div className="flex justify-between gap-3"><span className="text-ink-soft">{t(lang, "auction.estItem")}</span><span className="tnum">{f(total.item)}</span></div>
             {total.intlShipping > 0 && (
               <div className="flex justify-between gap-3"><span className="text-ink-soft">{t(lang, "order.intlShipping")}</span><span className="tnum">{f(total.intlShipping)}</span></div>
+            )}            {total.customsDeposit > 0 && (
+              <div className="flex justify-between gap-3"><span className="text-ink-soft">{t(lang, "customs.depositLine")}</span><span className="tnum">{f(total.customsDeposit)}</span></div>
             )}
             <div className="mt-1.5 flex items-baseline justify-between gap-3 border-t border-tomo-navy/10 pt-2">
               <span className="font-bold text-ink">{t(lang, "auction.estTitle")}</span>

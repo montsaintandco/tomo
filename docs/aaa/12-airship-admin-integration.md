@@ -389,6 +389,10 @@
 | `/api/ops/inspections/:kind/:id` | GET | ops | `:kind` = `tx`(센터 경유 직거래)·`proxy`(대행 요청) (T4, 0054) | `{ status(대상 지금 상태), items[{ id, result(ok\|issue), note, photos[경로], photo_urls[서명 URL 10분 \| null], received, created_at, inspector{nickname} }] }` 최신 먼저 | — |
 | `/api/ops/inspections/:kind/:id/upload` | POST | ops | `count`(1~10). DB 를 바꾸지 않아 request_id 기록 없음 → 서명 업로드 URL(2시간). 센터 브라우저가 `PUT <url>`(content-type image/jpeg, 5MB 이하)로 tomo 비공개 버킷 `inspection-photos` 에 바로 올린다 | `{ uploads[{ path, url }], method: "PUT", content_type, max_bytes, expires_in }` | 대상 status(다르면 409) |
 | `/api/ops/inspections/:kind/:id` | POST | ops | `result`(ok\|issue), `note`(issue 면 필수, 2000자, **고객에게 보임**), `photos`(upload 가 준 path, 10개 이하, 버킷에 실제로 있어야 함), `receive`(true 면 입고 처리 함께: 거래 shipped_to_center·대행 purchasing → center_received, 알림 포함) → `admin_record_inspection` | `{ result: inspections 행 }` | 대상 status(거래 transactions.status·대행 proxy_requests.status) |
+| `/api/ops/trades?step=open` · `?customs=open` · `?q=<신청서 번호>` | GET | ops | 0057: 센터 접수 번호 없는 결제 완료 건 / 통관 정산 남은 건 / CarryToJ·재팬비즈 번호로 찾기 | 거래 행에 `customs_deposit, customs_actual, customs_shortfall, customs_settled_at, ship_weight_kg, measured_weight_kg, ship_overage, center_step{ref, memo, done_at, due_at}` (docs/aaa/17) |
+| `/api/ops/trades/:id/center_step` | POST | ops | `ref`(A-Z 0-9 . _ # / -, 60자), `memo`(운영자만), `expected_status`(거래 상태) → `admin_set_center_step`. 일본 센터는 판매자 주소에 붙고 알림 | 단계 행 |
+| `/api/ops/trades/:id/measured_weight` | POST | money | `kg`(0~100), 한국 센터·센터 단계만 → `admin_set_measured_weight`. 차액은 판매자 정산에서 차감 | `{ fee, overage, currency }` |
+| `/api/ops/trades/:id/customs_settle` | POST | money | `actual`(정수, 거래 통화), `memo` → `admin_settle_customs` + 남는 금액 부분 환불 즉시 실행(실패하면 대기열). 추가 청구 경로 없음 | `{ refund, refund_amount, shortfall, currency, refund_run }` |
 ### 9.5 이벤트(tomo → 센터)
 
 | 항목 | 값 |

@@ -3,7 +3,7 @@
 
 export type AgingStage =
   | "quote" | "pay_check" | "purchase" | "inbound" | "intl_ship"
-  | "cancel_req" | "dispute" | "center" | "refund" | "payout" | "report" | "support";
+  | "cancel_req" | "dispute" | "center" | "refund" | "payout" | "report" | "support" | "forward";
 export type AgingLevel = "warn" | "late";
 export type AgingThresholds = Record<AgingStage, { warn_h: number; late_h: number }>;
 
@@ -21,11 +21,12 @@ export const DEFAULT_AGING: AgingThresholds = {
   payout: { warn_h: 24, late_h: 72 },       // 출금 신청
   report: { warn_h: 24, late_h: 72 },       // 신고 확인
   support: { warn_h: 12, late_h: 24 },      // 문의 답변
+  forward: { warn_h: 3, late_h: 6 },        // 0057 결제 뒤 CarryToJ 신청·재팬비즈 입고 예정 등록(6시간 = DB 재알림)
 };
 
 export const STAGE_LABEL: Record<AgingStage, string> = {
   quote: "견적", pay_check: "결제 확인", purchase: "현지 구매", inbound: "센터 입고", intl_ship: "국제 발송",
-  cancel_req: "취소 요청", dispute: "분쟁", center: "센터", refund: "환불", payout: "출금", report: "신고", support: "문의",
+  cancel_req: "취소 요청", dispute: "분쟁", center: "센터", refund: "환불", payout: "출금", report: "신고", support: "문의", forward: "센터 접수",
 };
 
 /** 대행 요청 상태 → 운영자가 처리할 단계(없으면 고객·택배 차례) */

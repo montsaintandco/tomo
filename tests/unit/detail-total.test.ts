@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { proxyOrderTotal, directShippingFee } from "../../lib/fees";
-import { proxyDetailTotal, directDetailTotal } from "../../components/detail/total";
+import { proxyOrderTotal, directShippingFee, customsDeposit, txChargeBase, bandFee } from "../../lib/fees";
+import { proxyDetailTotal, directDetailTotal, parseQuote } from "../../components/detail/total";
 
 // 05-roadmap T7 완료 기준: 상세 총액 박스 숫자 = 주문서·결제 합계(같은 함수, 같은 입력 → 같은 값)
 describe("상세 총액 = 주문서 합계", () => {
@@ -26,6 +26,39 @@ describe("상세 총액 = 주문서 합계", () => {
     expect(d.intlShipping).toBe(cur === "KRW" ? 8000 : 900);
   });
   it("국경 간이 아니면 국제배송비 0", () => {
-    expect(directDetailTotal(30000, "KRW", false)).toEqual({ item: 30000, intlShipping: 0, total: 30000, currency: "KRW" });
+    expect(directDetailTotal(30000, "KRW", false)).toEqual({ item: 30000, intlShipping: 0, customsDeposit: 0, total: 30000, currency: "KRW" });
+  });
+});
+
+describe("0057 한국→일본 무게 구간·통관 예치금", () => {
+  it("견적(DB listing_quote)이 있으면 그 국제배송비, 기준가 이상이면 예치금 10%(10원 올림)", () => {
+    const q = { intlFee: 9260, customsMin: 139326 };
+    expect(directDetailTotal(50000, "KRW", true, q)).toEqual({ item: 50000, intlShipping: 9260, customsDeposit: 0, total: 59260, currency: "KRW" });
+    expect(directDetailTotal(139326, "KRW", true, q).customsDeposit).toBe(13940);
+    expect(directDetailTotal(139325, "KRW", true, q).customsDeposit).toBe(0);
+    expect(directDetailTotal(200000, "KRW", true, q).total).toBe(200000 + 9260 + 20000);
+  });
+  it("customsDeposit = DB direct_customs_deposit 규칙(ceil(price/100)×10)", () => {
+    expect(customsDeposit(139326, 139326)).toBe(13940);
+    expect(customsDeposit(300000, 139326)).toBe(30000);
+    expect(customsDeposit(300001, 139326)).toBe(30010);
+    expect(customsDeposit(300000, null)).toBe(0);
+  });
+  it("txChargeBase = 상품가 + 국경 간 배송비 + 예치금", () => {
+    expect(txChargeBase({ item_price: 200000, intl_shipping_fee: 18120, is_cross_border: true, customs_deposit: 20000 })).toBe(238120);
+    expect(txChargeBase({ item_price: 5000, intl_shipping_fee: 900, is_cross_border: false, customs_deposit: 0 })).toBe(5000);
+  });
+  it("bandFee = 무게 이상인 첫 구간", () => {
+    const b = [{ max_kg: 0.5, fee_krw: 7860 }, { max_kg: 1, fee_krw: 9260 }, { max_kg: 17, fee_krw: 47260 }];
+    expect(bandFee(b, 0.3)).toBe(7860);
+    expect(bandFee(b, 1)).toBe(9260);
+    expect(bandFee(b, 1.01)).toBe(47260);
+    expect(bandFee(b, 17.5)).toBeNull();
+    expect(bandFee(b, null)).toBeNull();
+  });
+  it("parseQuote: 숫자 문자열도 읽고, 비면 null", () => {
+    expect(parseQuote({ intl_fee: 9260, customs_min: "139326" })).toEqual({ intlFee: 9260, customsMin: 139326 });
+    expect(parseQuote({ intl_fee: null, customs_min: null })).toEqual({ intlFee: null, customsMin: null });
+    expect(parseQuote(null)).toBeNull();
   });
 });

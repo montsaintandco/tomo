@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { createAdminSupabase } from "@/lib/supabase/admin";
 import { getStripe, krwAmount, createSession } from "@/lib/stripe";
-import { directShippingFee } from "@/lib/fees";
+import { directShippingFee, txChargeBase } from "@/lib/fees";
 import { t, type Lang } from "@/lib/i18n";
 import { apiError, reqLang } from "@/lib/api-error";
 import { auctionEnabled, auctionErrorKey, auctionErrorStatus } from "@/lib/auction";
@@ -13,6 +13,8 @@ function rpcError(lang: Lang, msg: string) {
   if (msg.includes("cannot buy own listing")) return apiError(lang, "pay.err.ownListing");
   if (msg.includes("shipping only")) return apiError(lang, "pay.err.shippingOnly");
   if (msg.includes("auction listing")) return apiError(lang, "auction.err.useAuction", 409);
+  if (msg.includes("ship weight required")) return apiError(lang, "pay.err.needWeight", 409);
+  if (msg.includes("rate missing")) return apiError(lang, "pay.err.notReady", 503);
   return apiError(lang, "pay.err.order");
 }
 
@@ -35,11 +37,11 @@ export async function POST(req: Request) {
   const { data: profile } = await supabase.from("profiles").select("language").eq("id", auth.user.id).maybeSingle();
   const lang: Lang = profile?.language === "ja" ? "ja" : profile?.language === "ko" ? "ko" : rl;
 
-  type Tx = { id: string; item_price: number; intl_shipping_fee: number; is_cross_border: boolean; currency: string; meetup: boolean; status: string; created_at?: string; stripe_session_id?: string | null };
+  type Tx = { id: string; item_price: number; intl_shipping_fee: number; customs_deposit?: number | null; is_cross_border: boolean; currency: string; meetup: boolean; status: string; created_at?: string; stripe_session_id?: string | null };
   let tx: Tx;
   if (typeof transactionId === "string") {
     // 결제 대기 거래 재결제 — RLS가 당사자만 읽게 하고, 구매자·대기 상태만 연다
-    const { data } = await supabase.from("transactions").select("id, item_price, intl_shipping_fee, is_cross_border, currency, meetup, status, buyer_id, created_at, stripe_session_id").eq("id", transactionId).maybeSingle();
+    const { data } = await supabase.from("transactions").select("id, item_price, intl_shipping_fee, customs_deposit, is_cross_border, currency, meetup, status, buyer_id, created_at, stripe_session_id").eq("id", transactionId).maybeSingle();
     if (!data || data.buyer_id !== auth.user.id || data.status !== "pending_payment") return apiError(lang, "pay.err.notPayable");
     // 낙찰 거래면 경매가 아직 결제 대기여야 한다(미결제 확정 뒤 옛 거래로 창을 열지 않게). 새 창 10분 규칙은 아래 그대로
     const { data: au } = await createAdminSupabase().from("auctions").select("status").eq("tx_id", data.id).maybeSingle();
@@ -73,7 +75,7 @@ export async function POST(req: Request) {
   if (tx.created_at && Date.now() - new Date(tx.created_at).getTime() > 10 * 60_000)
     return apiError(lang, "pay.err.expired");
 
-  const base = tx.item_price + (tx.is_cross_border ? tx.intl_shipping_fee : 0);
+  const base = txChargeBase(tx);   // 0057: 상품가 + 국제배송비 + 통관 예치금(DB tx_charge_base)
   const amount = await krwAmount(supabase, base, tx.currency);
   if (amount == null) return apiError(lang, "pay.err.notReady", 503);
 

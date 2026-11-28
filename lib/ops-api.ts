@@ -39,6 +39,8 @@ const PROXY_COLS = `id, status, center, quote_item_price, quote_fee, quote_shipp
   customer:profiles!proxy_requests_user_id_fkey(id, nickname), proxy_orders(code, status, currency, total, paid_krw)`;
 const TX_COLS = `id, code, status, center, is_cross_border, meetup, item_price, intl_shipping_fee, platform_fee, currency, paid_krw, refund_pending,
   dispute_reason, dispute_resolution, disputed_from, cancel_reason, domestic_tracking, intl_tracking, created_at, updated_at, delivered_at,
+  customs_deposit, customs_actual, customs_shortfall, customs_settled_at, ship_weight_kg, measured_weight_kg, ship_overage,
+  center_step:tx_center_steps!tx_center_steps_tx_id_fkey(ref, memo, done_at, due_at),
   listing:listings!transactions_listing_id_fkey(id, title, status), buyer:profiles!transactions_buyer_id_fkey(id, nickname), seller:profiles!transactions_seller_id_fkey(id, nickname)`;
 // 지연 표시(lib/admin-aging.ts 기준 그대로). 행마다 aging_level(warn|late|null)·aging_since. 운영자 차례가 아닌 단계는 null
 type Row = Record<string, unknown>;
@@ -62,7 +64,7 @@ const centerOf = (s: string) => ({ KR: "SEOUL", JP: "NARITA", SEOUL: "SEOUL", NA
 // ── 조회 ──
 const meta: Handler = async () => opsOk({
   api_version: OPS_API_VERSION, site: { ...OPS_SITE, url: SITE_URL }, capabilities: OPS_CAPABILITIES, events: OPS_EVENT_TYPES,
-  money_actions: ["proxy.cancel", "trades.cancel", "trades.complete", "disputes.resolve", "refunds.run", "payouts.paid", "payouts.reject", "users.delete", "ledger.adjust", "market_bids.won", "market_bids.missed", "market_bids.cancel", "market_bids.settings"],
+  money_actions: ["proxy.cancel", "trades.cancel", "trades.complete", "trades.measured_weight", "trades.customs_settle", "disputes.resolve", "refunds.run", "payouts.paid", "payouts.reject", "users.delete", "ledger.adjust", "market_bids.won", "market_bids.missed", "market_bids.cancel", "market_bids.settings"],
 });
 
 const health: Handler = async ({ admin }) => {
@@ -102,6 +104,13 @@ const counts: Handler = async ({ admin }) => {
       q: pr("updated_at").eq("status", "center_received").order("updated_at").limit(1000) },
     { key: "center.c2c", label: "센터 처리", capability: "center", url: "/admin/center", stage: "center", since: "updated_at",
       q: admin.from("transactions").select("updated_at", { count: "exact" }).in("status", ["shipped_to_center", "center_received"]).order("updated_at").limit(1000) },
+    // 0057: 결제된 국제 직거래의 센터 접수(한국 = CarryToJ 배송대행 신청, 일본 = 재팬비즈 입고 예정 등록)
+    { key: "center.forward_kr", label: "배송대행 신청 필요(CarryToJ)", capability: "center", url: "/admin/center", stage: "forward", since: "due_at",
+      q: admin.from("tx_center_steps").select("due_at, transactions!tx_center_steps_tx_id_fkey!inner(status)", { count: "exact" }).eq("center", "SEOUL").is("done_at", null)
+        .not("transactions.status", "in", "(cancelled,pending_payment)").order("due_at").limit(1000) },
+    { key: "center.forward_jp", label: "입고 예정 등록 필요(재팬비즈)", capability: "center", url: "/admin/center", stage: "forward", since: "due_at",
+      q: admin.from("tx_center_steps").select("due_at, transactions!tx_center_steps_tx_id_fkey!inner(status)", { count: "exact" }).eq("center", "NARITA").is("done_at", null)
+        .not("transactions.status", "in", "(cancelled,pending_payment)").order("due_at").limit(1000) },
     { key: "disputes.open", label: "분쟁", capability: "disputes", url: "/admin/disputes", stage: "dispute", since: "updated_at",
       q: admin.from("transactions").select("updated_at", { count: "exact" }).eq("status", "disputed").order("updated_at").limit(1000) },
     { key: "support.open", label: "문의 미답변", capability: "support", url: "/admin/support", stage: "support", since: "created_at",
@@ -334,6 +343,24 @@ const txList = (fixed?: { status?: string[]; center?: boolean }): Handler => asy
   }
   const code = opsCodeQ(str(url.searchParams.get("q"), 60));
   if (code) q = UUID_RE.test(code) ? q.eq("id", code) : q.eq("code", code);
+  else {
+    // 0057: 재팬비즈 입고 예정 번호·CarryToJ 신청번호로 찾기(상자에 적힌 번호)
+    const ref = str(url.searchParams.get("q"), 60);
+    if (ref && /^[A-Za-z0-9._#/-]+$/.test(ref)) {
+      const s = await admin.from("tx_center_steps").select("tx_id").eq("ref", ref);
+      const ids = (s.data ?? []).map((x) => x.tx_id as string);
+      if (ids.length) q = q.in("id", ids);
+    }
+  }
+  // 0057 customs=open: 통관 예치금 정산이 남은 건
+  if (url.searchParams.get("customs") === "open") q = q.gt("customs_deposit", 0).is("customs_settled_at", null);
+  // 0057 step=open: 센터 접수 번호를 아직 안 넣은 결제 완료 건
+  if (url.searchParams.get("step") === "open") {
+    const s = await admin.from("tx_center_steps").select("tx_id").is("done_at", null).limit(1000);
+    if (s.error) return opsFail(502, `db: ${s.error.message}`);
+    const ids = (s.data ?? []).map((x) => x.tx_id as string);
+    q = q.in("id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"]);
+  }
   const r = await q;
   if (r.error) return opsFail(502, `db: ${r.error.message}`);
   return opsOk({ items: (r.data ?? []).map((x) => txAging(country(x as { center: string | null }))), total: r.count });
@@ -526,6 +553,36 @@ const ROUTES: Route[] = [
       run: async (sb) => res(await adminCancel(sb!, { type: "complete", id, reason: ctx.body.note })) });
   } },
   { method: "GET", path: "center/:center", need: "ops", h: txList({ status: ["shipped_to_center", "center_received"], center: true }) },
+  // 0057 센터 접수 번호(한국 = CarryToJ 신청번호, 일본 = 재팬비즈 입고 예정 번호 → 판매자 주소에 붙고 알림). expected_status = 거래 상태
+  { method: "POST", path: "trades/:id/center_step", need: "ops", h: async (ctx, [id]) => {
+    const nf = uuidOr404(id); if (nf) return nf;
+    const ref = str(ctx.body.ref, 60);
+    if (!ref || !/^[A-Za-z0-9._#/-]+$/.test(ref)) return bad("ref required (A-Z 0-9 . _ # / -)");
+    return runOp(ctx, { action: "trades.center_step", target: id, current: statusOf(ctx.admin, "transactions", id),
+      run: async (sb) => rpcRes(await sb!.rpc("admin_set_center_step", { p_tx: id, p_ref: ref, p_memo: str(ctx.body.memo, 500) })) });
+  } },
+  // 한국 센터 실측 무게(kg) → 신고 구간보다 비싸면 차액을 판매자 정산에서 뺀다
+  { method: "POST", path: "trades/:id/measured_weight", need: "money", h: async (ctx, [id]) => {
+    const nf = uuidOr404(id); if (nf) return nf;
+    const kg = Number(ctx.body.kg);
+    if (!Number.isFinite(kg) || kg <= 0 || kg > 100) return bad("kg must be 0~100");
+    return runOp(ctx, { action: "trades.measured_weight", target: id, current: statusOf(ctx.admin, "transactions", id),
+      run: async (sb) => rpcRes(await sb!.rpc("admin_set_measured_weight", { p_tx: id, p_kg: Math.round(kg * 100) / 100 })) });
+  } },
+  // 통관 예치금 정산 — 남는 금액은 부분 환불(바로 실행, 실패하면 대기열), 모자라면 운영 부담 기록. 추가 청구 경로는 없다
+  { method: "POST", path: "trades/:id/customs_settle", need: "money", h: async (ctx, [id]) => {
+    const nf = uuidOr404(id); if (nf) return nf;
+    const actual = Number(ctx.body.actual);
+    if (!Number.isInteger(actual) || actual < 0 || actual > 100_000_000) return bad("actual must be a non-negative integer");
+    return runOp(ctx, { action: "trades.customs_settle", target: id, current: statusOf(ctx.admin, "transactions", id),
+      run: async (sb) => {
+        const r = await sb!.rpc("admin_settle_customs", { p_tx: id, p_actual: actual, p_memo: str(ctx.body.memo, 300) });
+        if (r.error) return rpcRes(r);
+        const d = r.data as { refund: string | null };
+        const refund = d.refund ? await runRefund(d.refund) : null;
+        return { status: 200, body: { ...d, refund_run: refund } };
+      } });
+  } },
   { method: "POST", path: "center/:center/:id/advance", need: "ops", h: txAdvance(true) },
   { method: "GET", path: "disputes", need: "ops", h: txList({ status: ["disputed"] }) },
   { method: "POST", path: "disputes/:id/resolve", need: "money", h: async (ctx, [id]) => {

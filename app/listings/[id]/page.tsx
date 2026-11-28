@@ -27,7 +27,7 @@ import { headers } from "next/headers";
 import { SITE_URL } from "@/lib/site";
 import { langAlternates, OG_IMAGE } from "@/lib/seo";
 import { getRequestLang } from "@/lib/locale";
-import { directDetailTotal } from "@/components/detail/total";
+import { directDetailTotal, parseQuote } from "@/components/detail/total";
 import { DirectTotalBox } from "@/components/detail/TotalBox";
 import { isListingCategory, listingCategoryName, findMajor } from "@/lib/categories";
 import { auctionEnabled, auctionSelect, type AuctionState } from "@/lib/auction";
@@ -122,12 +122,15 @@ export default async function ListingDetail(props: { params: Promise<{ id: strin
   const methodLabel = method === "both" ? t(lang, "method.bothLong") : t(lang, `method.${method}`);
   // 결제 경로: 직거래 전용·해외 직거래(여행)는 만남 거래가 기본, 둘 다면 보조 링크로 다른 경로
   const meetupPrimary = method === "direct" || (method === "both" && foreign);
-  const shipAvailable = method !== "direct" && (!foreign || !!l.cross_border_enabled);
+  // 0057 국제배송비 견적(결제 함수와 같은 표). 한국 상품은 판매자가 무게를 넣어야 국제 택배 결제가 열린다(조회 실패도 닫힘)
+  const quote = foreign && l.cross_border_enabled ? parseQuote((await supabase.rpc("listing_quote", { p_listing: l.id })).data) : null;
+  const needsWeight = foreign && !!l.cross_border_enabled && l.country === "KR" && method !== "direct" && quote?.intlFee == null;
+  const shipAvailable = method !== "direct" && (!foreign || (!!l.cross_border_enabled && !needsWeight));
   const secondaryCheckout = meetupPrimary ? shipAvailable : method === "both";
   const shipNote = foreign && method !== "direct" ? t(lang, "ship.intl") : methodLabel;
   // 국경 간 택배 결제 합계 — 결제(app/api/checkout)·DB(0035)와 같은 directShippingFee. 첫 화면에서 국제 배송비를 보인다
   const directTotals = foreign && shipAvailable && !free && canAct && !isMine && !isAuction
-    ? directDetailTotal(l.price, l.currency === "JPY" ? "JPY" : "KRW", true) : null;
+    ? directDetailTotal(l.price, l.currency === "JPY" ? "JPY" : "KRW", true, quote) : null;
   const listedAt = fmtAt(l.created_at, lang, { year: "numeric", month: "long", day: "numeric" });
 
   const info: [string, React.ReactNode][] = [
@@ -286,10 +289,10 @@ export default async function ListingDetail(props: { params: Promise<{ id: strin
 
         {isAuction && auctionState && (
           <AuctionPanel initial={auctionState} lang={lang} listingStatus={l.status} foreign={foreign}
-            countryBlocked={foreign && !l.cross_border_enabled} viewerCurrency={viewer.currency} rate={viewer.rate}
+            countryBlocked={foreign && (!l.cross_border_enabled || needsWeight)} quote={quote} viewerCurrency={viewer.currency} rate={viewer.rate}
             guest={!!viewer.guest} suspended={!!(suspendedRes?.data as { suspended?: boolean } | null)?.suspended} />
         )}
-        {directTotals && <DirectTotalBox lang={lang} totals={directTotals} viewerCurrency={viewer.currency} rate={viewer.rate} />}
+        {directTotals && <DirectTotalBox lang={lang} totals={directTotals} viewerCurrency={viewer.currency} rate={viewer.rate} toJapan={country === "KR"} />}
 
         {/* 가격제안 — 판매자가 허용한 판매중 상품, 구매자만 */}
         {canAct && !isMine && !free && l.allow_offers && (
@@ -326,6 +329,7 @@ export default async function ListingDetail(props: { params: Promise<{ id: strin
           <p className="rounded-card bg-tomo-navy/5 p-3.5 text-[13px] leading-relaxed text-ink">
             <span className="font-bold text-tomo-navy">{t(lang, "detail.foreignLead")}.</span>{" "}
             {t(lang, "detail.foreignBody", { center: t(lang, `center.${center}`) })}
+            {needsWeight && <span className="mt-1 block font-bold text-tomo-rose">{t(lang, "ship.weightPending")}</span>}
           </p>
         )}
 

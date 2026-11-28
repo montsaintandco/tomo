@@ -1,6 +1,7 @@
 import type Stripe from "stripe";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { APP_TAG, type PayKind } from "./stripe";
+import { txChargeBase } from "./fees";
 
 // 결제 완료 세션 → DB 확정(멱등). 웹훅과 성공 리다이렉트 둘 다 부른다(먼저 온 쪽이 확정, 나중 쪽은 그대로 통과).
 // 원칙: DB가 「확정할 수 없다」고 확실히 답한 결제만 자동 전액 환불한다(이미 다른 결제로 확정·취소됨·금액 바뀜·옛 창).
@@ -22,10 +23,10 @@ export async function settleSession(stripe: Stripe, admin: SupabaseClient, s: St
   if (!pi) return { kind, id, status: "unpaid", code: "NO_PAYMENT_INTENT" };
   const table = kind === "tx" ? "transactions" : "proxy_orders";
   const cols = kind === "tx"
-    ? "status, currency, item_price, intl_shipping_fee, is_cross_border, stripe_payment_intent_id, stripe_session_id"
+    ? "status, currency, item_price, intl_shipping_fee, customs_deposit, is_cross_border, stripe_payment_intent_id, stripe_session_id"
     : "status, currency, total, stripe_payment_intent_id, stripe_session_id";
 
-  type Row = { status: string; currency: string; item_price?: number; intl_shipping_fee?: number; is_cross_border?: boolean; total?: number; stripe_payment_intent_id: string | null; stripe_session_id: string | null };
+  type Row = { status: string; currency: string; item_price?: number; intl_shipping_fee?: number; customs_deposit?: number | null; is_cross_border?: boolean; total?: number; stripe_payment_intent_id: string | null; stripe_session_id: string | null };
   const row = must(await admin.from(table).select(cols).eq("id", id).maybeSingle(), `${table} read`) as Row | null;
   if (!row) { console.error("[stripe settle] row not found — 환불하지 않음", { pi, kind, id }); return { kind, id, status: "ignored", code: "NOT_FOUND" }; }
   if (row.stripe_payment_intent_id === pi && row.status !== "pending_payment") return { kind, id, status: "paid" }; // 이 결제로 이미 확정(재진입)
@@ -48,7 +49,7 @@ export async function settleSession(stripe: Stripe, admin: SupabaseClient, s: St
 
   if (row.status !== "pending_payment") return refund("NOT_PENDING");
   if (row.stripe_session_id !== s.id) return refund("STALE_SESSION");
-  const base = kind === "tx" ? row.item_price! + (row.is_cross_border ? row.intl_shipping_fee! : 0) : row.total!;
+  const base = kind === "tx" ? txChargeBase({ item_price: row.item_price!, intl_shipping_fee: row.intl_shipping_fee!, is_cross_border: !!row.is_cross_border, customs_deposit: row.customs_deposit }) : row.total!;
   if (String(base) !== m.base || row.currency !== m.cur || s.currency !== "krw") return refund("AMOUNT_CHANGED");
 
   const done = kind === "tx"

@@ -5,6 +5,7 @@ import { isListingCategory } from "@/lib/categories";
 import { apiError, reqLang } from "@/lib/api-error";
 import { loadPriceLock, PRICE_LOCK_ERR } from "../price-lock";
 import { auctionEditBlocked } from "@/lib/auction-server";
+import { parseShipWeight } from "@/lib/ship-weight";
 
 const METHODS = ["direct","shipping","both"];
 const CONDITIONS = ["new","like_new","good","fair","poor"];
@@ -23,6 +24,8 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   const body = await req.json().catch(() => ({}));
   const { title, description, price, category, tradeMethod, crossBorder, images,
     condition, shippingPayer, shipDays, allowOffers } = body;
+  const weight = parseShipWeight(body.shipWeightKg);
+  if (weight === undefined) return NextResponse.json({ error: "invalid weight" }, { status: 400 });
   if (!title || typeof title !== "string" || title.length > 80 ||
       !description || typeof description !== "string" || description.length > 2000 ||
       !Number.isInteger(price) || price < 0 || price > 100000000)
@@ -32,10 +35,12 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     return NextResponse.json({ error: "invalid fields" }, { status: 400 });
 
   const { data: current } = await supabase.from("listings")
-    .select("seller_id, source_language, price, status, sale_type").eq("id", id).maybeSingle();
+    .select("seller_id, source_language, price, status, sale_type, country").eq("id", id).maybeSingle();
   if (!current || current.seller_id !== auth.user.id) return NextResponse.json({ error: "not found" }, { status: 404 });
   // 경매 상품(U3): 가격·거래 방법·국제 거래·제안은 경매 함수만 바꾼다(0046 잠금 트리거). 폼이 보낸 값 대신 지금 값을 그대로 쓴다
   const auctionLock = current.sale_type === "auction";
+  if (!auctionLock && weight != null && current.country === "KR" && (await supabase.rpc("intl_ship_fee_krw", { p_kg: weight })).data == null)
+    return apiError(reqLang(req), "sell.weightNeed", 409);
   if (auctionLock && await auctionEditBlocked(supabase, id)) return apiError(reqLang(req), "auction.err.editBids", 409);
   if (!auctionLock && price !== current.price) {
     const lock = await loadPriceLock(supabase, id, current.status);
@@ -47,6 +52,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     : {
       title, description, price, category, trade_method: tradeMethod, cross_border_enabled: !!crossBorder,
       condition, shipping_payer: shippingPayer, ship_days: shipDays, allow_offers: price > 0 && !!allowOffers,
+      ship_weight_kg: weight,   // 0057: 한국 국제 택배는 필수(DB listing_require_weight). 경매 상품은 등록 때 값 그대로
     };
   if (Array.isArray(images) && images.length > 0) patch.images = images.filter(imageOk).slice(0, 5);
 
@@ -54,6 +60,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   if (error) {
     if (/price locked/.test(error.message)) return apiError(reqLang(req), PRICE_LOCK_ERR.activeTx, 409); // 0039 트리거(경합)
     if (/auction listing locked|auction in progress/.test(error.message)) return apiError(reqLang(req), "auction.err.locked", 409);
+    if (/ship weight required/.test(error.message)) return apiError(reqLang(req), "sell.weightNeed", 409);
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
 

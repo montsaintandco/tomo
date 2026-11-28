@@ -29,6 +29,18 @@ describe("센터 발송 안내", () => {
     expect(l.address).toBe("千葉県富里市七栄649-114 建物内109 TOMO TX000123");
     expect(l.recipient).toBe("TOMO");
   });
+  it("0057 한국 센터 = 받는 사람 뒤 괄호에 주문 번호, 주소·코드는 그대로", () => {
+    const a = { recipient: "몽상앤코", postal: "48480", address: "부산광역시 남구 신선로 2, 부산지식산업센터(우암점) 303호 CA-0816", phone: "010" };
+    const l = centerShipLines(a, "TX000123", { center: "SEOUL" });
+    expect(l.recipient).toBe("몽상앤코 (TX000123)");
+    expect(l.address).toBe(a.address);
+  });
+  it("0057 일본 센터 = 입고 예정 번호를 建物内109 뒤에, 번호 없으면 주소 없음", () => {
+    const a = { recipient: "西岡 美奈子", postal: "286-0221", address: "千葉県富里市七栄649-114 建物内109", phone: null };
+    expect(centerShipLines(a, "TX000123", { center: "NARITA", ref: "58213" }).address).toBe("千葉県富里市七栄649-114 建物内109 58213");
+    expect(centerShipLines(a, "TX000123", { center: "NARITA", ref: null }).address).toBeNull();
+    expect(centerShipLines(a, "TX000123", { center: "NARITA", ref: "58213" }).recipient).toBe("西岡 美奈子");
+  });
   it("상자에 적힌 태그에서 TOMO 를 떼면 주문 번호로 읽힌다(센터 화면 검색)", () => {
     expect(parseOrderCode(centerMatchTag("TX000123").replace(/^TOMO\s*/i, ""))).toEqual({ kind: "tx", code: "TX000123" });
     expect(parseOrderCode(centerMatchTag("T000045").replace(/^TOMO\s*/i, ""))).toEqual({ kind: "po", code: "T000045" });

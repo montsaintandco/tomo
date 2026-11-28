@@ -2,7 +2,7 @@ import { orderLabel } from "@/lib/order-code";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { getViewer, displayTitle } from "@/lib/listings";
 import { formatPrice, convertPrice, type Currency } from "@/lib/currency";
-import { platformFee, buyerTotal, sellerPayout } from "@/lib/fees";
+import { platformFee, sellerPayout, txChargeBase } from "@/lib/fees";
 import { t, type Lang } from "@/lib/i18n";
 import EscrowTimeline from "@/components/EscrowTimeline";
 import TxActions from "@/components/TxActions";
@@ -22,6 +22,8 @@ type TxDetail = {
   id: string; code?: string | null; status: string; is_cross_border: boolean; meetup: boolean; center: string | null;
   buyer_id: string; seller_id: string;
   item_price: number; intl_shipping_fee: number; platform_fee: number; currency: Currency;
+  customs_deposit: number; customs_actual: number | null; customs_settled_at: string | null; ship_overage: number;
+  ship_weight_kg: number | null; measured_weight_kg: number | null;
   domestic_tracking: string | null; intl_tracking: string | null;
   dispute_reason: string | null; dispute_resolution: string | null;
   listings: {
@@ -50,7 +52,7 @@ export default async function TransactionPage(props: { params: Promise<{ id: str
 
   const { data } = await supabase.from("transactions")
     .select(`id, code, status, is_cross_border, meetup, center, buyer_id, seller_id,
-      item_price, intl_shipping_fee, platform_fee, currency, domestic_tracking, intl_tracking, dispute_reason, dispute_resolution,
+      item_price, intl_shipping_fee, platform_fee, currency, customs_deposit, customs_actual, customs_settled_at, ship_overage, ship_weight_kg, measured_weight_kg, domestic_tracking, intl_tracking, dispute_reason, dispute_resolution,
       listings!transactions_listing_id_fkey(id, title, source_language, country, images, listing_translations(language, title)),
       buyer:profiles!transactions_buyer_id_fkey(id, nickname),
       seller:profiles!transactions_seller_id_fkey(id, nickname)`)
@@ -64,13 +66,14 @@ export default async function TransactionPage(props: { params: Promise<{ id: str
   const l = tx.listings;
   const foreign = tx.currency !== viewer.currency;
   const isParty = role === "buyer" || role === "seller";
-  const total = buyerTotal(tx.item_price, tx.is_cross_border ? tx.intl_shipping_fee : 0);
+  const total = txChargeBase(tx);   // 0057: 통관 예치금 포함
+  const payout = Math.max(0, sellerPayout(tx.item_price) - (tx.ship_overage ?? 0));   // 실측 무게 초과분은 판매자 정산에서 뺀다(credit_sale_on_complete)
 
   // 취소 사유·환불(0025) — 별도 조회, 마이그레이션 전에는 비어 있음. 판매자는 환불 행을 RLS로 못 봄
   const [cancelRes, refundRes] = tx.status === "cancelled"
     ? await Promise.all([
       supabase.from("transactions").select("cancel_reason").eq("id", tx.id),
-      supabase.from("refunds").select("amount, currency, status").eq("kind", "tx").eq("transaction_id", tx.id),
+      supabase.from("refunds").select("amount, currency, status").eq("kind", "tx").eq("is_full", true).eq("transaction_id", tx.id),
     ])
     : [{ data: [], error: null }, { data: [], error: null }];
   const cancelReason = (safeRows(cancelRes) as { cancel_reason: string | null }[])[0]?.cancel_reason ?? null;
@@ -79,10 +82,13 @@ export default async function TransactionPage(props: { params: Promise<{ id: str
   // 센터 경유 거래: 판매자 발송 안내(결제 완료 뒤)·센터 검수 기록(0054, 당사자 읽기 전용, 사진은 서명 URL)
   const viaCenter = tx.is_cross_border && !tx.meetup;
   const showGuide = viaCenter && role === "seller" && tx.status === "paid";
-  const [addrRes, insp] = await Promise.all([
+  const [addrRes, insp, refRes] = await Promise.all([
     showGuide && tx.center ? supabase.from("center_addresses").select("recipient, postal, address, phone").eq("center", tx.center).maybeSingle() : null,
     viaCenter && !["pending_payment", "paid", "shipped"].includes(tx.status) ? loadInspections(supabase, "tx", tx.id) : [],
+    // 일본 센터 = 재팬비즈 입고 예정 번호(운영자가 넣은 뒤에만 주소가 완성된다, 0057 tx_center_ref)
+    showGuide && tx.center === "NARITA" ? supabase.rpc("tx_center_ref", { p_tx: tx.id }) : null,
   ]);
+  const centerRef = (refRes?.data as string | null | undefined) ?? null;
   const centerAddr = (addrRes?.data ?? null) as { recipient: string; postal: string | null; address: string; phone: string | null } | null;
 
   let alreadyReviewed = false;
@@ -144,12 +150,13 @@ export default async function TransactionPage(props: { params: Promise<{ id: str
       <div className="card mb-4 p-4 text-[13px]">
         <Row label={t(lang, "ext.item")} value={formatPrice(tx.item_price, tx.currency, lang)} />
         {tx.is_cross_border && <Row label={t(lang, "tx.intlShipping")} value={formatPrice(tx.intl_shipping_fee, tx.currency, lang)} />}
+        {role !== "seller" && tx.customs_deposit > 0 && <Row label={t(lang, "customs.depositLine")} value={formatPrice(tx.customs_deposit, tx.currency, lang)} />}
         <div className="mt-2 flex items-baseline justify-between gap-3 border-t border-tomo-navy/10 pt-2">
           <span className="font-bold text-ink">{t(lang, role === "seller" ? "tx.payout" : "tx.total")}</span>
           <span className="text-right">
             <span className="tnum block text-[15px] font-extrabold text-tomo-navy">
               {role === "seller"
-                ? formatPrice(sellerPayout(tx.item_price), tx.currency, lang)
+                ? formatPrice(payout, tx.currency, lang)
                 : foreign
                   ? `${t(lang, "price.approx")} ${formatPrice(convertPrice(total, tx.currency, viewer.rate), viewer.currency, lang)}`
                   : formatPrice(total, tx.currency, lang)}
@@ -162,6 +169,18 @@ export default async function TransactionPage(props: { params: Promise<{ id: str
         {role === "seller" && (
           <p className="mt-1 text-right text-[11px] text-ink-faint">
             {t(lang, "tx.feeNote", { fee: formatPrice(platformFee(tx.item_price), tx.currency, lang) })}
+          </p>
+        )}
+        {role === "seller" && tx.ship_overage > 0 && (
+          <p className="mt-1 text-right text-[11px] font-bold text-tomo-rose">
+            {t(lang, "ship.overageNote", { amount: formatPrice(tx.ship_overage, tx.currency, lang), kg: String(tx.measured_weight_kg ?? ""), declared: String(tx.ship_weight_kg ?? "") })}
+          </p>
+        )}
+        {role !== "seller" && tx.customs_deposit > 0 && (
+          <p className="mt-1 text-[11px] leading-relaxed text-ink-soft">
+            {tx.customs_settled_at
+              ? t(lang, "customs.settled", { actual: formatPrice(tx.customs_actual ?? 0, tx.currency, lang), back: formatPrice(Math.max(0, tx.customs_deposit - (tx.customs_actual ?? 0)), tx.currency, lang) })
+              : t(lang, "customs.pending")}
           </p>
         )}
       </div>
@@ -181,7 +200,7 @@ export default async function TransactionPage(props: { params: Promise<{ id: str
         </section>
       )}
 
-      {showGuide && <CenterShipGuide addr={centerAddr} code={orderLabel(tx.code, tx.id)} lang={lang} />}
+      {showGuide && <CenterShipGuide addr={centerAddr} center={tx.center === "NARITA" ? "NARITA" : "SEOUL"} centerRef={centerRef} code={orderLabel(tx.code, tx.id)} lang={lang} />}
       {role === "buyer" && tx.status === "pending_payment" && <div className="mb-2"><PayTxButton txId={tx.id} lang={lang} /></div>}
       <TxActions txId={tx.id} status={tx.status} isCrossBorder={tx.is_cross_border} meetup={tx.meetup} role={role} lang={lang} />
 

@@ -365,3 +365,10 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=<Supabase 대시보드 → Project Settings → AP
 - 고객 문구: 패널·상세 워커 방식(마감 직전 입찰, 입찰 준비 뒤 취소 불가, 낙찰 확인 뒤 결제), FAQ 5문항·llms·AI 상담원(15번 패치를 고쳐 적용, 플래그일 때만).
 - 운영 설정 executor=airship, accepting=false(에어쉽 스위치 꺼짐이라 켜기 거절 `mb: worker down`). 켜기·끄기 절차와 실입찰 시험 S 관찰표는 docs/aaa/16 13.4·13.5.
 - tomo 설정 그대로(executor=manual, accepting=false). 다음: T2(수동 전환·워커 건 고객 취소 동기·고객 문구) → R(리허설) → S(Ren 승인 실입찰). 켜기는 Ren 승인 뒤.
+### 2026-11-28 배송 센터 개편 — 무게 구간 국제배송비·통관 예치금·센터 접수 번호 (docs/aaa/17-shipping-centers.md)
+- 0057_shipping_centers(운영 적용, 리허설 `docs/aaa/17-rehearsal.sql` PASS 43단언·결함 주입 5종 검출 뒤, 되돌리기 `docs/aaa/17-rollback-0057.sql`).
+- 한국→일본 국제배송비 = CarryToJ 해상 ACE 원가 × 1.10(10원 올림) 무게 구간표(`intl_ship_rates`·`intl_ship_settings`, 운영자만 읽음). 판매자 「포장 후 무게」 필수(트리거). 무게 없는 옛 상품은 국제 결제 막음(공개 판매 중 0건 확인). 실측 초과 차액 = 판매 정산에서 차감(`ship_overage`).
+- 통관 예치금: 상품가 ≥ ¥16,666 이면 10% 결제 포함(`customs_deposit`), 정산 = 부분 환불 또는 운영 부담 기록(추가 청구 없음). 판매자 정산·수수료 제외.
+- 센터 접수 단계 `tx_center_steps`(CarryToJ 신청번호·재팬비즈 입고 예정 번호, 메모 운영자만), 이벤트 center.step_due/overdue(6시간), counts 2줄, 운영 API center_step·measured_weight·customs_settle. 판매자 안내: 한국 = 받는 사람 「몽상앤코 (TX…)」, 일본 = 번호 입력 뒤 「…建物内109 <번호>」.
+- 이름: 서울 센터 → 한국 센터, 나리타 센터 → 일본 센터(DB 값 그대로).
+- 바꾸지 않음: 일본→한국 ¥900 정액, 해외 마켓 대행 정액.

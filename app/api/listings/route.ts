@@ -5,6 +5,8 @@ import { translateListing } from "@/lib/translate";
 import { allow } from "@/lib/ratelimit";
 import { isListingCategory } from "@/lib/categories";
 import { auctionEnabled } from "@/lib/auction";
+import { apiError, reqLang } from "@/lib/api-error";
+import { parseShipWeight } from "@/lib/ship-weight";
 
 const METHODS = ["direct","shipping","both"];
 const CONDITIONS = ["new","like_new","good","fair","poor"];
@@ -26,6 +28,8 @@ export async function POST(req: Request) {
   const body = await req.json();
   const { title, description, price, category, tradeMethod, crossBorder, images,
     condition = "good", shippingPayer = "seller", shipDays = "2_3", allowOffers = true } = body;
+  const weight = parseShipWeight(body.shipWeightKg);
+  if (weight === undefined) return NextResponse.json({ error: "invalid weight" }, { status: 400 });
   // 경매 등록 1단계(U3): 숨긴 일반 상품(택배·제안 끔)으로 만든다. 공개는 POST /api/auctions(create_auction)가 한다
   const forAuction = auctionEnabled() && body.saleType === "auction";
   if (forAuction && (price <= 0 || tradeMethod !== "shipping")) return NextResponse.json({ error: "invalid fields" }, { status: 400 });
@@ -39,6 +43,9 @@ export async function POST(req: Request) {
   if (!CONDITIONS.includes(condition) || !PAYERS.includes(shippingPayer) || !SHIP_DAYS.includes(shipDays))
     return NextResponse.json({ error: "invalid condition or shipping" }, { status: 400 });
 
+  // 표 최대(17kg)보다 무거우면 결제가 안 되니 등록 때 막는다
+  if (weight != null && profile.country === "KR" && (await supabase.rpc("intl_ship_fee_krw", { p_kg: weight })).data == null)
+    return apiError(reqLang(req), "sell.weightNeed", 409);
   const { data: listing, error } = await supabase.from("listings").insert({
     seller_id: auth.user.id,
     title, description,
@@ -53,9 +60,13 @@ export async function POST(req: Request) {
     images: Array.isArray(images) ? images.filter(imageOk).slice(0, 5) : [],
     condition, shipping_payer: shippingPayer, ship_days: shipDays,
     allow_offers: !forAuction && price > 0 && !!allowOffers,   // 나눔·경매엔 가격제안 없음
+    ship_weight_kg: weight,   // 0057: 한국 국제 택배는 필수(DB listing_require_weight)
     ...(forAuction ? { hidden: true } : {}),
   }).select("id").single();
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  if (error) {
+    if (/ship weight required/.test(error.message)) return apiError(reqLang(req), "sell.weightNeed", 409);
+    return NextResponse.json({ error: error.message }, { status: 400 });
+  }
 
   const translated = await translateListing({
     title, description, from: profile.language as "ko" | "ja",

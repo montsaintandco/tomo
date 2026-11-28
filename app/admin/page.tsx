@@ -108,7 +108,7 @@ export default async function AdminHome() {
           <Table head={["센터", "상품", "상태", "갱신"]} empty="센터 대기 거래가 없어요">
             {cRows.map((r) => (
               <tr key={r.id}>
-                <td>{r.center === "NARITA" ? "나리타" : "서울"}</td>
+                <td>{r.center === "NARITA" ? "일본" : "한국"}</td>
                 <td><Link href={`/transactions/${r.id}`} className="a-link">{r.listings?.title ?? "—"}</Link></td>
                 <td><Pill tone={TX_META[r.status]?.tone}>{TX_META[r.status]?.label ?? r.status}</Pill></td>
                 <td className="a-faint tnum whitespace-nowrap">{fmtDate(r.updated_at!)}</td>

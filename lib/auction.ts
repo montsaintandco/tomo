@@ -1,6 +1,5 @@
 // 자체 상품 경매(U1·U2, docs/aaa/14-auction.md). DB 정본은 0046·0047 함수다. 여기는 화면 표시·미리 계산·오류 문구용.
 // AUCTION_RULES 는 0046 auction_settings.rules 기본값과 글자 그대로 같아야 한다(tests/unit/auction.test.ts 가 비교).
-import { directShippingFee } from "./fees";
 import { t, type I18nKey, type Lang } from "./i18n";
 
 export type Cur = "KRW" | "JPY";
@@ -87,8 +86,6 @@ export function extendedEnd(endsAtMs: number, nowMs: number, priceRose: boolean)
   return priceRose && endsAtMs - nowMs <= EXTEND_MINUTES * 60_000 ? nowMs + EXTEND_MINUTES * 60_000 : null;
 }
 
-/** 입찰 창 예상 결제액 = 입찰가 + 국경 간이면 국제배송비(8,000원/900엔). 결제 때 start_auction_transaction 이 같은 표로 정한다 */
-export const estimatedTotal = (cur: Cur, price: number, crossBorder: boolean) => price + directShippingFee(cur, crossBorder);
 
 /** 폴링 간격: 5초, 마감 5분 전부터 2초, 끝난 경매는 멈춤(null) */
 export function pollMs(s: Pick<AuctionState, "status" | "ends_at" | "server_now">): number | null {

@@ -27,13 +27,19 @@ export const newPhotoPath = (kind: InspectionKind, id: string, i = 0) =>
  * 앞에 「TOMO」를 붙여 같은 창고의 에어쉽 상자(#6자리)와 섞이지 않게 한다.
  */
 export const centerMatchTag = (code: string) => `TOMO ${code}`;
-export function centerShipLines(addr: { recipient: string; postal: string | null; address: string; phone: string | null }, code: string) {
-  return {
-    recipient: addr.recipient,
-    postal: addr.postal,
-    address: `${addr.address} ${centerMatchTag(code)}`,
-    phone: addr.phone,
-  };
+/**
+ * 0057 직거래 판매자 안내(docs/aaa/17):
+ *  - 한국 센터(CarryToJ 부산): 주소·코드 CA-0816 은 그대로, 주문 번호는 받는 사람 이름 뒤 괄호 「몽상앤코 (TX000123)」.
+ *    코드 뒤에 글자를 붙여도 CarryToJ 가 받는지 확인되지 않아 코드 칸은 건드리지 않는다.
+ *  - 일본 센터(재팬비즈): 운영자가 넣은 입고 예정 번호를 「建物内109」 뒤에 붙인다. 번호가 없으면 address = null(「주소 준비 중」).
+ *  center 를 안 주면 예전 방식(주소 끝에 「TOMO 번호」, 구매대행 상자 등).
+ */
+export function centerShipLines(addr: { recipient: string; postal: string | null; address: string; phone: string | null }, code: string,
+  opts?: { center: "SEOUL" | "NARITA"; ref?: string | null }) {
+  const base = { recipient: addr.recipient, postal: addr.postal, phone: addr.phone };
+  if (opts?.center === "SEOUL") return { ...base, recipient: `${addr.recipient} (${code})`, address: addr.address as string | null };
+  if (opts?.center === "NARITA") return { ...base, address: opts.ref ? `${addr.address} ${opts.ref}` : null };
+  return { ...base, address: `${addr.address} ${centerMatchTag(code)}` as string | null };
 }
 
 /** 대상 하나의 검수 기록(최신 먼저) + 사진 서명 URL. sb 가 사용자 세션이면 RLS(운영자·당사자)로 걸러진다. 조회 실패는 null */

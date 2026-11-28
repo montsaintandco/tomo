@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { customsCharge } from "./fees";
+import { customsCharge, txChargeBase } from "./fees";
 import { getStripe } from "./stripe";
 import { createAdminSupabase } from "./supabase/admin";
 import { rows } from "./safe";
@@ -88,8 +88,8 @@ export async function processRefund(admin: SupabaseClient, id: string): Promise<
   // 환불 비율의 분모(주문/거래 통화 총액)와 실제 청구 원화
   let total = 0; let paidKrw: number | null = null;
   if (f.kind === "tx") {
-    const { data: t } = await admin.from("transactions").select("item_price, intl_shipping_fee, is_cross_border, paid_krw").eq("id", f.transaction_id).maybeSingle();
-    if (t) { total = t.item_price + (t.is_cross_border ? t.intl_shipping_fee : 0); paidKrw = t.paid_krw ?? null; }
+    const { data: t } = await admin.from("transactions").select("item_price, intl_shipping_fee, customs_deposit, is_cross_border, paid_krw").eq("id", f.transaction_id).maybeSingle();
+    if (t) { total = txChargeBase(t); paidKrw = t.paid_krw ?? null; }   // 0057: 통관 예치금 포함(부분 환불 비율의 분모)
   } else {
     const { data: o } = await admin.from("proxy_orders").select("total, paid_krw").eq("id", f.proxy_order_id).maybeSingle();
     if (o) { total = o.total; paidKrw = o.paid_krw ?? null; }

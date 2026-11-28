@@ -2,7 +2,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import {
-  AUCTION_RULES, amountOk, auctionErrorKey, endsAt, estimatedTotal, extendedEnd, increment, minBid, pollMs, proxyBid,
+  AUCTION_RULES, amountOk, auctionErrorKey, endsAt, extendedEnd, increment, minBid, pollMs, proxyBid,
   cardAuctionInfo, clockSkew, countdownText, needsBigConfirm, payNeededCount, pickAuction, sellerCanRelist, sellerChoiceCount,
   splitMs, timeLeftShort, viewerPhase, type AuctionState,
 } from "@/lib/auction";
@@ -76,11 +76,6 @@ describe("시각", () => {
     expect(pollMs({ status: "live", server_now: now, ends_at: "2026-11-27T02:00:00Z" })).toBe(5000);
     expect(pollMs({ status: "live", server_now: now, ends_at: "2026-11-27T01:04:00Z" })).toBe(2000);
     expect(pollMs({ status: "awaiting_payment", server_now: now, ends_at: now })).toBeNull();
-  });
-  it("예상 결제액 = 입찰가 + 국경 간 국제배송비", () => {
-    expect(estimatedTotal("KRW", 30000, true)).toBe(38000);
-    expect(estimatedTotal("JPY", 3000, true)).toBe(3900);
-    expect(estimatedTotal("KRW", 30000, false)).toBe(30000);
   });
 });
 

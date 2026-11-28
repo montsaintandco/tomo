@@ -62,7 +62,7 @@ export default async function AdminTransactionsPage(props: { searchParams: Promi
               <td><Link href={`/transactions/${r.id}`} className="a-link block max-w-[260px] truncate">{r.listings?.title ?? "—"}</Link></td>
               <td className="whitespace-nowrap">{r.buyer?.nickname} <span className="a-faint">→</span> {r.seller?.nickname}</td>
               <td className="tnum whitespace-nowrap">{money(r.item_price, r.currency)}</td>
-              <td className="a-muted whitespace-nowrap">{r.meetup ? "만남" : r.is_cross_border ? `국제 · ${r.center === "NARITA" ? "나리타" : "서울"}` : "국내"}</td>
+              <td className="a-muted whitespace-nowrap">{r.meetup ? "만남" : r.is_cross_border ? `국제 · ${r.center === "NARITA" ? "일본" : "한국"}` : "국내"}</td>
               <td>
                 <Pill tone={TX_META[r.status]?.tone}>{TX_META[r.status]?.label ?? r.status}</Pill>
                 {refundOf[r.id] && <span className="mt-1 block"><Pill tone={REFUND[refundOf[r.id]]?.tone}>{REFUND[refundOf[r.id]]?.label ?? refundOf[r.id]}</Pill></span>}

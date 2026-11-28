@@ -15,7 +15,7 @@ export default async function EditListingPage(props: { params: Promise<{ id: str
   const viewer = await getViewer(supabase);
   if (!viewer) redirect(`/login?next=/listings/${id}/edit`);
   const { data: l } = await supabase.from("listings")
-    .select("id, seller_id, title, description, price, category, trade_method, cross_border_enabled, condition, shipping_payer, ship_days, allow_offers, images, status, sale_type")
+    .select("id, seller_id, title, description, price, category, trade_method, cross_border_enabled, condition, shipping_payer, ship_days, allow_offers, images, status, sale_type, ship_weight_kg")
     .eq("id", id).maybeSingle();
   if (!l || l.seller_id !== viewer.id) notFound();
   // 가격 잠금 안내 — 서버(PATCH)가 가격 변경을 409로 막는다. 폼은 일반 저장 실패 문구만 보여 주므로 이유는 여기서 먼저 알린다.

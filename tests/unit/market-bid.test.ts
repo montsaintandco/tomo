@@ -203,8 +203,8 @@ describe("M3 0052 정산·크론", () => {
     }
     expect(notifHref({ kind: "mb_won", ref_id: "b1", data: {} })).toBe("/bids/b1");
   });
-  it("ops_outbox 종류 = OPS_EVENT_TYPES(SQL 과 코드가 같다, 마지막 제약 파일 0056), capability market_auction", () => {
-    const m = readFileSync("supabase/migrations/0056_market_bid_t2.sql", "utf8").match(/ops_outbox_type_check check \(type in \(([^)]+)\)\)/)!;
+  it("ops_outbox 종류 = OPS_EVENT_TYPES(SQL 과 코드가 같다, 마지막 제약 파일 0057), capability market_auction", () => {
+    const m = readFileSync("supabase/migrations/0057_shipping_centers.sql", "utf8").match(/ops_outbox_type_check check \(type = any \(array\[([^\]]+)\]/)!;
     const sqlTypes = [...m[1].matchAll(/'([a-z_.]+)'/g)].map((x) => x[1]).sort();
     expect(sqlTypes).toEqual([...OPS_EVENT_TYPES].sort());
     expect(OPS_CAPABILITIES).toContain("market_auction");

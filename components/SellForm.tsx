@@ -8,6 +8,7 @@ import { mergePhotos, resizeImage } from "@/lib/image-resize";
 import { LISTING_CATEGORIES, isListingCategory, listingCategoryName } from "@/lib/categories";
 import { AUCTION_DURATIONS, AUCTION_RULES, amountOk, auctionEnabled, endsAt } from "@/lib/auction";
 import { formatPrice } from "@/lib/currency";
+import { SHIP_WEIGHT_CHOICES, SHIP_WEIGHT_MAX, bandFee } from "@/lib/fees";
 
 const METHODS = ["direct", "shipping", "both"] as const;
 const CONDITIONS = ["new", "like_new", "good", "fair", "poor"] as const;
@@ -28,7 +29,7 @@ const endsPreview = (days: number, lang: Lang) => endsAt(new Date(), days).toLoc
 export type SellInitial = {
   id: string; title: string; description: string; price: number; category: string; trade_method: string;
   cross_border_enabled: boolean; condition: string; shipping_payer: string; ship_days: string; allow_offers: boolean;
-  images?: string[]; sale_type?: string;
+  images?: string[]; sale_type?: string; ship_weight_kg?: number | null;
 };
 const pick = <T extends readonly string[]>(list: T, v: string | undefined, d: T[number]): T[number] =>
   (list as readonly string[]).includes(v ?? "") ? (v as T[number]) : d;
@@ -61,6 +62,19 @@ export default function SellForm({ lang, hint, initial, prefill, importMsg, curr
   const [shippingPayer, setShippingPayer] = useState<(typeof PAYERS)[number]>(pick(PAYERS, initial?.shipping_payer, "seller"));
   const [shipDays, setShipDays] = useState<(typeof SHIP_DAYS)[number]>(pick(SHIP_DAYS, initial?.ship_days, "2_3"));
   const [allowOffers, setAllowOffers] = useState(initial?.allow_offers ?? true);
+  // 0057 포장 후 무게(한국 판매자 국제 택배). 금액은 DB intl_ship_bands(최종 금액만)
+  const initKg = initial?.ship_weight_kg != null ? Number(initial.ship_weight_kg) : null;
+  const [weightPick, setWeightPick] = useState<string>(initKg == null ? "" : (SHIP_WEIGHT_CHOICES as readonly number[]).includes(initKg) ? String(initKg) : "other");
+  const [weightOther, setWeightOther] = useState(initKg != null && !(SHIP_WEIGHT_CHOICES as readonly number[]).includes(initKg) ? String(initKg) : "");
+  const [bands, setBands] = useState<{ max_kg: number; fee_krw: number }[]>([]);
+  const needWeight = currency === "KRW" && crossBorder && (auction || tradeMethod !== "direct");
+  useEffect(() => {
+    if (!needWeight || bands.length) return;
+    createBrowserSupabase().rpc("intl_ship_bands").then(({ data }) => { if (Array.isArray(data)) setBands(data.map((b) => ({ max_kg: Number(b.max_kg), fee_krw: Number(b.fee_krw) }))); }, () => {});
+  }, [needWeight, bands.length]);
+  const maxKg = bands.length ? Number(bands[bands.length - 1].max_kg) : SHIP_WEIGHT_MAX;
+  const weightKg = weightPick === "other" ? Number(weightOther) : weightPick ? Number(weightPick) : NaN;
+  const weightOk = Number.isFinite(weightKg) && weightKg > 0 && weightKg <= maxKg;
   const [free, setFree] = useState(initial ? initial.price === 0 : false);
   const [files, setFiles] = useState<File[]>([]);
   const [photoNote, setPhotoNote] = useState("");
@@ -91,6 +105,7 @@ export default function SellForm({ lang, hint, initial, prefill, importMsg, curr
     const created: { id: string | null } = { id: null };
     try {
       if (auction && !amountOk(currency, startPrice, true)) throw new SellError(t(lang, "auction.sell.startBad", startHint(currency, lang)));
+      if (needWeight && !weightOk) throw fail("sell.weightNeed");
       const { data: auth } = await supabase.auth.getUser();
       if (!auth.user) throw fail("sell.errLogin");
       const images: string[] = [];
@@ -108,6 +123,7 @@ export default function SellForm({ lang, hint, initial, prefill, importMsg, curr
           title, description, price: free && !auction ? 0 : parseInt(price, 10), category, images,
           tradeMethod: auction ? "shipping" : tradeMethod, crossBorder,
           condition, shippingPayer, shipDays, allowOffers: !free && !auction && allowOffers,
+          shipWeightKg: needWeight && weightOk ? Math.round(weightKg * 100) / 100 : null,
           ...(auction ? { saleType: "auction" } : {}),
         }),
       });
@@ -307,6 +323,34 @@ export default function SellForm({ lang, hint, initial, prefill, importMsg, curr
             <input type="checkbox" className="h-4 w-4 accent-accent" checked={crossBorder} onChange={(e) => setCrossBorder(e.target.checked)} disabled={locked} />
             {t(lang, "sell.crossBorder")}
           </label>
+          {needWeight && !locked && (
+            <fieldset>
+              <legend className={`mb-1 ${LABEL}`}>{t(lang, "sell.weight")}</legend>
+              <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+                {[...SHIP_WEIGHT_CHOICES.map(String), "other"].map((w) => {
+                  const fee = w === "other" ? null : bandFee(bands, Number(w));
+                  return (
+                    <button type="button" key={w} aria-pressed={weightPick === w} onClick={() => setWeightPick(w)}
+                      className={`btn py-2.5 text-[13px] ${weightPick === w ? "bg-tomo-navy text-white shadow-soft" : "bg-white text-ink-soft shadow-soft"}`}>
+                      {w === "other" ? t(lang, "sell.weightOther") : t(lang, "sell.weightKg", { kg: w })}
+                      {fee != null && <span className="block text-[11px] font-normal">{t(lang, "sell.weightFee", { fee: formatPrice(fee, "KRW", lang) })}</span>}
+                    </button>
+                  );
+                })}
+              </div>
+              {weightPick === "other" && (
+                <label className="mt-2 block text-[12px] text-ink-soft">{t(lang, "sell.weightMax", { kg: String(maxKg) })}
+                  <input type="number" inputMode="decimal" min={0.1} max={maxKg} step={0.1} value={weightOther}
+                    onChange={(e) => setWeightOther(e.target.value)} className={FIELD} placeholder="kg" />
+                  {weightOk && bandFee(bands, weightKg) != null && (
+                    <span className="mt-1 block">{t(lang, "sell.weightFee", { fee: formatPrice(bandFee(bands, weightKg)!, "KRW", lang) })}</span>
+                  )}
+                </label>
+              )}
+              <p className="mt-1.5 text-[12px] leading-relaxed text-ink-soft">{t(lang, "sell.weightHelp")}</p>
+              <p className="mt-1 text-[12px] font-bold leading-relaxed text-tomo-rose">{t(lang, "sell.weightOver")}</p>
+            </fieldset>
+          )}
           {!free && !auction && !locked && (
             <label className={`flex items-center gap-2 ${LABEL}`}>
               <input type="checkbox" className="h-4 w-4 accent-accent" checked={allowOffers} onChange={(e) => setAllowOffers(e.target.checked)} />

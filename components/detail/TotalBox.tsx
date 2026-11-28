@@ -34,8 +34,10 @@ export function ProxyTotalBox({ lang, totals, original, shippingIncluded }: {
 }
 
 // 국경 간 직거래(택배) 총액 — 결제(app/api/checkout)와 같은 directShippingFee. 거래 통화 금액이 기준, 구매자 통화는 참고
-export function DirectTotalBox({ lang, totals, viewerCurrency, rate }: {
+export function DirectTotalBox({ lang, totals, viewerCurrency, rate, toJapan }: {
   lang: Lang; totals: DirectDetailTotal; viewerCurrency: "KRW" | "JPY"; rate: number;
+  /** 한국 상품 → 일본(통관 예치금·세금 안내) */
+  toJapan?: boolean;
 }) {
   const f = (n: number) => formatPrice(n, totals.currency, lang);
   const approx = totals.currency !== viewerCurrency
@@ -44,6 +46,7 @@ export function DirectTotalBox({ lang, totals, viewerCurrency, rate }: {
     <section aria-label={t(lang, "detail.directTotalTitle")} className="rounded-card border border-tomo-navy/10 p-3.5 text-[13px]">
       <Line k={t(lang, "detail.itemPrice")} v={f(totals.item)} />
       <Line k={t(lang, "order.intlShipping")} v={f(totals.intlShipping)} />
+      {totals.customsDeposit > 0 && <Line k={t(lang, "customs.depositLine")} v={f(totals.customsDeposit)} />}
       <div className="mt-1.5 flex items-baseline justify-between gap-3 border-t border-tomo-navy/10 pt-2">
         <span className="font-bold text-ink">{t(lang, "detail.directTotalTitle")}</span>
         <span className="text-right">
@@ -52,6 +55,11 @@ export function DirectTotalBox({ lang, totals, viewerCurrency, rate }: {
         </span>
       </div>
       <p className="mt-1.5 text-[11px] leading-relaxed text-ink-soft">{t(lang, "detail.directTotalNote")}</p>
+      {toJapan && (
+        <p className="mt-1 text-[11px] leading-relaxed text-ink-soft">
+          {t(lang, totals.customsDeposit > 0 ? "customs.depositNote" : "customs.smallNote")}
+        </p>
+      )}
     </section>
   );
 }
