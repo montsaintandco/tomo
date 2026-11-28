@@ -7,7 +7,7 @@ import { centerShipLines } from "@/lib/inspection";
 type Addr = { recipient: string; postal: string | null; address: string; phone: string | null; updated_at: string };
 
 // 판매자 센터 발송 안내에 나가는 센터 주소(0054 center_addresses). 저장 = admin_set_center_address(활동 기록에 전후 값).
-// 판매자 화면은 주소 끝에 「TOMO <거래 번호>」를 붙여 보여 준다 — 미리보기로 확인한다.
+// 판매자 화면: 한국 센터는 받는 사람 뒤 「(주문 번호)」, 일본 센터는 주소 끝에 입고 예정 번호 — 미리보기로 확인한다.
 export default function CenterAddressForm({ center, initial }: { center: "SEOUL" | "NARITA"; initial: Addr | null }) {
   const [v, setV] = useState({ recipient: initial?.recipient ?? "TOMO", postal: initial?.postal ?? "", address: initial?.address ?? "", phone: initial?.phone ?? "" });
   const [busy, setBusy] = useState(false);
@@ -15,7 +15,7 @@ export default function CenterAddressForm({ center, initial }: { center: "SEOUL"
   const [pending, start] = useTransition();
   const router = useRouter();
   const set = (k: keyof typeof v) => (e: React.ChangeEvent<HTMLInputElement>) => setV({ ...v, [k]: e.target.value });
-  const preview = v.address.trim() ? centerShipLines({ recipient: v.recipient.trim() || "TOMO", postal: v.postal.trim() || null, address: v.address.trim(), phone: v.phone.trim() || null }, "TX000123") : null;
+  const preview = v.address.trim() ? centerShipLines({ recipient: v.recipient.trim() || "TOMO", postal: v.postal.trim() || null, address: v.address.trim(), phone: v.phone.trim() || null }, "TX000123", { center, ref: "(입고 예정 번호)" }) : null;
 
   async function save() {
     if (!v.address.trim()) return setErr("주소를 넣어 주세요");

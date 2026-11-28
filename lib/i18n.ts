@@ -208,7 +208,7 @@ const D = {
   "detail.translationPending": ["번역 준비 중", "翻訳準備中"],
   "detail.travelLead": ["여행 중 직거래 가능", "旅行中に直接取引OK"],
   "detail.travelBody": ["{market} 여행 때 판매자와 직접 만나 받을 수 있어요. 채팅으로 장소·시간을 정하세요.", "{market}旅行のときに出品者と直接会って受け取れます。チャットで場所・時間を決めましょう。"],
-  "detail.foreignLead": ["해외 상품이에요", "海外の商品です"],
+  "detail.foreignLead": ["해외 상품이에요.", "海外の商品です。"],
   "detail.foreignBody": ["{center} 센터를 거쳐 배송되고, 국제배송비는 결제할 때 함께 계산됩니다.", "{center}センターを経由して配送され、国際送料は決済時に合わせて計算されます。"],
   "center.NARITA": ["일본", "日本"],
   "center.SEOUL": ["한국", "韓国"],

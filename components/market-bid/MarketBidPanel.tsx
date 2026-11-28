@@ -76,7 +76,7 @@ export default function MarketBidPanel(p: MbPanelProps) {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    if (!Number.isInteger(capN) || capN < min) { setError(t(lang, "mb.err.capLow", { min })); return; }
+    if (!Number.isInteger(capN) || capN < min) { setError(t(lang, "mb.err.capLow", { min: min.toLocaleString("en-US") })); return; }
     if (capN > p.settings!.cap_max_jpy) { setError(t(lang, "mb.err.capHigh", { max: p.settings!.cap_max_jpy })); return; }
     if (!agree.every(Boolean)) { setError(t(lang, "mb.panel.agreeNeeded")); return; }
     const code = pccc.trim().toUpperCase();
@@ -102,7 +102,7 @@ export default function MarketBidPanel(p: MbPanelProps) {
       <label className="block text-[12px] font-bold text-ink">{t(lang, "mb.panel.cap")}
         <input inputMode="numeric" value={cap} onChange={(e) => setCap(e.target.value.replace(/[^0-9]/g, ""))} required
           className="tnum mt-1 w-full rounded-full bg-white px-4 py-2.5 text-base font-bold shadow-soft" aria-describedby="mb-cap-hint" />
-        <span id="mb-cap-hint" className="mt-1 block text-[11px] font-normal text-ink-soft">{t(lang, "mb.panel.capHint", { min, max: p.settings.cap_max_jpy })}</span>
+        <span id="mb-cap-hint" className="mt-1 block text-[11px] font-normal text-ink-soft">{t(lang, "mb.panel.capHint", { min: min.toLocaleString("en-US"), max: p.settings.cap_max_jpy.toLocaleString("en-US") })}</span>
       </label>
       {amt && (
         <dl className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 rounded-card bg-tomo-navy/5 p-3 text-[12px]">

@@ -73,7 +73,7 @@ export function CustomsSettleForm({ txId, deposit, currency, settled }: { txId: 
   if (settled) return <p className="mt-2 text-[12px]">통관 정산 끝: 예치금 {deposit.toLocaleString("ko-KR")}{unit} · 실제 세금 {(settled.actual ?? 0).toLocaleString("ko-KR")}{unit}{settled.shortfall > 0 && ` · 운영 부담 ${settled.shortfall.toLocaleString("ko-KR")}${unit}`}</p>;
   return (
     <div className="mt-2 grid max-w-md gap-1.5 text-[12px]">
-      <span>통관 예치금 {deposit.toLocaleString("ko-KR")}{unit} — 실제 관부가세(거래 통화)를 넣는다</span>
+      <span>통관 예치금 {deposit.toLocaleString("ko-KR")}{unit} — 실제 관부가세(거래 통화)를 넣어 주세요</span>
       <span className="flex gap-1.5">
         <input type="number" min={0} step={1} value={amt} onChange={(e) => setAmt(e.target.value)} placeholder={`실제 세금(${unit})`} className={`${field} w-32`} />
         <input value={memo} onChange={(e) => setMemo(e.target.value)} placeholder="메모(고지서 번호 등)" maxLength={200} className={`${field} flex-1`} />
@@ -109,7 +109,7 @@ export function ShipRateEditor({ rates, markup }: { rates: { max_kg: number; cos
         <button type="button" disabled={busy} className={btn} onClick={() => run(`가산율을 ${mk} 로 바꿀까요? 새로 여는 결제부터 적용됩니다.`,
           async () => createBrowserSupabase().rpc("admin_set_ship_markup", { p_markup: Number(mk) }))}>저장</button>
       </span>
-      <table className="w-fit">
+      <div className="overflow-x-auto"><table className="w-fit">
         <thead><tr><th className="pr-3 text-left">~kg</th><th className="pr-3 text-left">원가(원)</th><th className="pr-3 text-left">고객 금액</th><th /></tr></thead>
         <tbody>
           {rates.map((r) => {
@@ -127,7 +127,7 @@ export function ShipRateEditor({ rates, markup }: { rates: { max_kg: number; cos
             );
           })}
         </tbody>
-      </table>
+      </table></div>
       {err && <p role="alert" className="text-tomo-rose">{err}</p>}
     </div>
   );

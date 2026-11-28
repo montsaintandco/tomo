@@ -327,7 +327,7 @@ export default async function ListingDetail(props: { params: Promise<{ id: strin
         )}
         {foreign && method !== "direct" && (
           <p className="rounded-card bg-tomo-navy/5 p-3.5 text-[13px] leading-relaxed text-ink">
-            <span className="font-bold text-tomo-navy">{t(lang, "detail.foreignLead")}.</span>{" "}
+            <span className="font-bold text-tomo-navy">{t(lang, "detail.foreignLead")}</span>{" "}
             {t(lang, "detail.foreignBody", { center: t(lang, `center.${center}`) })}
             {needsWeight && <span className="mt-1 block font-bold text-tomo-rose">{t(lang, "ship.weightPending")}</span>}
           </p>
