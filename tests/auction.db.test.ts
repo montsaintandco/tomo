@@ -26,7 +26,7 @@ const auctions: string[] = [];
 async function newAuction(): Promise<string> {
   const l = await alice.from("listings").insert({
     seller_id: aliceId, title: "U1 동시 입찰 시험", description: "시험용", source_language: "ko", hidden: true,
-    price: 50000, currency: "KRW", category: "camera", trade_method: "shipping", cross_border_enabled: true, country: "KR", region: "서울 마포구",
+    price: 50000, currency: "KRW", category: "camera", trade_method: "shipping", cross_border_enabled: true, ship_weight_kg: 1, country: "KR", region: "서울 마포구",
   }).select("id").single();
   if (l.error) throw l.error;
   listings.push(l.data.id);

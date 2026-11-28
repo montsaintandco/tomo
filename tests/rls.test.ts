@@ -36,7 +36,7 @@ beforeAll(async () => {
   const { data: listing, error: le } = await alice.from("listings").insert({
     seller_id: aliceId, title: "필름카메라", description: "잘 작동해요", source_language: "ko",
     price: 50000, currency: "KRW", category: "camera", trade_method: "shipping",
-    country: "KR", region: "서울 마포구", cross_border_enabled: true,
+    country: "KR", region: "서울 마포구", cross_border_enabled: true, ship_weight_kg: 1,
   }).select().single();
   if (le) throw le;
   listingId = listing!.id;

@@ -27,7 +27,7 @@ describe("listings", () => {
     const { data: listing, error } = await alice.from("listings").insert({
       seller_id: aliceId, title: "테스트 상품", description: "설명", source_language: "ko",
       price: 10000, currency: "KRW", category: "etc", trade_method: "both",
-      country: "KR", region: "서울 마포구", cross_border_enabled: true,
+      country: "KR", region: "서울 마포구", cross_border_enabled: true, ship_weight_kg: 1,
     }).select().single();
     expect(error).toBeNull();
     const { error: te } = await alice.from("listing_translations").insert({

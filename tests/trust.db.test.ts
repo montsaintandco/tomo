@@ -29,7 +29,7 @@ beforeAll(async () => {
   const { data: l, error } = await alice.from("listings").insert({
     seller_id: aliceId, title: "T3 차단 시험", description: "시험용", source_language: "ko",
     price: 50000, currency: "KRW", category: "camera", trade_method: "shipping",
-    country: "KR", region: "서울 마포구", cross_border_enabled: true, allow_offers: true,
+    country: "KR", region: "서울 마포구", cross_border_enabled: true, ship_weight_kg: 1, allow_offers: true,
   }).select("id").single();
   if (error) throw error;
   listingId = l!.id;

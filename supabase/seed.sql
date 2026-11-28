@@ -27,11 +27,11 @@ insert into profiles (id, nickname, country, region, language, is_admin) values
 
 -- chat·escrow 가 빌리는 bob 의 국경 간 상품, chat 이 빌리는 alice 의 상품(다른 테스트가 만든 상품은 끝에 지워진다)
 insert into listings (seller_id, title, description, source_language, price, currency, category,
-  trade_method, cross_border_enabled, country, region)
+  trade_method, cross_border_enabled, country, region, ship_weight_kg)
 values ('b0b00000-0000-4000-8000-000000000002', 'フィルムカメラ', '動作確認済み', 'ja', 12000, 'JPY', 'camera',
-  'shipping', true, 'JP', '東京 新宿区'),
+  'shipping', true, 'JP', '東京 新宿区', null),
   ('a11ce000-0000-4000-8000-000000000001', '시드 필름카메라', '시험용', 'ko', 50000, 'KRW', 'camera',
-  'shipping', true, 'KR', '서울 마포구');
+  'shipping', true, 'KR', '서울 마포구', 1);   -- 0057: 한국 국제 택배는 포장 후 무게 필수
 
 -- cart-rls 가 빌리는 최근 외부 상품(15분 신선도 안에서 주문 테스트가 돈다)
 insert into external_items (source, source_id, url, title, price, currency, images, seller_name, status, fetched_at)
